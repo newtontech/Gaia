@@ -69,3 +69,61 @@ class ModifyNodeOp(BaseModel):
     op: Literal["modify_node"] = "modify_node"
     node_id: int
     changes: dict
+
+
+# ── Commit Workflow ──
+
+
+class CommitRequest(BaseModel):
+    """Inbound request to submit a commit."""
+    message: str
+    operations: list[AddEdgeOp | ModifyEdgeOp | ModifyNodeOp]
+
+
+class ValidationResult(BaseModel):
+    """Result of structural validation for one operation."""
+    op_index: int
+    valid: bool
+    errors: list[str] = []
+
+
+class DedupCandidate(BaseModel):
+    """A potential duplicate found during dedup checking."""
+    node_id: int
+    content: str
+    score: float
+
+
+class ReviewResult(BaseModel):
+    """Result of LLM review."""
+    approved: bool
+    issues: list[str] = []
+    suggestions: list[str] = []
+
+
+class MergeResult(BaseModel):
+    """Result of merging a commit into the graph."""
+    success: bool
+    new_node_ids: list[int] = []
+    new_edge_ids: list[int] = []
+    errors: list[str] = []
+
+
+class Commit(BaseModel):
+    """A commit representing a batch of graph operations."""
+    commit_id: str
+    status: Literal["pending_review", "reviewed", "rejected", "merged"] = "pending_review"
+    message: str
+    operations: list[AddEdgeOp | ModifyEdgeOp | ModifyNodeOp]
+    check_results: dict | None = None
+    review_results: dict | None = None
+    merge_results: dict | None = None
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+
+class CommitResponse(BaseModel):
+    """Response after submitting a commit."""
+    commit_id: str
+    status: str
+    check_results: dict | None = None

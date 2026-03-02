@@ -77,3 +77,68 @@ def test_modify_edge_op():
 def test_modify_node_op():
     op = ModifyNodeOp(node_id=789, changes={"content": "updated"})
     assert op.op == "modify_node"
+
+
+# ── Commit Workflow Tests ──
+
+from libs.models import (
+    Commit, CommitRequest, CommitResponse,
+    ValidationResult, DedupCandidate, ReviewResult, MergeResult,
+)
+
+
+def test_commit_request():
+    req = CommitRequest(
+        message="Add new finding",
+        operations=[
+            AddEdgeOp(
+                tail=[NewNode(content="premise A")],
+                head=[NodeRef(node_id=42)],
+                type="meet",
+                reasoning=["deduction"],
+            )
+        ],
+    )
+    assert len(req.operations) == 1
+    assert req.message == "Add new finding"
+
+
+def test_commit_defaults():
+    from datetime import datetime
+    commit = Commit(
+        commit_id="abc123",
+        message="test commit",
+        operations=[],
+    )
+    assert commit.status == "pending_review"
+    assert commit.check_results is None
+    assert commit.review_results is None
+    assert commit.merge_results is None
+
+
+def test_validation_result():
+    vr = ValidationResult(op_index=0, valid=False, errors=["tail is empty"])
+    assert not vr.valid
+    assert len(vr.errors) == 1
+
+
+def test_dedup_candidate():
+    dc = DedupCandidate(node_id=42, content="existing proposition", score=0.95)
+    assert dc.score == 0.95
+
+
+def test_review_result():
+    rr = ReviewResult(approved=True)
+    assert rr.issues == []
+    assert rr.suggestions == []
+
+
+def test_merge_result():
+    mr = MergeResult(success=True, new_node_ids=[100, 101], new_edge_ids=[50])
+    assert mr.success
+    assert len(mr.new_node_ids) == 2
+
+
+def test_commit_response():
+    cr = CommitResponse(commit_id="abc", status="pending_review")
+    assert cr.commit_id == "abc"
