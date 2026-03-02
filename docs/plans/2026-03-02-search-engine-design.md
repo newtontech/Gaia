@@ -7,7 +7,7 @@
 | 状态 | 设计完成 |
 | 前置文档 | `docs/plans/2026-03-02-storage-layer-design.md` |
 | 目标 | 定义 Search Engine 模块的结构、接口和召回策略 |
-| 变更记录 | v1.0: 初始设计; v1.1: 统一命名 (Node/HyperEdge), API 路径 /search/nodes, /search/edges |
+| 变更记录 | v1.0: 初始设计; v1.1: 统一命名 (Node/HyperEdge), API 路径 /search/nodes, /search/hyperedges |
 
 ---
 
@@ -224,6 +224,6 @@ class ResultMerger:
 | 调用方 | 使用的方法 | 场景 |
 |--------|-----------|------|
 | **API Gateway** | `search_nodes` | `POST /search/nodes` |
-| **API Gateway** | `search_edges` | `POST /search/edges` |
+| **API Gateway** | `search_edges` | `POST /search/hyperedges` |
 | **Commit Engine (DedupChecker)** | `search_nodes` | submit 时去重召回 |
 | **Build Pipeline (外部)** | `search_nodes` | 候选对发现 |

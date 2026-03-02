@@ -13,7 +13,7 @@
 ## 1. 设计原则
 
 - **纯路由层**：Gateway 不包含业务逻辑，只做请求转发和序列化
-- **统一命名**：API 路径用 `/nodes` 和 `/edges`（不用 propositions/hyperedges）
+- **统一命名**：API 路径用 `/nodes` 和 `/hyperedges`（与数据模型 `Node` / `HyperEdge` 一致）
 - **Layer 1 先行**：本文档覆盖 Layer 1 (Knowledge Graph API)，Layer 2 (Research API) 待后续设计
 
 ---
@@ -27,7 +27,7 @@ services/gateway/
 ├── routes/
 │   ├── __init__.py
 │   ├── commits.py       # /commits 相关端点
-│   ├── read.py          # /nodes, /edges 相关端点
+│   ├── read.py          # /nodes, /hyperedges 相关端点
 │   └── search.py        # /search 相关端点
 └── deps.py              # 依赖注入 (StorageManager, CommitEngine, SearchEngine)
 ```
@@ -51,7 +51,7 @@ services/gateway/
 | 方法 | 路径 | 转发到 | 说明 |
 |------|------|--------|------|
 | GET | `/nodes/{id}` | `storage.lance.load_node` | 读取节点详情 |
-| GET | `/edges/{id}` | `storage.graph.get_hyperedge` | 读取超边详情 |
+| GET | `/hyperedges/{id}` | `storage.graph.get_hyperedge` | 读取超边详情 |
 | GET | `/nodes/{id}/subgraph` | `storage.graph.get_subgraph` + `storage.lance.load_nodes_bulk` | 读取节点的 N-hop 子图 |
 
 ### 3.3 搜索 (2 个端点)
@@ -59,7 +59,7 @@ services/gateway/
 | 方法 | 路径 | 转发到 | 说明 |
 |------|------|--------|------|
 | POST | `/search/nodes` | `SearchEngine.search_nodes` | 三路召回搜节点 |
-| POST | `/search/edges` | `SearchEngine.search_edges` | 三路召回搜超边 |
+| POST | `/search/hyperedges` | `SearchEngine.search_edges` | 三路召回搜超边 |
 
 **总计 10 个端点。**
 
@@ -167,10 +167,10 @@ async def get_node(
     return node
 ```
 
-### 4.7 GET /edges/{id}
+### 4.7 GET /hyperedges/{id}
 
 ```python
-@router.get("/edges/{edge_id}")
+@router.get("/hyperedges/{edge_id}")
 async def get_edge(
     edge_id: int,
     storage: StorageManager = Depends(get_storage),
@@ -233,10 +233,10 @@ class SearchNodesRequest(BaseModel):
     paths: list[str] | None = None      # ["vector", "bm25", "topology"]
 ```
 
-### 4.10 POST /search/edges
+### 4.10 POST /search/hyperedges
 
 ```python
-@router.post("/search/edges")
+@router.post("/search/hyperedges")
 async def search_edges(
     request: SearchEdgesRequest,
     search: SearchEngine = Depends(get_search_engine),
@@ -318,9 +318,9 @@ def create_app(config: StorageConfig) -> FastAPI:
 | | `/commits/{id}/merge` | POST | CommitEngine.merge |
 | | `/commits/batch` | POST | 批量处理 |
 | **读取** | `/nodes/{id}` | GET | LanceStore.load_node |
-| | `/edges/{id}` | GET | Neo4jGraphStore.get_hyperedge |
+| | `/hyperedges/{id}` | GET | Neo4jGraphStore.get_hyperedge |
 | | `/nodes/{id}/subgraph` | GET | get_subgraph + load_nodes_bulk |
 | **搜索** | `/search/nodes` | POST | SearchEngine.search_nodes |
-| | `/search/edges` | POST | SearchEngine.search_edges |
+| | `/search/hyperedges` | POST | SearchEngine.search_edges |
 
 **总计 10 个端点。**
