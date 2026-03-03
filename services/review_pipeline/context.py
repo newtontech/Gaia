@@ -31,6 +31,8 @@ class JoinTree(BaseModel):
     relation: str  # "equivalent", "partial_overlap", "subsumes", "subsumed_by"
     verified: bool = False
     reasoning: str = ""
+    source_content: str = ""  # content of the new node (anchor)
+    target_content: str = ""  # content of the existing node (candidate)
 
 
 class PipelineContext:

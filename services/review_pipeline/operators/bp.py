@@ -29,9 +29,7 @@ class BPOperator(Operator):
         if not seed_ids:
             return context
 
-        node_ids, edge_ids = await self._storage.graph.get_subgraph(
-            seed_ids, hops=self._hops
-        )
+        node_ids, edge_ids = await self._storage.graph.get_subgraph(seed_ids, hops=self._hops)
         if not edge_ids:
             return context
 
