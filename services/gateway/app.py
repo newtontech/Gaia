@@ -5,6 +5,9 @@ from __future__ import annotations
 from fastapi import FastAPI
 
 from .deps import deps, Dependencies
+from .routes.commits import router as commits_router
+from .routes.read import router as read_router
+from .routes.search import router as search_router
 
 
 def create_app(dependencies: Dependencies | None = None) -> FastAPI:
@@ -12,6 +15,14 @@ def create_app(dependencies: Dependencies | None = None) -> FastAPI:
     app = FastAPI(title="Gaia", version="0.1.0", description="Large Knowledge Model API")
 
     active_deps = dependencies or deps
+
+    # When custom dependencies are injected (e.g. in tests), propagate
+    # them to the module-level singleton so route handlers can use them.
+    if dependencies is not None:
+        deps.storage = dependencies.storage
+        deps.search_engine = dependencies.search_engine
+        deps.commit_engine = dependencies.commit_engine
+        deps.inference_engine = dependencies.inference_engine
 
     @app.on_event("startup")
     async def startup():
@@ -26,10 +37,8 @@ def create_app(dependencies: Dependencies | None = None) -> FastAPI:
     async def health():
         return {"status": "ok", "version": "0.1.0"}
 
-    # Routes will be added in Tasks 23-24
-    # from .routes import commits, read, search
-    # app.include_router(commits.router)
-    # app.include_router(read.router)
-    # app.include_router(search.router)
+    app.include_router(commits_router)
+    app.include_router(read_router)
+    app.include_router(search_router)
 
     return app
