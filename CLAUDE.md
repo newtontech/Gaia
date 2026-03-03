@@ -31,11 +31,15 @@ pytest -m "not neo4j"
 ruff check .
 ruff format .
 
-# Run the API server
-uvicorn services.gateway.app:create_app --factory --reload --host 0.0.0.0 --port 8000
+# Run the API server (Neo4j auth is disabled locally)
+GAIA_LANCEDB_PATH=./data/lancedb/gaia GAIA_NEO4J_DATABASE=neo4j \
+  uvicorn services.gateway.app:create_app --factory --reload --host 0.0.0.0 --port 8000
 
-# Seed databases with fixture data
-python scripts/seed_database.py --fixtures-dir tests/fixtures --db-path /data/lancedb/gaia --neo4j-password testpassword
+# Seed databases with fixture data (run once after clone)
+python scripts/seed_database.py --fixtures-dir tests/fixtures --db-path ./data/lancedb/gaia --neo4j-database neo4j
+
+# Run frontend dev server
+cd frontend && npm install && npm run dev
 ```
 
 All async tests run automatically via `asyncio_mode = "auto"`.

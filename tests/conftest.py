@@ -14,11 +14,16 @@ def pytest_collection_modifyitems(config, items):
 def _neo4j_available() -> bool:
     try:
         import neo4j
-        driver = neo4j.GraphDatabase.driver(
-            "bolt://localhost:7687", auth=("neo4j", "testpassword")
-        )
-        driver.verify_connectivity()
-        driver.close()
-        return True
+
+        # Try without auth first (local dev), then with password (CI)
+        for auth in [None, ("neo4j", "testpassword")]:
+            try:
+                driver = neo4j.GraphDatabase.driver("bolt://localhost:7687", auth=auth)
+                driver.verify_connectivity()
+                driver.close()
+                return True
+            except neo4j.exceptions.AuthError:
+                continue
+        return False
     except Exception:
         return False

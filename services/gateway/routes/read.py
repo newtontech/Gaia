@@ -42,9 +42,7 @@ async def get_node_subgraph_hydrated(node_id: int, hops: int = 1):
 
     # Load nodes and edges in parallel
     nodes_task = deps.storage.lance.load_nodes_bulk(list(node_ids))
-    edges_task = asyncio.gather(
-        *[deps.storage.graph.get_hyperedge(eid) for eid in edge_ids]
-    )
+    edges_task = asyncio.gather(*[deps.storage.graph.get_hyperedge(eid) for eid in edge_ids])
     nodes, edges = await asyncio.gather(nodes_task, edges_task)
     edges = [e for e in edges if e is not None]
 
@@ -81,9 +79,7 @@ async def list_hyperedges(
         raise HTTPException(status_code=503, detail="Graph store not available")
 
     # Use Neo4j to list edges with pagination
-    async with deps.storage.graph._driver.session(
-        database=deps.storage.graph._db
-    ) as session:
+    async with deps.storage.graph._driver.session(database=deps.storage.graph._db) as session:
         skip = (page - 1) * size
         result = await session.run(
             "MATCH (h:Hyperedge) RETURN h.id AS id ORDER BY h.id SKIP $skip LIMIT $limit",
@@ -96,9 +92,7 @@ async def list_hyperedges(
         count_record = await count_result.single()
         total = count_record["total"] if count_record else 0
 
-    edges = await asyncio.gather(
-        *[deps.storage.graph.get_hyperedge(eid) for eid in edge_ids]
-    )
+    edges = await asyncio.gather(*[deps.storage.graph.get_hyperedge(eid) for eid in edge_ids])
     edges = [e for e in edges if e is not None]
 
     return {
@@ -115,17 +109,13 @@ async def list_contradictions():
     if not deps.storage.graph:
         raise HTTPException(status_code=503, detail="Graph store not available")
 
-    async with deps.storage.graph._driver.session(
-        database=deps.storage.graph._db
-    ) as session:
+    async with deps.storage.graph._driver.session(database=deps.storage.graph._db) as session:
         result = await session.run(
             "MATCH (h:Hyperedge {type: 'contradiction'}) RETURN h.id AS id ORDER BY h.id"
         )
         edge_ids = [record["id"] async for record in result]
 
-    edges = await asyncio.gather(
-        *[deps.storage.graph.get_hyperedge(eid) for eid in edge_ids]
-    )
+    edges = await asyncio.gather(*[deps.storage.graph.get_hyperedge(eid) for eid in edge_ids])
     edges = [e for e in edges if e is not None]
     return [e.model_dump() for e in edges]
 
@@ -144,9 +134,7 @@ async def get_stats():
     }
 
     if graph_available:
-        async with deps.storage.graph._driver.session(
-            database=deps.storage.graph._db
-        ) as session:
+        async with deps.storage.graph._driver.session(database=deps.storage.graph._db) as session:
             result = await session.run("MATCH (h:Hyperedge) RETURN count(h) AS total")
             record = await result.single()
             stats["edge_count"] = record["total"] if record else 0

@@ -244,12 +244,7 @@ class LanceStore:
         if self._fts_dirty:
             table.create_fts_index("content", replace=True)
             self._fts_dirty = False
-        results = (
-            table.search(query, query_type="fts")
-            .select(["id"])
-            .limit(k)
-            .to_list()
-        )
+        results = table.search(query, query_type="fts").select(["id"]).limit(k).to_list()
         return [(r["id"], r["_score"]) for r in results]
 
     async def close(self) -> None:

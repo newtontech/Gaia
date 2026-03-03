@@ -1,8 +1,8 @@
 """CommitEngine: orchestrates the 3-step commit workflow.
 
-    submit  -> validate + dedup + save as pending_review
-    review  -> LLM review -> mark reviewed/rejected
-    merge   -> apply operations to storage -> mark merged
+submit  -> validate + dedup + save as pending_review
+review  -> LLM review -> mark reviewed/rejected
+merge   -> apply operations to storage -> mark merged
 """
 
 from __future__ import annotations

@@ -18,10 +18,7 @@ async def search_text(request: TextSearchRequest):
     node_ids = [nid for nid, _ in results]
     nodes = await deps.storage.lance.load_nodes_bulk(node_ids)
     scores = {nid: score for nid, score in results}
-    return [
-        {"node": n.model_dump(), "score": scores.get(n.id, 0.0)}
-        for n in nodes
-    ]
+    return [{"node": n.model_dump(), "score": scores.get(n.id, 0.0)} for n in nodes]
 
 
 class SearchNodesRequest(BaseModel):

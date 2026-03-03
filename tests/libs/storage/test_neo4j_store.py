@@ -15,9 +15,8 @@ pytestmark = pytest.mark.neo4j
 @pytest.fixture
 async def store():
     import neo4j
-    driver = neo4j.AsyncGraphDatabase.driver(
-        NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD)
-    )
+
+    driver = neo4j.AsyncGraphDatabase.driver(NEO4J_URI, auth=(NEO4J_USER, NEO4J_PASSWORD))
     s = Neo4jGraphStore(driver=driver, database=NEO4J_DB)
     await s.initialize_schema()
     yield s
