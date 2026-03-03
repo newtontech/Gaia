@@ -101,7 +101,7 @@ Neo4j is optional — the system degrades gracefully without it. All writes go t
 ## Testing
 
 - Tests live in `tests/` mirroring the source structure
-- Neo4j tests are marked `@pytest.mark.neo4j` and auto-skipped if Neo4j is unreachable (checked in `conftest.py`)
+- Neo4j tests (`tests/libs/storage/test_neo4j_store.py`) require a running Neo4j instance; CI provides one via service container
 - E2E integration tests (`tests/integration/test_e2e.py`) run without Neo4j using `tmp_path` for ephemeral LanceDB
 - Test fixtures in `tests/fixtures/` — note `embeddings.json` is git-ignored (large file)
 
