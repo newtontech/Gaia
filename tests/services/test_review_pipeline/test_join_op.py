@@ -2,7 +2,6 @@ import pytest
 from services.review_pipeline.operators.join import (
     CCJoinOperator,
     CPJoinOperator,
-    JoinLLM,
     StubJoinLLM,
 )
 from services.review_pipeline.context import PipelineContext

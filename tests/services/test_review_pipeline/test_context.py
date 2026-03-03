@@ -1,4 +1,4 @@
-from services.review_pipeline.context import PipelineContext, NewNodeInfo, JoinTree
+from services.review_pipeline.context import PipelineContext, JoinTree
 
 
 def test_context_init_from_add_edge_ops():

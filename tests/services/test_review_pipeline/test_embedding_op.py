@@ -1,11 +1,10 @@
 import pytest
 from services.review_pipeline.operators.embedding import (
-    EmbeddingModel,
     EmbeddingOperator,
     StubEmbeddingModel,
 )
 from services.review_pipeline.context import PipelineContext
-from libs.models import CommitRequest, AddEdgeOp, NewNode, NodeRef
+from libs.models import CommitRequest, AddEdgeOp, NewNode
 
 
 @pytest.fixture

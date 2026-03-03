@@ -15,15 +15,15 @@ from pathlib import Path
 import pytest
 from dotenv import load_dotenv
 
-# Auto-load .env from project root
-load_dotenv(Path(__file__).resolve().parents[3] / ".env")
-
 from services.review_pipeline.config import LLMModelConfig
 from services.review_pipeline.context import JoinTree
 from services.review_pipeline.llm_client import LLMClient
 from services.review_pipeline.operators.embedding_dashscope import DashScopeEmbeddingModel
 from services.review_pipeline.operators.join import LiteLLMJoinClient
 from services.review_pipeline.operators.verify import LiteLLMVerifyClient
+
+# Auto-load .env from project root (must run before skip guards read env vars)
+load_dotenv(Path(__file__).resolve().parents[3] / ".env")
 
 # ---------------------------------------------------------------------------
 # Skip guards
@@ -198,7 +198,7 @@ async def test_verify_real_api(verify_client):
     result = await verify_client.verify(trees)
 
     print(f"\n{'='*60}")
-    print(f"VERIFY RESULT:")
+    print("VERIFY RESULT:")
     print(f"  verified={result[0].verified}")
     print(f"  reasoning: {result[0].reasoning}")
     print(f"{'='*60}")
