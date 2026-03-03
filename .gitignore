@@ -28,5 +28,9 @@ htmlcov/
 # Worktrees
 .worktrees/
 
-# Data (large files, keep out of repo)
+# Data (local databases, large files)
 data/
+
+# Frontend
+frontend/node_modules/
+frontend/dist/
