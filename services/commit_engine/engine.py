@@ -128,3 +128,7 @@ class CommitEngine:
     async def get_commit(self, commit_id: str) -> Commit | None:
         """Retrieve a commit by its ID."""
         return await self._store.get(commit_id)
+
+    async def list_commits(self) -> list[Commit]:
+        """List all commits."""
+        return await self._store.list_commits()
