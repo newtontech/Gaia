@@ -1,5 +1,7 @@
 # Plan 2: Single-Input API Layer
 
+> **Status:** SUPERSEDED — Job infra (Tasks 1-2, 5) moved to Plan A; remaining tasks (async review, search embedding, enhanced read) to be re-planned as Plan B
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Implement the v3 single-input APIs: async review with job management, updated commit/merge, search without external embedding, and enhanced read routes.

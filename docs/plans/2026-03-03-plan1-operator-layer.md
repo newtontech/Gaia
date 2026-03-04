@@ -1,5 +1,7 @@
 # Plan 1: Review Pipeline Operator Layer
 
+> **Status:** COMPLETED (PR #4 merged)
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Build the review pipeline framework and all operators (embedding, NN search, CC/CP join, verify, refine, BP) as independent, testable modules.

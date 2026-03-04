@@ -1,5 +1,7 @@
 # LKM API 设计 v2.2
 
+> **Status:** SUPERSEDED by `2026-03-03-lkm-api-design-v3.md`
+
 | 文档属性 | 值 |
 |---------|---|
 | 版本 | 2.4 |
