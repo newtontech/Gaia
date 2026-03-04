@@ -1,17 +1,13 @@
-import pytest
-
-from tests.conftest import load_fixture_embeddings
-from services.review_pipeline.operators.nn_search import NNSearchOperator
+from libs.embedding import StubEmbeddingModel
+from libs.models import AddEdgeOp, CommitRequest, ModifyNodeOp, NewNode
 from services.review_pipeline.context import PipelineContext
-from libs.models import CommitRequest, AddEdgeOp, ModifyNodeOp, NewNode
+from services.review_pipeline.operators.nn_search import NNSearchOperator
+
+_embedding_model = StubEmbeddingModel()
 
 
 async def test_nn_search_returns_neighbors(storage):
-    """NNSearchOperator finds real neighbors from fixture embeddings."""
-    embeddings = load_fixture_embeddings()
-    if not embeddings:
-        pytest.skip("No fixture embeddings available")
-
+    """NNSearchOperator finds real neighbors from seeded embeddings."""
     req = CommitRequest(
         message="test",
         operations=[
@@ -24,16 +20,14 @@ async def test_nn_search_returns_neighbors(storage):
         ],
     )
     ctx = PipelineContext.from_commit_request(req)
-    # Use real fixture embeddings
-    first_id = next(iter(embeddings))
-    ctx.embeddings = {0: embeddings[first_id]}
+    # Generate a query embedding with the same model conftest used to seed
+    ctx.embeddings = {0: (await _embedding_model.embed(["superconductor"]))[0]}
 
     op = NNSearchOperator(vector_client=storage.vector, k=5)
     result = await op.execute(ctx)
 
     assert 0 in result.nn_results
     assert len(result.nn_results[0]) > 0
-    # Results should be (node_id, distance) tuples with real node IDs
     for node_id, distance in result.nn_results[0]:
         assert isinstance(node_id, int)
         assert distance >= 0

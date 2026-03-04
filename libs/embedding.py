@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import hashlib
+import math
 import struct
 from abc import ABC, abstractmethod
 
@@ -29,7 +30,8 @@ class StubEmbeddingModel(EmbeddingModel):
             # Repeat digest bytes to fill dim floats
             raw = digest * ((self._dim * 4 // len(digest)) + 1)
             floats = list(struct.unpack(f"<{self._dim}f", raw[: self._dim * 4]))
-            # Normalize to reasonable range
+            # Replace NaN/Inf with 0.0 then normalize
+            floats = [0.0 if (math.isnan(f) or math.isinf(f)) else f for f in floats]
             mag = max(abs(f) for f in floats) or 1.0
             results.append([f / mag for f in floats])
         return results
