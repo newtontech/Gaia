@@ -6,10 +6,6 @@ from services.gateway.deps import deps
 router = APIRouter(prefix="/commits", tags=["commits"])
 
 
-class ReviewRequest(BaseModel):
-    depth: str = "standard"
-
-
 class MergeRequest(BaseModel):
     force: bool = False
 
@@ -34,11 +30,49 @@ async def get_commit(commit_id: str):
 
 
 @router.post("/{commit_id}/review")
-async def review_commit(commit_id: str, request: ReviewRequest = ReviewRequest()):
+async def review_commit(commit_id: str):
+    """Submit async review job for a commit."""
     commit = await deps.commit_engine.get_commit(commit_id)
     if not commit:
         raise HTTPException(status_code=404, detail="Commit not found")
-    result = await deps.commit_engine.review(commit_id, depth=request.depth)
+    try:
+        job = await deps.commit_engine.submit_review(commit_id)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"job_id": job.job_id, "status": job.status.value}
+
+
+@router.get("/{commit_id}/review")
+async def get_review_status(commit_id: str):
+    """Get review job status."""
+    commit = await deps.commit_engine.get_commit(commit_id)
+    if not commit or not commit.review_job_id:
+        raise HTTPException(status_code=404, detail="No review job found")
+    job = await deps.commit_engine.job_manager.get_status(commit.review_job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Review job not found")
+    return {"job_id": job.job_id, "status": job.status.value, "progress": job.progress}
+
+
+@router.delete("/{commit_id}/review")
+async def cancel_review(commit_id: str):
+    """Cancel a running review job."""
+    commit = await deps.commit_engine.get_commit(commit_id)
+    if not commit or not commit.review_job_id:
+        raise HTTPException(status_code=404, detail="No review job found")
+    cancelled = await deps.commit_engine.job_manager.cancel(commit.review_job_id)
+    return {"cancelled": cancelled}
+
+
+@router.get("/{commit_id}/review/result")
+async def get_review_result(commit_id: str):
+    """Get the detailed review result."""
+    commit = await deps.commit_engine.get_commit(commit_id)
+    if not commit or not commit.review_job_id:
+        raise HTTPException(status_code=404, detail="No review job found")
+    result = await deps.commit_engine.job_manager.get_result(commit.review_job_id)
+    if result is None:
+        raise HTTPException(status_code=404, detail="Review result not available yet")
     return result
 
 

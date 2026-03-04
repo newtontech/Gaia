@@ -5,9 +5,12 @@ storage backends (LanceDB on disk, local vector index) but without Neo4j.
 Graph operations are gracefully skipped when graph=None.
 """
 
+import asyncio
+
 import pytest
 import numpy as np
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from services.gateway.app import create_app
 from services.gateway.deps import Dependencies
 from libs.storage import StorageConfig
@@ -25,6 +28,19 @@ def app_client(tmp_path):
     app = create_app(dependencies=dep)
     client = TestClient(app)
     return client, dep
+
+
+@pytest.fixture
+async def async_app_client(tmp_path):
+    """Create an async app client for tests that need background task completion."""
+    config = StorageConfig(lancedb_path=str(tmp_path / "lance"))
+    dep = Dependencies(config)
+    dep.initialize(config)
+    dep.storage.graph = None
+    app = create_app(dependencies=dep)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client, dep
 
 
 def _embedding(dim=1024):
@@ -48,11 +64,11 @@ class TestHealthCheck:
 class TestCommitWorkflow:
     """Full submit -> review -> merge -> verify workflow."""
 
-    def test_submit_review_merge(self, app_client):
-        client, dep = app_client
+    async def test_submit_review_merge(self, async_app_client):
+        client, dep = async_app_client
 
         # 1. Submit a valid commit
-        resp = client.post(
+        resp = await client.post(
             "/commits",
             json={
                 "message": "Add new finding about YH10",
@@ -71,18 +87,25 @@ class TestCommitWorkflow:
         commit_id = resp.json()["commit_id"]
         assert resp.json()["status"] == "pending_review"
 
-        # 2. Review (stub LLM always approves)
-        resp = client.post(f"/commits/{commit_id}/review")
+        # 2. Review (async — submit then wait for completion)
+        resp = await client.post(f"/commits/{commit_id}/review")
         assert resp.status_code == 200
-        assert resp.json()["approved"] is True
+        assert "job_id" in resp.json()
+
+        # Wait for review job to complete
+        for _ in range(50):
+            resp = await client.get(f"/commits/{commit_id}/review")
+            if resp.json()["status"] in ("completed", "failed"):
+                break
+            await asyncio.sleep(0.02)
 
         # 3. Merge
-        resp = client.post(f"/commits/{commit_id}/merge")
+        resp = await client.post(f"/commits/{commit_id}/merge")
         assert resp.status_code == 200
         assert resp.json()["success"] is True
 
         # 4. Verify commit status is now 'merged'
-        resp = client.get(f"/commits/{commit_id}")
+        resp = await client.get(f"/commits/{commit_id}")
         assert resp.status_code == 200
         assert resp.json()["status"] == "merged"
 
