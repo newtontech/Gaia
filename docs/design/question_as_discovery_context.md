@@ -4,7 +4,7 @@
 |---------|---|
 | 版本 | 1.0 |
 | 日期 | 2026-03-04 |
-| 关联文档 | [text_structuring_service.md](text_structuring_service.md), [agent_verifiable_memory.md](agent_verifiable_memory.md) §5 |
+| 关联文档 | [text_structuring_service.md](text_structuring_service.md), [agent_verifiable_memory.md](agent_verifiable_memory.md) §5, [version_dependency_environment.md](version_dependency_environment.md) |
 | 状态 | Wishlist |
 
 ---
@@ -308,6 +308,7 @@ POST /verify/dry-run
 | [agent_verifiable_memory.md](agent_verifiable_memory.md) | Agent 的子目标作为 question 的天然来源（来源一） |
 | [verification_providers.md](verification_providers.md) | 验证的是 conclusion，不是 question；question 不影响 verification 流程 |
 | [scaling_belief_propagation.md](scaling_belief_propagation.md) | BP 不使用 question 字段；question 纯粹影响搜索层 |
+| [version_dependency_environment.md](version_dependency_environment.md) | Question 随 Knowledge Package 版本一起管理；在 Gaia.toml 中可以按 question 搜索依赖的 package |
 
 ---
 

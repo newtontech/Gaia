@@ -4,7 +4,7 @@
 |---------|---|
 | 版本 | 1.0 |
 | 日期 | 2026-03-04 |
-| 关联文档 | [scaling_belief_propagation.md](scaling_belief_propagation.md) §2.4, [agent_verifiable_memory.md](agent_verifiable_memory.md) §4, [theoretical_foundations.md](theoretical_foundations.md) §2 |
+| 关联文档 | [scaling_belief_propagation.md](scaling_belief_propagation.md) §2.4, [agent_verifiable_memory.md](agent_verifiable_memory.md) §4, [theoretical_foundations.md](theoretical_foundations.md) §2, [version_dependency_environment.md](version_dependency_environment.md) |
 | 状态 | Wishlist |
 
 ---
@@ -579,6 +579,10 @@ Verification 提供了具体路径:
 | induction | 不保真 (probability < 1.0) | 结论可能被证伪——这正是 induction 的本质 |
 
 如果一条 abstraction 边的结论被 falsified，说明提取有误（不是 abstraction 不保真，而是 LLM 错误分类了边类型）。如果一条 induction 边的结论被 falsified，这是正常的——induction 本来就是"冒险"。
+
+### 9.5 与版本/依赖管理的关系
+
+[version_dependency_environment.md](version_dependency_environment.md)：Verification 更新 edge probability → 触发 edge 版本变更 → 依赖该 edge 的 Knowledge Package 需要 version bump。具体来说，verification 结果（verified/falsified）通过 Bayesian update 改变 edge probability，这在版本管理框架下构成一次 edge 的 minor 或 major 变更（取决于 probability 变化幅度），进而触发下游依赖的 stale detection 和传播机制。
 
 ---
 
