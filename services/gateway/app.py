@@ -9,6 +9,7 @@ from .deps import deps, Dependencies
 from .routes.commits import router as commits_router
 from .routes.read import router as read_router
 from .routes.search import router as search_router
+from .routes.jobs import router as jobs_router
 
 
 def create_app(dependencies: Dependencies | None = None) -> FastAPI:
@@ -32,6 +33,7 @@ def create_app(dependencies: Dependencies | None = None) -> FastAPI:
         deps.search_engine = dependencies.search_engine
         deps.commit_engine = dependencies.commit_engine
         deps.inference_engine = dependencies.inference_engine
+        deps.job_manager = dependencies.job_manager
 
     @app.on_event("startup")
     async def startup():
@@ -49,5 +51,6 @@ def create_app(dependencies: Dependencies | None = None) -> FastAPI:
     app.include_router(commits_router)
     app.include_router(read_router)
     app.include_router(search_router)
+    app.include_router(jobs_router)
 
     return app
