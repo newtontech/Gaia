@@ -18,7 +18,7 @@ Plan D 🔵 Active ────────────────────�
   └─ Test rewrites: commit (#18), search (#19),
      inference (#20), review pipeline (#21)
 
-Plan B 📋 To be planned
+Plan B 🔵 Active
   └─ Async review pipeline (#6, #7)
   └─ Search embedding internalization (#8)
   └─ Enhanced read routes (#12, #13, #14)
@@ -42,6 +42,7 @@ Future
 | [API Design v3](2026-03-03-lkm-api-design-v3.md) | Target API spec | — |
 | [Plan A: Foundation](2026-03-04-plan-a-foundation.md) | Fixtures, edge rename, Job infra | #17, #25, #5 |
 | [Plan D: Test Rewrite](2026-03-04-plan-d-test-rewrite.md) | Mock → real storage tests | #18-#21 |
+| [Plan B: Feature Enhancements](2026-03-04-plan-b-feature-enhancements.md) | Async review, search embedding, read enhancements | #6-#8, #12-#14 |
 | [Plan 3: Batch APIs](2026-03-03-plan3-batch-processing.md) | Batch commit/read/search | #9-#11 |
 
 ### Completed
