@@ -1,5 +1,7 @@
 # Search Engine 模块详细设计
 
+> **Status:** COMPLETED
+
 | 文档属性 | 值 |
 |---------|---|
 | 版本 | 1.4 |

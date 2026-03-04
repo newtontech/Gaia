@@ -1,5 +1,7 @@
 # Plan 3: Batch Processing APIs
 
+> **Status:** ACTIVE (not started, depends on Plan B)
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Add batch (async) variants for all APIs: batch commit (with auto review/merge), batch search, batch read.

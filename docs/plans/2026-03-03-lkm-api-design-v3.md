@@ -1,5 +1,7 @@
 # LKM API 设计 v3
 
+> **Status:** ACTIVE (current API spec)
+
 | 文档属性 | 值 |
 |---------|---|
 | 版本 | 3.0 |
