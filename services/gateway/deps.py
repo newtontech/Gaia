@@ -7,6 +7,8 @@ from services.search_engine.engine import SearchEngine
 from services.commit_engine.engine import CommitEngine
 from services.commit_engine.store import CommitStore
 from services.inference_engine.engine import InferenceEngine
+from services.job_manager.manager import JobManager
+from services.job_manager.store import InMemoryJobStore
 
 
 class Dependencies:
@@ -18,6 +20,7 @@ class Dependencies:
         self.search_engine: SearchEngine | None = None
         self.commit_engine: CommitEngine | None = None
         self.inference_engine: InferenceEngine | None = None
+        self.job_manager: JobManager | None = None
 
     def initialize(self, storage_config: StorageConfig | None = None):
         """Create all services. Call once at startup."""
@@ -31,6 +34,7 @@ class Dependencies:
             search_engine=self.search_engine,
         )
         self.inference_engine = InferenceEngine(self.storage)
+        self.job_manager = JobManager(store=InMemoryJobStore())
 
     async def cleanup(self):
         """Shut down services gracefully."""
