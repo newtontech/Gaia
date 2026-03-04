@@ -229,9 +229,7 @@ class Neo4jGraphStore:
                         "WHERE p.id IN $frontier AND h.type IN $etypes "
                         "RETURN DISTINCT h.id AS hid"
                     )
-                    he_res = await tx.run(
-                        he_query, frontier=list(frontier), etypes=edge_types
-                    )
+                    he_res = await tx.run(he_query, frontier=list(frontier), etypes=edge_types)
                 else:
                     he_query = (
                         "MATCH (p:Proposition)-[:TAIL]->(h:Hyperedge) "

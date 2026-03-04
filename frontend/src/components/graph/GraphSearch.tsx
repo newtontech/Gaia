@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { AutoComplete, Input } from "antd";
 import { SearchOutlined } from "@ant-design/icons";
-import { useTextSearch } from "../../hooks/useSearch";
+import { useNodeSearch } from "../../hooks/useSearch";
 
 interface Props {
   onSelectNode: (nodeId: number) => void;
@@ -9,7 +9,7 @@ interface Props {
 
 export function GraphSearch({ onSelectNode }: Props) {
   const [query, setQuery] = useState("");
-  const { data: results } = useTextSearch(query);
+  const { data: results } = useNodeSearch(query);
 
   const options = (results ?? []).slice(0, 10).map((r) => ({
     value: String(r.node.id),

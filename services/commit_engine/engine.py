@@ -96,9 +96,7 @@ class CommitEngine:
         if not commit:
             raise ValueError(f"Commit {commit_id} not found")
         if commit.status != "pending_review":
-            raise ValueError(
-                f"Commit {commit_id} is not pending review (status={commit.status})"
-            )
+            raise ValueError(f"Commit {commit_id} is not pending review (status={commit.status})")
 
         async def run_review(job_id: str) -> dict:
             ctx = PipelineContext.from_commit_request(
@@ -127,12 +125,8 @@ class CommitEngine:
                 NNCandidate(node_id=str(nid), similarity=sim)
                 for nid, sim in context.nn_results.get(i, [])
             ]
-            cc_trees = [
-                t.model_dump() for t in context.cc_join_trees if t.source_node_index == i
-            ]
-            cp_trees = [
-                t.model_dump() for t in context.cp_join_trees if t.source_node_index == i
-            ]
+            cc_trees = [t.model_dump() for t in context.cc_join_trees if t.source_node_index == i]
+            cp_trees = [t.model_dump() for t in context.cp_join_trees if t.source_node_index == i]
             detail = OperationReviewDetail(
                 op_index=node_info.op_index,
                 verdict="pass",
