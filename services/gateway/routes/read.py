@@ -1,4 +1,5 @@
 import asyncio
+from typing import Literal
 
 from fastapi import APIRouter, HTTPException, Query
 from services.gateway.deps import deps
@@ -25,20 +26,46 @@ async def get_hyperedge(edge_id: int):
 
 
 @router.get("/nodes/{node_id}/subgraph")
-async def get_node_subgraph(node_id: int, hops: int = 1):
+async def get_node_subgraph(
+    node_id: int,
+    hops: int = 1,
+    direction: Literal["upstream", "downstream", "both"] = "both",
+    max_nodes: int = 500,
+    edge_types: str | None = None,
+):
     if not deps.storage.graph:
         raise HTTPException(status_code=503, detail="Graph store not available")
-    node_ids, edge_ids = await deps.storage.graph.get_subgraph([node_id], hops=hops)
-    return {"node_ids": list(node_ids), "edge_ids": list(edge_ids)}
+    edge_type_list = edge_types.split(",") if edge_types else None
+    node_ids, edge_ids = await deps.storage.graph.get_subgraph(
+        [node_id],
+        hops=hops,
+        direction=direction,
+        max_nodes=max_nodes,
+        edge_types=edge_type_list,
+    )
+    return {"node_ids": sorted(node_ids), "edge_ids": sorted(edge_ids)}
 
 
 @router.get("/nodes/{node_id}/subgraph/hydrated")
-async def get_node_subgraph_hydrated(node_id: int, hops: int = 1):
+async def get_node_subgraph_hydrated(
+    node_id: int,
+    hops: int = 1,
+    direction: Literal["upstream", "downstream", "both"] = "both",
+    max_nodes: int = 500,
+    edge_types: str | None = None,
+):
     """Return full Node[] + HyperEdge[] for a subgraph, avoiding N+1 requests."""
     if not deps.storage.graph:
         raise HTTPException(status_code=503, detail="Graph store not available")
 
-    node_ids, edge_ids = await deps.storage.graph.get_subgraph([node_id], hops=hops)
+    edge_type_list = edge_types.split(",") if edge_types else None
+    node_ids, edge_ids = await deps.storage.graph.get_subgraph(
+        [node_id],
+        hops=hops,
+        direction=direction,
+        max_nodes=max_nodes,
+        edge_types=edge_type_list,
+    )
 
     # Load nodes and edges in parallel
     nodes_task = deps.storage.lance.load_nodes_bulk(list(node_ids))

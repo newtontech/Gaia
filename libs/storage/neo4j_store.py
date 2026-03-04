@@ -168,15 +168,29 @@ class Neo4jGraphStore:
         node_ids: list[int],
         hops: int = 1,
         edge_types: list[str] | None = None,
+        direction: str = "both",
+        max_nodes: int = 500,
     ) -> tuple[set[int], set[int]]:
         """Return (node_ids, edge_ids) reachable within *hops* knowledge hops.
 
         One knowledge hop = Proposition -> Hyperedge -> Proposition, which is
         two Neo4j hops.  We expand iteratively so that edge-type filtering
         is applied at every step.
+
+        Args:
+            node_ids: Seed proposition ids.
+            hops: Number of knowledge hops to expand.
+            edge_types: Optional list of edge types to include.
+            direction: Traversal direction — ``"both"`` (default), ``"upstream"``
+                (follow edges where node is in head, going backward to tails),
+                or ``"downstream"`` (follow edges where node is in tail, going
+                forward to heads).
+            max_nodes: Maximum total nodes in the returned subgraph.
         """
         async with self._driver.session(database=self._db) as session:
-            result = await session.execute_read(self._tx_get_subgraph, node_ids, hops, edge_types)
+            result = await session.execute_read(
+                self._tx_get_subgraph, node_ids, hops, edge_types, direction, max_nodes
+            )
         return result
 
     @staticmethod
@@ -185,8 +199,16 @@ class Neo4jGraphStore:
         seed_ids: list[int],
         hops: int,
         edge_types: list[str] | None,
+        direction: str = "both",
+        max_nodes: int = 500,
     ) -> tuple[set[int], set[int]]:
-        """Iteratively expand the subgraph one knowledge hop at a time."""
+        """Iteratively expand the subgraph one knowledge hop at a time.
+
+        Direction controls which edges are discovered from frontier nodes:
+        - ``"downstream"``: only edges where frontier nodes are tails (forward).
+        - ``"upstream"``: only edges where frontier nodes are heads (backward).
+        - ``"both"``: edges in either direction (default, original behaviour).
+        """
         visited_nodes: set[int] = set(seed_ids)
         visited_edges: set[int] = set()
         frontier: set[int] = set(seed_ids)
@@ -194,46 +216,54 @@ class Neo4jGraphStore:
         for _ in range(hops):
             if not frontier:
                 break
-
-            # Find hyperedges connected to frontier propositions (via TAIL)
-            # and optionally filter by edge type.
-            if edge_types is not None:
-                he_query = (
-                    "MATCH (p:Proposition)-[:TAIL]->(h:Hyperedge) "
-                    "WHERE p.id IN $frontier AND h.type IN $etypes "
-                    "RETURN DISTINCT h.id AS hid"
-                )
-                he_res = await tx.run(he_query, frontier=list(frontier), etypes=edge_types)
-            else:
-                he_query = (
-                    "MATCH (p:Proposition)-[:TAIL]->(h:Hyperedge) "
-                    "WHERE p.id IN $frontier "
-                    "RETURN DISTINCT h.id AS hid"
-                )
-                he_res = await tx.run(he_query, frontier=list(frontier))
+            if len(visited_nodes) >= max_nodes:
+                break
 
             new_edge_ids: set[int] = set()
-            async for record in he_res:
-                new_edge_ids.add(record["hid"])
 
-            # Also find hyperedges where frontier propositions appear in HEAD
-            if edge_types is not None:
-                he_rev_query = (
-                    "MATCH (h:Hyperedge)-[:HEAD]->(p:Proposition) "
-                    "WHERE p.id IN $frontier AND h.type IN $etypes "
-                    "RETURN DISTINCT h.id AS hid"
-                )
-                he_rev_res = await tx.run(he_rev_query, frontier=list(frontier), etypes=edge_types)
-            else:
-                he_rev_query = (
-                    "MATCH (h:Hyperedge)-[:HEAD]->(p:Proposition) "
-                    "WHERE p.id IN $frontier "
-                    "RETURN DISTINCT h.id AS hid"
-                )
-                he_rev_res = await tx.run(he_rev_query, frontier=list(frontier))
+            # --- Downstream: frontier nodes appear as TAIL -----------------
+            if direction in ("both", "downstream"):
+                if edge_types is not None:
+                    he_query = (
+                        "MATCH (p:Proposition)-[:TAIL]->(h:Hyperedge) "
+                        "WHERE p.id IN $frontier AND h.type IN $etypes "
+                        "RETURN DISTINCT h.id AS hid"
+                    )
+                    he_res = await tx.run(
+                        he_query, frontier=list(frontier), etypes=edge_types
+                    )
+                else:
+                    he_query = (
+                        "MATCH (p:Proposition)-[:TAIL]->(h:Hyperedge) "
+                        "WHERE p.id IN $frontier "
+                        "RETURN DISTINCT h.id AS hid"
+                    )
+                    he_res = await tx.run(he_query, frontier=list(frontier))
 
-            async for record in he_rev_res:
-                new_edge_ids.add(record["hid"])
+                async for record in he_res:
+                    new_edge_ids.add(record["hid"])
+
+            # --- Upstream: frontier nodes appear as HEAD -------------------
+            if direction in ("both", "upstream"):
+                if edge_types is not None:
+                    he_rev_query = (
+                        "MATCH (h:Hyperedge)-[:HEAD]->(p:Proposition) "
+                        "WHERE p.id IN $frontier AND h.type IN $etypes "
+                        "RETURN DISTINCT h.id AS hid"
+                    )
+                    he_rev_res = await tx.run(
+                        he_rev_query, frontier=list(frontier), etypes=edge_types
+                    )
+                else:
+                    he_rev_query = (
+                        "MATCH (h:Hyperedge)-[:HEAD]->(p:Proposition) "
+                        "WHERE p.id IN $frontier "
+                        "RETURN DISTINCT h.id AS hid"
+                    )
+                    he_rev_res = await tx.run(he_rev_query, frontier=list(frontier))
+
+                async for record in he_rev_res:
+                    new_edge_ids.add(record["hid"])
 
             # Remove already-visited edges
             new_edge_ids -= visited_edges
@@ -241,16 +271,38 @@ class Neo4jGraphStore:
                 break
             visited_edges |= new_edge_ids
 
-            # Find all propositions connected to these hyperedges (both tail and head)
-            node_query = (
-                "MATCH (p:Proposition)-[:TAIL]->(h:Hyperedge) "
-                "WHERE h.id IN $eids "
-                "RETURN DISTINCT p.id AS nid "
-                "UNION "
-                "MATCH (h:Hyperedge)-[:HEAD]->(p:Proposition) "
-                "WHERE h.id IN $eids "
-                "RETURN DISTINCT p.id AS nid"
-            )
+            # Collect propositions from the discovered edges.
+            # Direction determines which side of the edge we follow into:
+            # - downstream: collect HEAD propositions (the outputs)
+            # - upstream: collect TAIL propositions (the inputs)
+            # - both: collect from both sides
+            node_query_parts: list[str] = []
+            if direction in ("both", "downstream"):
+                node_query_parts.append(
+                    "MATCH (h:Hyperedge)-[:HEAD]->(p:Proposition) "
+                    "WHERE h.id IN $eids "
+                    "RETURN DISTINCT p.id AS nid"
+                )
+            if direction in ("both", "upstream"):
+                node_query_parts.append(
+                    "MATCH (p:Proposition)-[:TAIL]->(h:Hyperedge) "
+                    "WHERE h.id IN $eids "
+                    "RETURN DISTINCT p.id AS nid"
+                )
+            # For "both" we also need the other sides so full context is kept
+            if direction == "both":
+                node_query = (
+                    "MATCH (p:Proposition)-[:TAIL]->(h:Hyperedge) "
+                    "WHERE h.id IN $eids "
+                    "RETURN DISTINCT p.id AS nid "
+                    "UNION "
+                    "MATCH (h:Hyperedge)-[:HEAD]->(p:Proposition) "
+                    "WHERE h.id IN $eids "
+                    "RETURN DISTINCT p.id AS nid"
+                )
+            else:
+                node_query = " UNION ".join(node_query_parts)
+
             node_res = await tx.run(node_query, eids=list(new_edge_ids))
             new_nodes: set[int] = set()
             async for record in node_res:
@@ -258,6 +310,10 @@ class Neo4jGraphStore:
 
             frontier = new_nodes - visited_nodes
             visited_nodes |= new_nodes
+
+            # Enforce max_nodes cap
+            if len(visited_nodes) >= max_nodes:
+                break
 
         return visited_nodes, visited_edges
 
