@@ -4,7 +4,7 @@
 |---------|---|
 | 版本 | 1.0 |
 | 日期 | 2026-03-04 |
-| 关联文档 | [version_dependency_environment.md](version_dependency_environment.md), [text_structuring_service.md](text_structuring_service.md), [agent_verifiable_memory.md](agent_verifiable_memory.md) |
+| 关联文档 | [version_dependency_environment.md](version_dependency_environment.md), [text_structuring_service.md](text_structuring_service.md), [agent_verifiable_memory.md](agent_verifiable_memory.md), [theoretical_foundations.md](theoretical_foundations.md) §7 — Horn Clause 共同基础 |
 | 状态 | Wishlist |
 
 ---
@@ -591,6 +591,8 @@ gaia submit                                   # 发布到 registry
 ---
 
 ## 11. 从第一性原理看：为什么不能完全照搬
+
+> **理论基础：** Gaia 和 Cargo 的结构相似性源于共同的 Horn clause 逻辑骨架。可复用的部分恰好是只依赖 Horn clause 结构的特性；不可复用的部分是各自的扩展方向（离散约束 vs 概率传播）。详见 [theoretical_foundations.md](theoretical_foundations.md) §7。
 
 尽管类比高度成立，有三个根本性差异阻止了完全照搬：
 
