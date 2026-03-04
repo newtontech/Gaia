@@ -1124,3 +1124,155 @@ pipeline_modify = Pipeline(steps=[
 | Job 管理 | 无 | 通用 /jobs API |
 | commit 轻量检查 | 去重 + 矛盾候选 + 引用校验 | 结构校验 + 引用校验 (去重移入 review pipeline) |
 | search 输入 | text + embedding | 仅 text (内部生成 embedding) |
+
+---
+
+## 11. Extra Endpoints (已实现但未记录)
+
+以下端点已在代码中实现，但未在本文档的主要章节中记录。这些端点提供额外的查询和管理功能。
+
+### 11.1 GET /commits — 提交列表
+
+返回系统中所有 commit 的列表，按创建时间排序（最新的在前）。
+
+**响应示例**：
+```json
+{
+  "commits": [
+    {
+      "commit_id": "abc123",
+      "status": "pending_review",
+      "message": "Add YH10 superconductivity findings",
+      "created_at": "2026-03-01T12:00:00Z"
+    }
+  ],
+  "total": 1
+}
+```
+
+### 11.2 GET /nodes — 分页节点列表
+
+支持类型过滤的分页节点列表。
+
+**参数**：
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 50 | 每页数量（最大200） |
+| type | string | null | 按节点类型过滤 |
+
+**响应示例**：
+```json
+{
+  "items": [{"id": 1, "type": "paper-extract", ...}],
+  "total": 1000,
+  "page": 1,
+  "size": 50
+}
+```
+
+### 11.3 GET /hyperedges — 分页边列表
+
+分页超边列表。需要 Neo4j 图存储可用。
+
+**参数**：
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| page | int | 1 | 页码（从1开始） |
+| size | int | 50 | 每页数量（最大200） |
+
+### 11.4 GET /contradictions — 矛盾边列表
+
+返回所有类型为 'contradiction' 的超边。需要 Neo4j 图存储可用。
+
+**响应示例**：
+```json
+[
+  {
+    "id": 2001,
+    "type": "contradiction",
+    "tail": [300, 301],
+    "head": [302],
+    "verified": true
+  }
+]
+```
+
+### 11.5 GET /stats — 系统统计
+
+返回知识图的概览统计信息。
+
+**响应示例**：
+```json
+{
+  "node_count": 10000,
+  "graph_available": true,
+  "edge_count": 5000,
+  "node_types": {
+    "paper-extract": 8000,
+    "abstraction": 500,
+    "deduction": 1500
+  }
+}
+```
+
+### 11.6 GET /nodes/{id}/subgraph/hydrated — 带完整数据的子图
+
+返回指定节点的子图，包含完整的节点和边数据（而非仅ID）。这比先调用 `/nodes/{id}/subgraph` 再逐个查询节点/边更高效。
+
+**参数**：
+| 参数 | 类型 | 默认值 | 说明 |
+|------|------|--------|------|
+| hops | int | 1 | 遍历跳数（1-5） |
+
+**响应示例**：
+```json
+{
+  "nodes": [
+    {"id": 251, "type": "paper-extract", "content": "..."},
+    {"id": 102, "type": "paper-extract", "content": "..."}
+  ],
+  "edges": [
+    {"id": 1234, "type": "paper-extract", "tail": [102, 5001], "head": [5002]}
+  ]
+}
+```
+
+### 11.7 POST /search/text — BM25 纯文本搜索
+
+纯 BM25 文本搜索，不需要 embedding。适合快速关键词搜索。
+
+**请求示例**：
+```json
+{
+  "query": "high pressure superconductivity",
+  "k": 50
+}
+```
+
+**响应示例**：
+```json
+[
+  {
+    "node": {
+      "id": 251,
+      "type": "paper-extract",
+      "title": "YH10 high-pressure superconductivity",
+      "content": "fcc YH10 phase superconducts at 400GPa with Tc≈303K"
+    },
+    "score": 0.95
+  }
+]
+```
+
+### 11.8 GET /health — 健康检查
+
+检查 API 健康状态并返回版本信息。
+
+**响应示例**：
+```json
+{
+  "status": "ok",
+  "version": "3.0.0"
+}
+```

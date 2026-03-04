@@ -1,0 +1,206 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Gaia API",
+    "description": "Gaia Large Knowledge Model API - manages knowledge graph operations",
+    "version": "3.0.0",
+    "contact": {
+      "name": "Gaia API Support",
+      "url": "https://github.com/SiliconEinstein/Gaia/issues"
+    },
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    }
+  },
+  "servers": [
+    {"url": "http://localhost:8000", "description": "Local development server"}
+  ],
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health check",
+        "description": "Check API health and get version information",
+        "responses": {"200": {"description": "API is healthy", "content": {"application/json": {"example": {"status": "ok", "version": "3.0.0"}}}}},
+        "tags": ["system"]
+      }
+    },
+    "/commits": {
+      "get": {
+        "summary": "List all commits",
+        "description": "Returns a list of all commits ordered by creation time",
+        "responses": {"200": {"description": "List of commits", "content": {"application/json": {"example": {"commits": [{"commit_id": "abc123", "status": "pending_review", "message": "Add findings", "created_at": "2026-03-01T12:00:00Z"}], "total": 1}}}}},
+        "tags": ["commits"]
+      },
+      "post": {
+        "summary": "Submit a new commit",
+        "description": "Submit a new commit with graph operations",
+        "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"message": {"type": "string"}, "operations": {"type": "array"}}}}}, "required": true},
+        "responses": {"200": {"description": "Commit submitted"}},
+        "tags": ["commits"]
+      }
+    },
+    "/commits/{commit_id}": {
+      "get": {
+        "summary": "Get commit details",
+        "parameters": [{"name": "commit_id", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "responses": {"200": {"description": "Commit details"}, "404": {"description": "Commit not found"}},
+        "tags": ["commits"]
+      }
+    },
+    "/commits/{commit_id}/review": {
+      "post": {
+        "summary": "Review a commit",
+        "parameters": [{"name": "commit_id", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "responses": {"200": {"description": "Review result"}, "404": {"description": "Commit not found"}},
+        "tags": ["commits"]
+      }
+    },
+    "/commits/{commit_id}/merge": {
+      "post": {
+        "summary": "Merge a commit",
+        "parameters": [{"name": "commit_id", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "responses": {"200": {"description": "Merge result"}, "404": {"description": "Commit not found"}},
+        "tags": ["commits"]
+      }
+    },
+    "/nodes": {
+      "get": {
+        "summary": "List nodes (paginated)",
+        "description": "Get paginated list of nodes with optional type filtering",
+        "parameters": [
+          {"name": "page", "in": "query", "schema": {"type": "integer", "default": 1}},
+          {"name": "size", "in": "query", "schema": {"type": "integer", "default": 50}},
+          {"name": "type", "in": "query", "schema": {"type": "string"}}
+        ],
+        "responses": {"200": {"description": "List of nodes"}},
+        "tags": ["read"]
+      }
+    },
+    "/nodes/{node_id}": {
+      "get": {
+        "summary": "Get node by ID",
+        "parameters": [{"name": "node_id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Node details"}, "404": {"description": "Node not found"}},
+        "tags": ["read"]
+      }
+    },
+    "/nodes/{node_id}/subgraph": {
+      "get": {
+        "summary": "Get node subgraph (IDs only)",
+        "parameters": [
+          {"name": "node_id", "in": "path", "required": true, "schema": {"type": "integer"}},
+          {"name": "hops", "in": "query", "schema": {"type": "integer", "default": 1}}
+        ],
+        "responses": {"200": {"description": "Subgraph node and edge IDs"}},
+        "tags": ["read"]
+      }
+    },
+    "/nodes/{node_id}/subgraph/hydrated": {
+      "get": {
+        "summary": "Get hydrated subgraph",
+        "description": "Get subgraph with full node and edge data",
+        "parameters": [
+          {"name": "node_id", "in": "path", "required": true, "schema": {"type": "integer"}},
+          {"name": "hops", "in": "query", "schema": {"type": "integer", "default": 1}}
+        ],
+        "responses": {"200": {"description": "Hydrated subgraph with full data"}},
+        "tags": ["read"]
+      }
+    },
+    "/hyperedges": {
+      "get": {
+        "summary": "List hyperedges (paginated)",
+        "parameters": [
+          {"name": "page", "in": "query", "schema": {"type": "integer", "default": 1}},
+          {"name": "size", "in": "query", "schema": {"type": "integer", "default": 50}}
+        ],
+        "responses": {"200": {"description": "List of hyperedges"}, "503": {"description": "Graph store not available"}},
+        "tags": ["read"]
+      }
+    },
+    "/hyperedges/{edge_id}": {
+      "get": {
+        "summary": "Get hyperedge by ID",
+        "parameters": [{"name": "edge_id", "in": "path", "required": true, "schema": {"type": "integer"}}],
+        "responses": {"200": {"description": "Hyperedge details"}, "404": {"description": "Hyperedge not found"}},
+        "tags": ["read"]
+      }
+    },
+    "/contradictions": {
+      "get": {
+        "summary": "List contradiction hyperedges",
+        "responses": {"200": {"description": "List of contradictions"}, "503": {"description": "Graph store not available"}},
+        "tags": ["read"]
+      }
+    },
+    "/stats": {
+      "get": {
+        "summary": "Get system statistics",
+        "responses": {"200": {"description": "System statistics"}},
+        "tags": ["read"]
+      }
+    },
+    "/search/text": {
+      "post": {
+        "summary": "Text search (BM25)",
+        "description": "Pure BM25 text search without requiring embeddings",
+        "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"query": {"type": "string"}, "k": {"type": "integer", "default": 50}}}}}, "required": true},
+        "responses": {"200": {"description": "Search results"}},
+        "tags": ["search"]
+      }
+    },
+    "/search/nodes": {
+      "post": {
+        "summary": "Semantic node search",
+        "description": "Search nodes using semantic similarity (embedding parameter is deprecated)",
+        "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"query": {"type": "string"}, "embedding": {"type": "array", "items": {"type": "number"}, "deprecated": true}, "k": {"type": "integer", "default": 50}}}}}, "required": true},
+        "responses": {"200": {"description": "Search results"}},
+        "tags": ["search"]
+      }
+    },
+    "/search/hyperedges": {
+      "post": {
+        "summary": "Semantic hyperedge search",
+        "description": "Search hyperedges using semantic similarity (embedding parameter is deprecated)",
+        "requestBody": {"content": {"application/json": {"schema": {"type": "object", "properties": {"query": {"type": "string"}, "embedding": {"type": "array", "items": {"type": "number"}, "deprecated": true}, "k": {"type": "integer", "default": 50}}}}}, "required": true},
+        "responses": {"200": {"description": "Search results"}},
+        "tags": ["search"]
+      }
+    },
+    "/jobs/{job_id}": {
+      "get": {
+        "summary": "Get job status",
+        "parameters": [{"name": "job_id", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "responses": {"200": {"description": "Job status"}, "404": {"description": "Job not found"}},
+        "tags": ["jobs"]
+      },
+      "delete": {
+        "summary": "Cancel job",
+        "parameters": [{"name": "job_id", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "responses": {"200": {"description": "Job cancelled"}, "404": {"description": "Job not found"}},
+        "tags": ["jobs"]
+      }
+    },
+    "/jobs/{job_id}/result": {
+      "get": {
+        "summary": "Get job result",
+        "parameters": [{"name": "job_id", "in": "path", "required": true, "schema": {"type": "string"}}],
+        "responses": {"200": {"description": "Job result"}, "404": {"description": "Job not found"}, "409": {"description": "Job not completed"}},
+        "tags": ["jobs"]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CommitRequest": {"type": "object", "properties": {"message": {"type": "string"}, "operations": {"type": "array"}}},
+      "CommitResponse": {"type": "object", "properties": {"commit_id": {"type": "string"}, "status": {"type": "string"}, "check_results": {"type": "object"}}},
+      "MergeResult": {"type": "object", "properties": {"success": {"type": "boolean"}, "new_node_ids": {"type": "array", "items": {"type": "integer"}}, "new_edge_ids": {"type": "array", "items": {"type": "integer"}}, "errors": {"type": "array", "items": {"type": "string"}}}},
+      "NodeResponse": {"type": "object", "properties": {"id": {"type": "integer"}, "type": {"type": "string"}, "title": {"type": "string"}, "content": {"type": "string"}, "belief": {"type": "number"}, "status": {"type": "string"}}},
+      "HyperEdgeResponse": {"type": "object", "properties": {"id": {"type": "integer"}, "type": {"type": "string"}, "tail": {"type": "array", "items": {"type": "integer"}}, "head": {"type": "array", "items": {"type": "integer"}}, "verified": {"type": "boolean"}}},
+      "TextSearchRequest": {"type": "object", "properties": {"query": {"type": "string"}, "k": {"type": "integer", "default": 50}}},
+      "SearchRequest": {"type": "object", "properties": {"query": {"type": "string"}, "embedding": {"type": "array", "items": {"type": "number"}, "deprecated": true}, "k": {"type": "integer", "default": 50}}},
+      "JobStatusResponse": {"type": "object", "properties": {"job_id": {"type": "string"}, "type": {"type": "string"}, "status": {"type": "string"}, "progress": {"type": "number"}, "created_at": {"type": "string"}, "updated_at": {"type": "string"}}}
+    }
+  }
+}
