@@ -105,6 +105,62 @@ class ReviewResult(BaseModel):
     suggestions: list[str] = []
 
 
+# ── Detailed Review Models (v3) ──
+
+
+class NNCandidate(BaseModel):
+    node_id: str
+    similarity: float
+
+
+class QualityMetrics(BaseModel):
+    reasoning_valid: bool
+    tightness: float
+    substantiveness: float
+    novelty: float
+
+
+class JoinTreeResults(BaseModel):
+    cc: list[dict] = []
+    cp: list[dict] = []
+
+
+class ContradictionResult(BaseModel):
+    node_id: str
+    edge_id: str
+    description: str
+
+
+class OverlapResult(BaseModel):
+    existing_node_id: str
+    similarity: float
+    recommendation: str  # "merge" | "keep_both"
+
+
+class OperationReviewDetail(BaseModel):
+    op_index: int
+    verdict: str  # "pass" | "has_overlap" | "rejected"
+    embedding_generated: bool
+    nn_candidates: list[NNCandidate] = []
+    quality: QualityMetrics | None = None
+    join_trees: JoinTreeResults = JoinTreeResults()
+    contradictions: list[ContradictionResult] = []
+    overlaps: list[OverlapResult] = []
+
+
+class BPResults(BaseModel):
+    belief_updates: dict[str, float] = {}
+    iterations: int = 0
+    converged: bool = False
+    affected_nodes: list[str] = []
+
+
+class DetailedReviewResult(BaseModel):
+    overall_verdict: str  # "pass" | "has_overlap" | "rejected"
+    operations: list[OperationReviewDetail] = []
+    bp_results: BPResults | None = None
+
+
 class MergeResult(BaseModel):
     """Result of merging a commit into the graph."""
 

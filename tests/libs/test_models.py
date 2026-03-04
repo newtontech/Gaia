@@ -14,6 +14,14 @@ from libs.models import (
     DedupCandidate,
     ReviewResult,
     MergeResult,
+    NNCandidate,
+    QualityMetrics,
+    JoinTreeResults,
+    ContradictionResult,
+    OverlapResult,
+    OperationReviewDetail,
+    BPResults,
+    DetailedReviewResult,
 )
 
 
@@ -151,3 +159,92 @@ def test_merge_result():
 def test_commit_response():
     cr = CommitResponse(commit_id="abc", status="pending_review")
     assert cr.commit_id == "abc"
+
+
+# ── Detailed Review Models Tests ──
+
+
+def test_nn_candidate_defaults():
+    c = NNCandidate(node_id="42", similarity=0.95)
+    assert c.node_id == "42"
+    assert c.similarity == 0.95
+
+
+def test_quality_metrics():
+    q = QualityMetrics(reasoning_valid=True, tightness=0.8, substantiveness=0.7, novelty=0.6)
+    assert q.reasoning_valid is True
+    assert q.novelty == 0.6
+
+
+def test_join_tree_results_defaults():
+    jt = JoinTreeResults()
+    assert jt.cc == []
+    assert jt.cp == []
+
+
+def test_contradiction_result():
+    cr = ContradictionResult(node_id="5", edge_id="10", description="Contradicts prior claim")
+    assert cr.node_id == "5"
+    assert cr.edge_id == "10"
+    assert cr.description == "Contradicts prior claim"
+
+
+def test_overlap_result():
+    o = OverlapResult(existing_node_id="7", similarity=0.92, recommendation="merge")
+    assert o.existing_node_id == "7"
+    assert o.similarity == 0.92
+    assert o.recommendation == "merge"
+
+
+def test_operation_review_detail_defaults():
+    detail = OperationReviewDetail(
+        op_index=0,
+        verdict="pass",
+        embedding_generated=True,
+        nn_candidates=[],
+        join_trees=JoinTreeResults(cc=[], cp=[]),
+        contradictions=[],
+        overlaps=[],
+    )
+    assert detail.verdict == "pass"
+    assert detail.quality is None
+
+
+def test_bp_results():
+    bp = BPResults(
+        belief_updates={"1": 0.8, "2": 0.6},
+        iterations=5,
+        converged=True,
+        affected_nodes=["1", "2"],
+    )
+    assert bp.converged is True
+    assert len(bp.affected_nodes) == 2
+
+
+def test_detailed_review_result():
+    result = DetailedReviewResult(
+        overall_verdict="pass",
+        operations=[
+            OperationReviewDetail(
+                op_index=0,
+                verdict="pass",
+                embedding_generated=True,
+                nn_candidates=[NNCandidate(node_id="10", similarity=0.9)],
+                join_trees=JoinTreeResults(cc=[], cp=[]),
+                contradictions=[],
+                overlaps=[],
+            )
+        ],
+        bp_results=BPResults(belief_updates={}, iterations=3, converged=True, affected_nodes=[]),
+    )
+    assert result.overall_verdict == "pass"
+    assert len(result.operations) == 1
+    assert result.bp_results.converged is True
+
+
+def test_detailed_review_result_no_bp():
+    result = DetailedReviewResult(
+        overall_verdict="has_overlap",
+        operations=[],
+    )
+    assert result.bp_results is None
