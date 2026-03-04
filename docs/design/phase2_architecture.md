@@ -92,11 +92,10 @@ Environment = {
         added_edges: [...]
         modified_beliefs: {node_id: belief}
     }
-    lifecycle: workspace | branch | experiment
 }
 ```
 
-三者只是生命周期不同：workspace 持久，branch 合并后删除，experiment 随时丢弃。
+没有 `env_type` 或 `lifecycle` 字段——工作区、分支、思想实验在数据模型上完全相同。所谓"workspace 持久、experiment 随时丢弃"只是用户的使用习惯，不是系统的结构属性。如果需要打标签，放 `metadata` 里。
 
 ### 2.3 BeliefSnapshot
 
@@ -266,28 +265,29 @@ class KnowledgePackage(BaseModel):
 
 ```python
 class Environment(BaseModel):
-    """统一的环境抽象：工作区 / 分支 / 思想实验"""
+    """统一的环境抽象——没有类型区分，一切都是环境"""
     env_id: str
     name: str
-    env_type: Literal["workspace", "branch", "experiment"]
     base_snapshot_id: str | None = None       # 基础状态
     parent_env_id: str | None = None          # 从哪个环境 fork 的
 
     # 稀疏 overlay（只存与 base 不同的部分）
     added_nodes: list[int] = []
     added_edges: list[int] = []
-    removed_edges: list[int] = []             # 在此环境中"假设不存在"的边
+    removed_edges: list[int] = []             # "假设这条推理不存在"
     belief_overrides: dict[int, float] = {}   # {node_id: override_belief}
 
-    # 生命周期
+    # 元数据
+    metadata: dict = {}                        # 用户自定义标签（如用途描述）
     created_at: str | None = None
     status: Literal["active", "merged", "archived"] = "active"
 ```
 
 **设计决策**：
-- `removed_edges` 支持思想实验中"假设这条推理不成立"
-- `belief_overrides` 支持"假设这个结论的 belief 是 0.3"
-- 合并后状态变为 `merged`，实验丢弃后变为 `archived`
+- **没有 `env_type`**——"工作区/分支/实验"只是用户的使用习惯，不是系统结构。统一环境模型意味着数据模型中不区分。如需标记用途，放 `metadata`。
+- `removed_edges` 支持"假设这条推理不成立"的场景
+- `belief_overrides` 支持"假设这个结论的 belief 是 0.3"的场景
+- 合并后状态变为 `merged`，不再需要后变为 `archived`
 
 ### 4.5 BeliefSnapshot（新增）
 

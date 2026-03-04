@@ -243,18 +243,21 @@ Environment = Base Snapshot + Overlay (delta)
 ```python
 class Environment:
     id: str
-    name: str | None              # branch 有名字，experiment 可以没有
-    kind: str                     # "workspace" | "branch" | "experiment"
+    name: str
     base_snapshot: str            # fork 自哪个快照
     parent_env: str | None        # 环境可以嵌套
     belief_overrides: dict[int, float]   # sparse belief delta
     added_nodes: list[Node]
     added_edges: list[HyperEdge]
+    removed_edges: list[int]             # "假设这条推理不存在"
     modified_nodes: dict[int, Node]
     modified_edges: dict[int, HyperEdge]
     derived_beliefs: dict[int, float] | None   # BP 结果（lazy）
-    persistent: bool              # workspace/branch=True, experiment=False
+    metadata: dict                # 用户自定义标签（用途描述等）
+    status: str                   # "active" | "merged" | "archived"
 ```
+
+**注意**：没有 `kind` 或 `persistent` 字段。"工作区/分支/实验" 只是用户的使用习惯，不是系统结构属性。统一环境模型意味着数据模型中不区分类型——如需标记用途，放 `metadata`。
 
 ### 4.4 环境栈
 
