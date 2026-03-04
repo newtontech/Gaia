@@ -10,6 +10,9 @@ class NodeFilters(BaseModel):
     status: list[str] = ["active"]
     min_belief: float | None = None
     keywords: list[str] | None = None
+    paper_id: str | None = None
+    min_quality: float | None = None
+    edge_type: list[str] | None = None
 
 
 class EdgeFilters(BaseModel):

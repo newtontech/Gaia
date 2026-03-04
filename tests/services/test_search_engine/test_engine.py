@@ -127,3 +127,17 @@ async def test_search_edges_with_type_filter(search, storage):
     )
     for r in results:
         assert r.edge.type == "abstraction"
+
+
+def test_node_filters_new_fields():
+    f = NodeFilters(paper_id="arxiv:2301.12345", min_quality=3.0, edge_type=["abstraction"])
+    assert f.paper_id == "arxiv:2301.12345"
+    assert f.min_quality == 3.0
+    assert f.edge_type == ["abstraction"]
+
+
+def test_node_filters_new_fields_default_none():
+    f = NodeFilters()
+    assert f.paper_id is None
+    assert f.min_quality is None
+    assert f.edge_type is None

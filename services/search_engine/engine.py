@@ -169,6 +169,15 @@ class SearchEngine:
             node_kw_set = set(node.keywords) if node.keywords else set()
             if not node_kw_set & set(filters.keywords):
                 return False
+        if filters.paper_id:
+            node_paper = (node.metadata or {}).get("paper_id")
+            if node_paper != filters.paper_id:
+                return False
+        if filters.min_quality is not None:
+            node_quality = (node.metadata or {}).get("quality")
+            if node_quality is None or node_quality < filters.min_quality:
+                return False
+        # edge_type filter requires graph join — skip in filter pass
         return True
 
     @staticmethod
