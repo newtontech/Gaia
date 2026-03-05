@@ -93,10 +93,12 @@ claim:
 ```yaml
 score: 0.95                            # P(conclusion | premises)
 justification: "纯逻辑演绎，前提给出互斥结论，矛盾直接成立，无跳步"
-confirmed_premises: [5005, 5006]          # 确认的强引用
-downgraded_premises: []                   # 应降级为 context
+confirmed_premises: [5005, 5006]       # 确认的强引用
+downgraded_premises: []                # 应降级为 context
 upgraded_context: []                   # 应升级为 premise
 irrelevant: []                         # 建议删除
+suggested_premise: []                  # 从 why 中提取的隐含强依赖
+suggested_context: []                  # 从 why 中提取的隐含背景知识
 ```
 
 ### 3.4 评估标准
@@ -158,7 +160,12 @@ Review skill 按以下维度评估：
 2. premises 是否充分？是否缺少隐含前提？（如有，降低 score）
 3. 声称的推理类型是否匹配实际推理方式？
 
-### Step 3: 打分
+### Step 3: 提取隐含假设
+从 why 中找出未声明的假设，按强弱分类：
+- `suggested_premise`: 推理强依赖的条件（错了结论不成立），显著影响 score
+- `suggested_context`: 推理用到的背景知识（错了结论仍可能成立）
+
+### Step 4: 打分
 给出 P(conclusion | confirmed premises) 的条件概率：
 - 0.95-1.0: 纯逻辑演绎，无跳步
 - 0.80-0.95: 推理可靠，有微小隐含假设
@@ -177,6 +184,8 @@ confirmed_premises: [<ids>]
 downgraded_premises: [<ids>]
 upgraded_context: [<ids>]
 irrelevant: [<ids>]
+suggested_premise: ["<隐含强依赖描述>", ...]
+suggested_context: ["<隐含背景知识描述>", ...]
 ```
 ```
 
@@ -310,6 +319,8 @@ review:
     downgraded_premises: []
     upgraded_context: []
     irrelevant: []
+    suggested_premise: []
+    suggested_context: []
 
   # 来源证明
   provenance:

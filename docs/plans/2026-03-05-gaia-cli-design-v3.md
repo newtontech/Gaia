@@ -410,6 +410,8 @@ confirmed_premises: [5005, 5006]   # 确认的强引用 → 参与 BP
 downgraded_premises: []            # 应降级为 context
 upgraded_context: []               # 应升级为 premise
 irrelevant: []                     # 建议删除
+suggested_premise: []              # 从 why 中提取的隐含强依赖
+suggested_context: []              # 从 why 中提取的隐含背景知识
 ```
 
 **评估标准：**
