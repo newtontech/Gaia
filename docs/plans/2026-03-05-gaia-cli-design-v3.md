@@ -91,40 +91,40 @@ claims:
   - id: 5005
     type: deduction
     content: "推导 A: 轻球拖拽重球 → 组合体 HL 比 H 慢"
-    cite: [5003, 5004]             # 强引用：前提错则结论错，参与 BP
+    premise: [5003, 5004]           # 强引用：前提错则结论错，参与 BP
     why: "按 v∝W 定律，L 慢于 H，L 会拖拽 H"
 
   - id: 5006
     type: deduction
     content: "推导 B: 组合体更重 → 组合体 HL 比 H 快"
-    cite: [5003, 5004]             # 强引用
+    premise: [5003, 5004]           # 强引用
     why: "按 v∝W 定律，HL 总重量 > H，应更快"
 
   - id: 5007
     type: deduction
     content: "同一物体不可能既比 H 快又比 H 慢 — 矛盾"
-    cite: [5005, 5006]             # 强引用
+    premise: [5005, 5006]           # 强引用
     context: []                     # 弱引用：背景知识，折入 prior
     why: "两个有效推导从同一前提得出互相矛盾的结论"
 ```
 
-### 2.4 强引用（cite）与弱引用（context）
+### 2.4 强引用（premise）与弱引用（context）
 
 ```yaml
   - id: 6009
     content: "光在引力场弯曲"
-    cite: [6008, 6005]                  # 强引用：错则结论错，参与 BP
+    premise: [6008, 6005]               # 强引用：错则结论错，参与 BP
     context: [6003]                     # 弱引用：背景知识，折入 prior
     why: "等效原理 + Maxwell 电磁理论 → 光必须沿弯曲路径传播"
 ```
 
 | 类型 | 字段 | 数学处理 | BP 参与 |
 |------|------|---------|--------|
-| 强引用 | `cite` | hyperedge tail，P(C\|premises) | 是 |
+| 强引用 | `premise` | hyperedge tail，P(C\|premises) | 是 |
 | 弱引用 | `context` | 折入 claim prior | 否 |
 | 无关 | — | 删除 | 否 |
 
-**判断标准：** 如果这个 premise 是错的，conclusion 还能成立吗？不能 → `cite`，能 → `context`。
+**判断标准：** 如果这个 premise 是错的，conclusion 还能成立吗？不能 → `premise`，能 → `context`。
 
 ### 2.5 跨包引用
 
@@ -133,7 +133,7 @@ claims:
 ```yaml
   - id: 5012
     content: "真空中所有物体等速下落"
-    cite:
+    premise:
       - 5008                           # 本包内强引用
       - galileo:5011@a1b2c3            # 跨包强引用
     context:
@@ -144,7 +144,7 @@ claims:
 ### 2.5 `gaia.lock`（自动生成）
 
 ```toml
-# gaia build 时自动从 cite: 字段解析生成
+# gaia build 时自动从 premise: 字段解析生成
 [packages.galileo]
 repo = "github.com/user/galileo_tied_balls"
 commit = "a1b2c3d4e5f6"
@@ -171,7 +171,7 @@ claims = []                        # 弱引用，无具体 claim
 
 ```
 gaia init [name]              # 初始化 knowledge package
-gaia claim "结论" --why "推理" --cite id1,id2 [--context id3]
+gaia claim "结论" --why "推理" --premise id1,id2 [--context id3]
                               # 添加一条命题（自动创建 node + edge）
 gaia build                    # 结构校验 + 本地 BP（快，离线）
 gaia review [id...]           # 调大模型评审（慢，需 API key）
@@ -192,18 +192,18 @@ $ gaia claim "石头比树叶落得快" --type observation
 
 # 有引用的命题
 $ gaia claim "v ∝ W 定律" \
-    --cite 5001,5002 \
+    --premise 5001,5002 \
     --why "从学说和观察归纳出定量规律" \
     --type theory
   Created claim 5003
 
 # 矛盾声明
-$ gaia claim "v∝W 自相矛盾" --type contradiction --cite 5005,5006
+$ gaia claim "v∝W 自相矛盾" --type contradiction --premise 5005,5006
   Created claim 5007
 
 # 带弱引用（背景知识）
 $ gaia claim "光在引力场弯曲" \
-    --cite 6008,6005 --context 6003 \
+    --premise 6008,6005 --context 6003 \
     --why "等效原理 + Maxwell → 光沿弯曲路径传播"
   Created claim 6009
 ```
@@ -226,7 +226,7 @@ $ gaia claim "光在引力场弯曲" \
 2. **`build` = 校验 + BP** — 快速、离线。检查 YAML 格式、引用完整性，跑本地 BP
 3. **`review` = 大模型评审** — 慢、需 API key。可指定 claim ID 或全包。内部并发调 API，逐条流式输出
 4. **无 `commit`/`push`** — 版本控制完全交给 git
-5. **`--cite` 支持跨包引用** — 格式 `pkg:claim_id@commit`
+5. **`--premise` 支持跨包引用** — 格式 `pkg:claim_id@commit`
 6. **所有命令支持 `--json` 输出** — Agent 解析 JSON，人类看默认 pretty-print
 7. **`search` 在本地运行** — 使用嵌入式 LanceDB
 
@@ -238,10 +238,10 @@ $ gaia claim "光在引力场弯曲" \
 
 ```bash
 gaia init galileo_tied_balls
-gaia claim "越重的物体下落越快" --why "亚里士多德经验观察" --cite aristotle:physics
-gaia claim "重球绑轻球，整体应更慢" --why "轻球拖累重球" --cite 1
-gaia claim "重球绑轻球，整体应更快" --why "总重量更大" --cite 1
-gaia claim "v∝W 自相矛盾" --type contradiction --cite 2,3
+gaia claim "越重的物体下落越快" --why "亚里士多德经验观察" --premise aristotle:physics
+gaia claim "重球绑轻球，整体应更慢" --why "轻球拖累重球" --premise 1
+gaia claim "重球绑轻球，整体应更快" --why "总重量更大" --premise 1
+gaia claim "v∝W 自相矛盾" --type contradiction --premise 2,3
 gaia build              # 本地 BP → belief 变化摘要
 gaia contradictions     # 查看矛盾列表
 gaia show 4             # 查看矛盾详情
@@ -333,12 +333,12 @@ Server 模式:
 ### 6.1 强引用（claim 级别，BP 传播）
 
 ```yaml
-cite:
+premise:
   - 5008                           # 本包内
   - galileo:5011@a1b2c3            # 跨包: pkg:claim_id@commit
 ```
 
-- 出现在 claim 的 `cite:` 字段中
+- 出现在 claim 的 `premise:` 字段中
 - `gaia build` 解析后写入 `gaia.lock`
 - Server 全局 BP 时，跨包引用参与概率传播
 
@@ -370,7 +370,7 @@ claims = []                        # 弱引用
 
 ### 6.4 依赖规则
 
-1. **`cite:` 中的跨包引用** → `gaia build` 自动解析，写入 `gaia.lock`
+1. **`premise:` 中的跨包引用** → `gaia build` 自动解析，写入 `gaia.lock`
 2. **Lock file 锁定 commit hash** — 保证可复现，不依赖 semver
 3. **命题不可变** — 已发布的 claim 不能修改/删除，修正通过新 claim + contradiction
 4. **`gaia build` 检查引用完整性** — 被引用的 claim 必须存在于对应 commit 中
@@ -384,7 +384,7 @@ claims = []                        # 弱引用
 
 ### 7.1 Review 的核心目标
 
-评估一条推理链的条件概率 **P(conclusion | premises)**：假设所有强引用（`cite`）都成立，这步推理有多可靠？
+评估一条推理链的条件概率 **P(conclusion | premises)**：假设所有强引用（`premise`）都成立，这步推理有多可靠？
 
 ### 7.2 Review Skill（公开协议）
 
@@ -396,7 +396,7 @@ claim:
   content: "同一物体不可能既比 H 快又比 H 慢 — 矛盾"
   type: deduction
   why: "两个有效推导从同一前提得出互相矛盾的结论"
-premises:                          # cite[] 中的强引用
+premises:                          # premise[] 中的强引用
   - { id: 5005, content: "推导 A: HL 比 H 慢" }
   - { id: 5006, content: "推导 B: HL 比 H 快" }
 context:                           # context[] 中的弱引用
@@ -407,9 +407,9 @@ context:                           # context[] 中的弱引用
 ```yaml
 score: 0.95                        # P(conclusion | premises)
 justification: "纯逻辑演绎，无跳步"
-confirmed_cites: [5005, 5006]      # 确认的强引用 → 参与 BP
-downgraded_cites: []               # 应降级为 context
-upgraded_context: []               # 应升级为 cite
+confirmed_premises: [5005, 5006]   # 确认的强引用 → 参与 BP
+downgraded_premises: []            # 应降级为 context
+upgraded_context: []               # 应升级为 premise
 irrelevant: []                     # 建议删除
 ```
 
@@ -466,7 +466,7 @@ $ gaia init galileo_tied_balls
 # 校验 + 本地推理
 $ gaia build
   ✓ 20 claims across 6 files
-  ✓ All cite references valid
+  ✓ All premise references valid
   ✓ Dependency DAG valid
   BP results:
     5003 (v∝W): 0.70 → 0.05 ↓  (2 contradictions)
@@ -517,6 +517,6 @@ $ gaia publish
 | 无 lock file | `gaia.lock` 自动生成 | 可复现性 |
 | 无弱引用 | `[related]` in gaia.toml | 包发现 |
 | 无不可变性规则 | claim 一经发布不可修改 | 知识可靠性 |
-| cite 不分强弱 | `cite`（强）+ `context`（弱） | 强引用参与 BP，弱引用折入 prior |
+| cite 不分强弱 | `premise`（强）+ `context`（弱） | 强引用参与 BP，弱引用折入 prior |
 | 无 review 系统 | Review Skill 公开协议 + Server bot | 透明、可复现的推理质量评审 |
 | Server 做所有 review | 发布与评审分离（GitHub=arXiv, Server=期刊） | 解决激励问题 |
