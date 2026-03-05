@@ -125,8 +125,12 @@ class CommitEngine:
                 NNCandidate(node_id=str(nid), similarity=sim)
                 for nid, sim in context.nn_results.get(i, [])
             ]
-            cc_trees = [t.model_dump() for t in context.cc_abstraction_trees if t.source_node_index == i]
-            cp_trees = [t.model_dump() for t in context.cp_abstraction_trees if t.source_node_index == i]
+            cc_trees = [
+                t.model_dump() for t in context.cc_abstraction_trees if t.source_node_index == i
+            ]
+            cp_trees = [
+                t.model_dump() for t in context.cp_abstraction_trees if t.source_node_index == i
+            ]
             detail = OperationReviewDetail(
                 op_index=node_info.op_index,
                 verdict="pass",
