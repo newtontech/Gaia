@@ -84,15 +84,15 @@ Neo4j is optional — the system degrades gracefully without it. All writes go t
 - **Fully async** — all I/O is `async def`, tests use `asyncio_mode = "auto"`
 - **Dependency injection** — `services/gateway/deps.py` holds a global `Dependencies` singleton initialized at startup; tests inject custom instances via `create_app(dependencies=...)`
 - **Graceful degradation** — Neo4j, vector search, and LLM review are all optional; topology recall is skipped when graph is unavailable
-- **Commit workflow** — operations (AddEdge, ModifyNode, ModifyEdge) are validated, reviewed (stub LLM auto-approves in Phase 1), then merged to all backends
+- **Commit workflow** — operations (AddEdge, ModifyNode, ModifyEdge) are validated, reviewed asynchronously via Pipeline + JobManager, then merged to all backends
 - **Search merging** — three recall paths run in parallel, scores are min-max normalized, weighted (vector=0.5, bm25=0.3, topology=0.2), deduped, and top-k filtered
 - **ID generation** — file-based with asyncio lock (`libs/storage/id_generator.py`), single-process safe
 
 ### API Routes (`services/gateway/routes/`)
 
-- **`commits.py`** — `POST /commits`, `GET /commits/{id}`, `POST /commits/{id}/review`, `POST /commits/{id}/merge`
-- **`read.py`** — `GET /nodes/{id}`, `GET /hyperedges/{id}`, `GET /nodes/{id}/subgraph`
-- **`search.py`** — `POST /search/nodes`, `POST /search/hyperedges`
+- **`commits.py`** — `POST /commits`, `GET /commits/{id}`, `POST /commits/{id}/review` (async job), `GET /commits/{id}/review` (status), `DELETE /commits/{id}/review` (cancel), `GET /commits/{id}/review/result`, `POST /commits/{id}/merge`
+- **`read.py`** — `GET /nodes/{id}`, `GET /hyperedges/{id}`, `GET /nodes/{id}/subgraph` (supports direction, max_nodes, edge_types)
+- **`search.py`** — `POST /search/nodes`, `POST /search/hyperedges` (both accept `text`, embedding generated server-side)
 
 ### Dependency Injection
 

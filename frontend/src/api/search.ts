@@ -1,9 +1,9 @@
 import { apiFetch } from "./client";
 import type { TextSearchResult } from "./types";
 
-export function searchText(query: string, k = 50) {
-  return apiFetch<TextSearchResult[]>("/search/text", {
+export function searchNodes(text: string, k = 20) {
+  return apiFetch<TextSearchResult[]>("/search/nodes", {
     method: "POST",
-    body: JSON.stringify({ query, k }),
+    body: JSON.stringify({ text, k }),
   });
 }

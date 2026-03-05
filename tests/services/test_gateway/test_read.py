@@ -42,3 +42,33 @@ def test_get_hyperedge_no_graph(client):
     if dep.storage.graph is None:
         resp = c.get("/hyperedges/1")
         assert resp.status_code == 503
+
+
+def test_subgraph_with_direction_param(client):
+    c, dep = client
+    resp = c.get("/nodes/1/subgraph?hops=2&direction=upstream&max_nodes=100")
+    # 503 when graph store not available (no Neo4j), 200 otherwise
+    assert resp.status_code in (200, 503)
+    if resp.status_code == 200:
+        data = resp.json()
+        assert "node_ids" in data
+        assert "edge_ids" in data
+
+
+def test_subgraph_with_edge_types_param(client):
+    c, dep = client
+    resp = c.get("/nodes/1/subgraph?hops=1&edge_types=abstraction,induction")
+    assert resp.status_code in (200, 503)
+
+
+def test_subgraph_hydrated_with_params(client):
+    c, dep = client
+    resp = c.get("/nodes/1/subgraph/hydrated?hops=1&direction=downstream&max_nodes=50")
+    assert resp.status_code in (200, 503)
+
+
+def test_subgraph_invalid_direction(client):
+    c, dep = client
+    resp = c.get("/nodes/1/subgraph?direction=sideways")
+    # FastAPI should reject invalid Literal value with 422
+    assert resp.status_code == 422

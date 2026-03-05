@@ -3,10 +3,13 @@
 
 import pytest
 from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock
 
 from libs.models import (
     AddEdgeOp,
+    BPResults,
     Commit,
+    DetailedReviewResult,
     ModifyEdgeOp,
     ModifyNodeOp,
     NewNode,
@@ -15,14 +18,31 @@ from libs.models import (
 from services.commit_engine.merger import Merger
 
 
-def _make_commit(ops, commit_id="merge-001"):
+def _make_commit(ops, commit_id="merge-001", **kwargs):
     return Commit(
         commit_id=commit_id,
         message="test merge",
         operations=ops,
         created_at=datetime.now(timezone.utc),
         updated_at=datetime.now(timezone.utc),
+        **kwargs,
     )
+
+
+def _mock_storage():
+    storage = MagicMock()
+    storage.ids = MagicMock()
+    storage.ids.alloc_node_id = AsyncMock(side_effect=range(100, 200))
+    storage.ids.alloc_hyperedge_id = AsyncMock(side_effect=range(200, 300))
+    storage.lance = MagicMock()
+    storage.lance.save_nodes = AsyncMock()
+    storage.lance.update_node = AsyncMock()
+    storage.graph = MagicMock()
+    storage.graph.create_hyperedge = AsyncMock(return_value=200)
+    storage.graph.update_hyperedge = AsyncMock()
+    storage.vector = MagicMock()
+    storage.vector.insert_batch = AsyncMock()
+    return storage
 
 
 @pytest.fixture
@@ -142,3 +162,81 @@ async def test_merge_multiple_operations(merger, storage):
     modified = await storage.lance.load_node(68)
     assert modified is not None
     assert modified.status == "deleted"
+
+
+# ------------------------------------------------------------------
+# BP persistence tests (mock-based for assert_any_call verification)
+# ------------------------------------------------------------------
+
+
+async def test_merge_persists_belief_updates():
+    """Merger should update node beliefs from review BP results."""
+    storage = _mock_storage()
+    merger = Merger(storage)
+
+    commit = _make_commit(
+        [],
+        commit_id="c1",
+        status="reviewed",
+        review_results=DetailedReviewResult(
+            overall_verdict="pass",
+            operations=[],
+            bp_results=BPResults(
+                belief_updates={"1": 0.85},
+                iterations=5,
+                converged=True,
+                affected_nodes=["1"],
+            ),
+        ).model_dump(),
+    )
+
+    result = await merger.merge(commit)
+    assert result.success is True
+    assert result.beliefs_persisted == {"1": 0.85}
+    assert result.bp_results is not None
+    assert result.bp_results.converged is True
+    storage.lance.update_node.assert_any_call(1, belief=0.85)
+
+
+async def test_merge_result_includes_bp():
+    """MergeResult should include BP results from review."""
+    storage = _mock_storage()
+    merger = Merger(storage)
+
+    commit = _make_commit(
+        [],
+        commit_id="c2",
+        status="reviewed",
+        review_results=DetailedReviewResult(
+            overall_verdict="pass",
+            operations=[],
+            bp_results=BPResults(
+                belief_updates={},
+                iterations=3,
+                converged=True,
+                affected_nodes=[],
+            ),
+        ).model_dump(),
+    )
+
+    result = await merger.merge(commit)
+    assert result.bp_results is not None
+    assert result.bp_results.converged is True
+    assert result.bp_results.iterations == 3
+
+
+async def test_merge_without_review_results():
+    """Merge with no review results should work (backward compat)."""
+    storage = _mock_storage()
+    merger = Merger(storage)
+
+    commit = _make_commit(
+        [],
+        commit_id="c3",
+        status="reviewed",
+    )
+
+    result = await merger.merge(commit)
+    assert result.success is True
+    assert result.bp_results is None
+    assert result.beliefs_persisted == {}

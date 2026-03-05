@@ -1,10 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { searchText } from "../api/search";
+import { searchNodes } from "../api/search";
 
-export function useTextSearch(query: string, k = 50) {
+export function useNodeSearch(text: string, k = 20) {
   return useQuery({
-    queryKey: ["search-text", query, k],
-    queryFn: () => searchText(query, k),
-    enabled: query.length >= 2,
+    queryKey: ["search-nodes", text, k],
+    queryFn: () => searchNodes(text, k),
+    enabled: text.length >= 2,
   });
 }

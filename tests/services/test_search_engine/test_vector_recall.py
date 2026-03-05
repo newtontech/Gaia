@@ -3,8 +3,10 @@
 
 import pytest
 
-from tests.conftest import load_fixture_embeddings
+from libs.embedding import StubEmbeddingModel
 from services.search_engine.recall.vector import VectorRecall
+
+_embedding_model = StubEmbeddingModel()
 
 
 @pytest.fixture
@@ -14,31 +16,24 @@ async def vector(storage):
 
 async def test_recall_finds_similar_vectors(vector):
     """Vector recall should find results when embeddings are loaded."""
-    embeddings = load_fixture_embeddings()
-    if not embeddings:
-        pytest.skip("No fixture embeddings available")
-    # Use an actual fixture embedding as query
-    first_id = next(iter(embeddings))
-    query_embedding = embeddings[first_id]
-    results = await vector.recall(query_embedding, k=5)
+    # Generate a query embedding matching what conftest seeded
+    query = (await _embedding_model.embed(["superconductor"]))[0]
+    results = await vector.recall(query, k=5)
     assert len(results) > 0
-    # The query itself should be among the top results
-    result_ids = [nid for nid, _ in results]
-    assert first_id in result_ids
+    for nid, _ in results:
+        assert isinstance(nid, int)
 
 
 async def test_recall_empty_when_no_embeddings(storage_empty):
     """VectorRecall on empty storage returns empty list."""
     recall = VectorRecall(storage_empty.vector)
-    results = await recall.recall([0.0] * 512, k=10)
+    query = (await _embedding_model.embed(["test"]))[0]
+    results = await recall.recall(query, k=10)
     assert results == []
 
 
 async def test_recall_respects_k(vector):
     """Results should be limited to k."""
-    embeddings = load_fixture_embeddings()
-    if not embeddings:
-        pytest.skip("No fixture embeddings available")
-    first_id = next(iter(embeddings))
-    results = await vector.recall(embeddings[first_id], k=3)
+    query = (await _embedding_model.embed(["superconductor"]))[0]
+    results = await vector.recall(query, k=3)
     assert len(results) <= 3

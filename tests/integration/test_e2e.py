@@ -5,13 +5,18 @@ storage backends (LanceDB on disk, local vector index) but without Neo4j.
 Graph operations are gracefully skipped when graph=None.
 """
 
+import asyncio
+
 import pytest
-import numpy as np
 from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from services.gateway.app import create_app
 from services.gateway.deps import Dependencies
 from libs.storage import StorageConfig
+from libs.embedding import StubEmbeddingModel
 from libs.models import Node
+
+_stub_emb = StubEmbeddingModel()
 
 
 @pytest.fixture
@@ -27,10 +32,22 @@ def app_client(tmp_path):
     return client, dep
 
 
-def _embedding(dim=1024):
-    """Generate a random unit-norm embedding vector."""
-    vec = np.random.randn(dim).astype(np.float32)
-    return (vec / np.linalg.norm(vec)).tolist()
+@pytest.fixture
+async def async_app_client(tmp_path):
+    """Create an async app client for tests that need background task completion."""
+    config = StorageConfig(lancedb_path=str(tmp_path / "lance"))
+    dep = Dependencies(config)
+    dep.initialize(config)
+    dep.storage.graph = None
+    app = create_app(dependencies=dep)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as client:
+        yield client, dep
+
+
+async def _embed(text: str) -> list[float]:
+    """Generate a deterministic embedding for test seeding."""
+    return (await _stub_emb.embed([text]))[0]
 
 
 class TestHealthCheck:
@@ -48,11 +65,11 @@ class TestHealthCheck:
 class TestCommitWorkflow:
     """Full submit -> review -> merge -> verify workflow."""
 
-    def test_submit_review_merge(self, app_client):
-        client, dep = app_client
+    async def test_submit_review_merge(self, async_app_client):
+        client, dep = async_app_client
 
         # 1. Submit a valid commit
-        resp = client.post(
+        resp = await client.post(
             "/commits",
             json={
                 "message": "Add new finding about YH10",
@@ -71,18 +88,25 @@ class TestCommitWorkflow:
         commit_id = resp.json()["commit_id"]
         assert resp.json()["status"] == "pending_review"
 
-        # 2. Review (stub LLM always approves)
-        resp = client.post(f"/commits/{commit_id}/review")
+        # 2. Review (async — submit then wait for completion)
+        resp = await client.post(f"/commits/{commit_id}/review")
         assert resp.status_code == 200
-        assert resp.json()["approved"] is True
+        assert "job_id" in resp.json()
+
+        # Wait for review job to complete
+        for _ in range(50):
+            resp = await client.get(f"/commits/{commit_id}/review")
+            if resp.json()["status"] in ("completed", "failed"):
+                break
+            await asyncio.sleep(0.02)
 
         # 3. Merge
-        resp = client.post(f"/commits/{commit_id}/merge")
+        resp = await client.post(f"/commits/{commit_id}/merge")
         assert resp.status_code == 200
         assert resp.json()["success"] is True
 
         # 4. Verify commit status is now 'merged'
-        resp = client.get(f"/commits/{commit_id}")
+        resp = await client.get(f"/commits/{commit_id}")
         assert resp.status_code == 200
         assert resp.json()["status"] == "merged"
 
@@ -268,16 +292,17 @@ class TestSearchWorkflow:
         ]
         asyncio.get_event_loop().run_until_complete(dep.storage.lance.save_nodes(nodes))
 
-        # Seed vectors
-        embs = [_embedding() for _ in range(2)]
+        # Seed vectors using the same stub model the search engine uses
+        embs = asyncio.get_event_loop().run_until_complete(
+            _stub_emb.embed([n.content for n in nodes])
+        )
         asyncio.get_event_loop().run_until_complete(dep.storage.vector.insert_batch([1, 2], embs))
 
         # Search via the API
         resp = client.post(
             "/search/nodes",
             json={
-                "query": "superconductivity",
-                "embedding": _embedding(),
+                "text": "superconductivity",
                 "k": 10,
                 "paths": ["vector", "bm25"],
             },
@@ -292,8 +317,7 @@ class TestSearchWorkflow:
         resp = client.post(
             "/search/nodes",
             json={
-                "query": "nothing",
-                "embedding": _embedding(),
+                "text": "nothing",
                 "k": 10,
                 "paths": ["bm25"],
             },
@@ -307,18 +331,18 @@ class TestSearchWorkflow:
         client, dep = app_client
         import asyncio
 
-        # Seed a node + its embedding
+        # Seed a node + its embedding using the stub model
         node = Node(id=1, type="paper-extract", content="hydrogen sulfide")
         asyncio.get_event_loop().run_until_complete(dep.storage.lance.save_nodes([node]))
-        emb = _embedding()
+        emb = asyncio.get_event_loop().run_until_complete(_embed("hydrogen sulfide"))
         asyncio.get_event_loop().run_until_complete(dep.storage.vector.insert_batch([1], [emb]))
 
-        # Search using only vector path
+        # Search using only vector path — "hydrogen sulfide" query will produce
+        # the same embedding as the seeded vector, guaranteeing a hit
         resp = client.post(
             "/search/nodes",
             json={
-                "query": "hydrogen",
-                "embedding": emb,  # use same embedding to guarantee a hit
+                "text": "hydrogen sulfide",
                 "k": 10,
                 "paths": ["vector"],
             },
@@ -326,7 +350,7 @@ class TestSearchWorkflow:
         assert resp.status_code == 200
         results = resp.json()
         assert isinstance(results, list)
-        # With the same embedding, we should find the node
+        # With the same text, we should find the node
         assert len(results) >= 1
 
     def test_search_bm25_only(self, app_client):
@@ -340,8 +364,7 @@ class TestSearchWorkflow:
         resp = client.post(
             "/search/nodes",
             json={
-                "query": "superconductor",
-                "embedding": _embedding(),
+                "text": "superconductor",
                 "k": 10,
                 "paths": ["bm25"],
             },
@@ -359,15 +382,13 @@ class TestSearchWorkflow:
 
         node = Node(id=1, type="paper-extract", content="structure test node")
         asyncio.get_event_loop().run_until_complete(dep.storage.lance.save_nodes([node]))
-        asyncio.get_event_loop().run_until_complete(
-            dep.storage.vector.insert_batch([1], [_embedding()])
-        )
+        emb = asyncio.get_event_loop().run_until_complete(_embed("structure test node"))
+        asyncio.get_event_loop().run_until_complete(dep.storage.vector.insert_batch([1], [emb]))
 
         resp = client.post(
             "/search/nodes",
             json={
-                "query": "structure",
-                "embedding": _embedding(),
+                "text": "structure",
                 "k": 10,
                 "paths": ["bm25"],
             },
@@ -419,8 +440,7 @@ class TestFullPipeline:
         resp = client.post(
             "/search/nodes",
             json={
-                "query": "LaH10",
-                "embedding": _embedding(),
+                "text": "LaH10",
                 "k": 10,
                 "paths": ["bm25"],
             },
@@ -460,8 +480,7 @@ class TestFullPipeline:
         resp = client.post(
             "/search/nodes",
             json={
-                "query": "ambient pressure",
-                "embedding": _embedding(),
+                "text": "ambient pressure",
                 "k": 10,
                 "paths": ["bm25"],
             },
@@ -534,3 +553,144 @@ class TestFullPipeline:
         assert len(merge_data["new_node_ids"]) == 3
         # Should have created 1 new hyperedge
         assert len(merge_data["new_edge_ids"]) == 1
+
+
+class TestAsyncReviewPipeline:
+    """Test the async review pipeline features added in Plan B."""
+
+    async def test_review_result_contains_detailed_fields(self, async_app_client):
+        """The review result should contain DetailedReviewResult fields."""
+        client, dep = async_app_client
+
+        # Submit commit
+        resp = await client.post(
+            "/commits",
+            json={
+                "message": "Test detailed review",
+                "operations": [
+                    {
+                        "op": "add_edge",
+                        "tail": [{"content": "New proposition for review"}],
+                        "head": [{"node_id": 1}],
+                        "type": "induction",
+                        "reasoning": ["test reasoning"],
+                    }
+                ],
+            },
+        )
+        assert resp.status_code == 200
+        commit_id = resp.json()["commit_id"]
+
+        # Submit review
+        resp = await client.post(f"/commits/{commit_id}/review")
+        assert resp.status_code == 200
+        assert "job_id" in resp.json()
+
+        # Wait for completion
+        for _ in range(50):
+            resp = await client.get(f"/commits/{commit_id}/review")
+            if resp.json()["status"] in ("completed", "failed"):
+                break
+            await asyncio.sleep(0.02)
+        assert resp.json()["status"] == "completed"
+
+        # Get result — should have DetailedReviewResult fields
+        resp = await client.get(f"/commits/{commit_id}/review/result")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "overall_verdict" in data
+        assert "operations" in data
+        assert data["overall_verdict"] == "pass"
+
+    async def test_review_cancel(self, async_app_client):
+        """Should be able to cancel a review job."""
+        client, dep = async_app_client
+
+        resp = await client.post(
+            "/commits",
+            json={
+                "message": "Test cancel",
+                "operations": [
+                    {
+                        "op": "add_edge",
+                        "tail": [{"content": "Cancel me"}],
+                        "head": [{"node_id": 1}],
+                        "type": "induction",
+                        "reasoning": ["r"],
+                    }
+                ],
+            },
+        )
+        assert resp.status_code == 200
+        commit_id = resp.json()["commit_id"]
+
+        # Submit review
+        resp = await client.post(f"/commits/{commit_id}/review")
+        assert resp.status_code == 200
+
+        # Cancel
+        resp = await client.delete(f"/commits/{commit_id}/review")
+        assert resp.status_code == 200
+
+    async def test_review_status_not_found(self, async_app_client):
+        """GET /commits/{id}/review should 404 if no review submitted."""
+        client, dep = async_app_client
+
+        resp = await client.post(
+            "/commits",
+            json={
+                "message": "No review",
+                "operations": [
+                    {
+                        "op": "add_edge",
+                        "tail": [{"content": "p"}],
+                        "head": [{"node_id": 1}],
+                        "type": "induction",
+                        "reasoning": ["r"],
+                    }
+                ],
+            },
+        )
+        assert resp.status_code == 200
+        commit_id = resp.json()["commit_id"]
+
+        resp = await client.get(f"/commits/{commit_id}/review")
+        assert resp.status_code == 404
+
+    async def test_search_text_only_no_embedding(self, async_app_client):
+        """Search with text only (BM25 path) should work without explicit embeddings."""
+        client, dep = async_app_client
+
+        # Submit and force-merge to seed data
+        resp = await client.post(
+            "/commits",
+            json={
+                "message": "Seed for text search",
+                "operations": [
+                    {
+                        "op": "add_edge",
+                        "tail": [{"content": "Graphene has high thermal conductivity"}],
+                        "head": [{"node_id": 1}],
+                        "type": "paper-extract",
+                        "reasoning": ["measurement result"],
+                    }
+                ],
+            },
+        )
+        assert resp.status_code == 200
+        commit_id = resp.json()["commit_id"]
+        merge_resp = await client.post(f"/commits/{commit_id}/merge", json={"force": True})
+        assert merge_resp.json()["success"] is True
+
+        # Search using only text (BM25), no embedding provided
+        resp = await client.post(
+            "/search/nodes",
+            json={
+                "text": "graphene thermal",
+                "k": 10,
+                "paths": ["bm25"],
+            },
+        )
+        assert resp.status_code == 200
+        results = resp.json()
+        assert isinstance(results, list)

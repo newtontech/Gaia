@@ -7,10 +7,13 @@ from pathlib import Path
 
 import pytest
 
+from libs.embedding import StubEmbeddingModel
 from libs.models import HyperEdge, Node
 from libs.storage import StorageConfig, StorageManager
 
 FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+_embedding_model = StubEmbeddingModel()
 
 
 def load_fixture_nodes() -> list[Node]:
@@ -25,16 +28,6 @@ def load_fixture_edges() -> list[HyperEdge]:
     with open(FIXTURES_DIR / "edges.json") as f:
         raw = json.load(f)
     return [HyperEdge.model_validate(e) for e in raw]
-
-
-def load_fixture_embeddings() -> dict[int, list[float]] | None:
-    """Load embeddings from tests/fixtures/embeddings.json if it exists."""
-    path = FIXTURES_DIR / "embeddings.json"
-    if not path.exists():
-        return None
-    with open(path) as f:
-        raw = json.load(f)
-    return {int(k): v for k, v in raw.items()}
 
 
 @pytest.fixture
@@ -60,12 +53,11 @@ async def storage(tmp_path: Path) -> StorageManager:
         except Exception:
             manager.graph = None  # degrade gracefully
 
-    # Seed embeddings (vector index)
-    embeddings = load_fixture_embeddings()
-    if embeddings:
-        node_ids = list(embeddings.keys())
-        vectors = list(embeddings.values())
-        await manager.vector.insert_batch(node_ids, vectors)
+    # Seed embeddings via StubEmbeddingModel (matches search-time dimensions)
+    texts = [n.content if isinstance(n.content, str) else str(n.content) for n in nodes]
+    vectors = await _embedding_model.embed(texts)
+    node_ids = [n.id for n in nodes]
+    await manager.vector.insert_batch(node_ids, vectors)
 
     yield manager
     await manager.close()

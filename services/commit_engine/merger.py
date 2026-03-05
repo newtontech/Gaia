@@ -7,6 +7,7 @@ Neo4j is optional — if unavailable, graph operations are silently skipped.
 from __future__ import annotations
 
 from libs.models import (
+    BPResults,
     Commit,
     HyperEdge,
     MergeResult,
@@ -45,10 +46,29 @@ class Merger:
                 elif isinstance(op, ModifyEdgeOp):
                     await self._apply_modify_edge(op)
 
+            # Persist pipeline outputs from review
+            bp_results_model: BPResults | None = None
+            beliefs_persisted: dict[str, float] = {}
+            join_edges_created: list[str] = []
+
+            review_data = commit.review_results
+            if isinstance(review_data, dict) and "overall_verdict" in review_data:
+                # It's a DetailedReviewResult
+                bp_data = review_data.get("bp_results")
+                if bp_data is not None:
+                    bp_results_model = BPResults(**bp_data)
+                    for node_id_str, belief in bp_data.get("belief_updates", {}).items():
+                        node_id = int(node_id_str)
+                        await self._storage.lance.update_node(node_id, belief=belief)
+                        beliefs_persisted[node_id_str] = belief
+
             return MergeResult(
                 success=True,
                 new_node_ids=new_node_ids,
                 new_edge_ids=new_edge_ids,
+                bp_results=bp_results_model,
+                join_edges_created=join_edges_created,
+                beliefs_persisted=beliefs_persisted,
             )
         except Exception as e:
             return MergeResult(success=False, errors=[str(e)])

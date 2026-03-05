@@ -6,7 +6,7 @@ import asyncio
 
 import httpx
 
-from services.review_pipeline.operators.embedding import EmbeddingModel
+from libs.embedding import EmbeddingModel
 
 
 class DashScopeEmbeddingModel(EmbeddingModel):
