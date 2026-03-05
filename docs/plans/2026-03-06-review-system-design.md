@@ -97,7 +97,6 @@ confirmed_premises: [5005, 5006]          # 确认的强引用
 downgraded_premises: []                   # 应降级为 context
 upgraded_context: []                   # 应升级为 premise
 irrelevant: []                         # 建议删除
-missing_premises: []                   # 推理隐含依赖但未声明的前提
 ```
 
 ### 3.4 评估标准
@@ -115,7 +114,7 @@ Review skill 按以下维度评估：
 剥离强引用后，假设所有 `confirmed_premises` 都为真，评估 `why` 中的推理过程：
 - 推理是否有效？
 - 有无逻辑跳步？
-- 是否依赖未声明的隐含前提？（`missing_premises`）
+- 是否依赖未声明的隐含前提？（如有，降低 score）
 
 **3. 充分性**
 
@@ -156,7 +155,7 @@ Review skill 按以下维度评估：
 ### Step 2: 评估推理链
 假设所有 confirmed_premises 都为真：
 1. why 中的推理是否逻辑有效？有无跳步？
-2. premises 是否充分？是否缺少隐含前提？（列入 missing_premises）
+2. premises 是否充分？是否缺少隐含前提？（如有，降低 score）
 3. 声称的推理类型是否匹配实际推理方式？
 
 ### Step 3: 打分
@@ -178,7 +177,6 @@ confirmed_premises: [<ids>]
 downgraded_premises: [<ids>]
 upgraded_context: [<ids>]
 irrelevant: [<ids>]
-missing_premises: ["<description>", ...]
 ```
 ```
 
@@ -312,7 +310,6 @@ review:
     downgraded_premises: []
     upgraded_context: []
     irrelevant: []
-    missing_premises: []
 
   # 来源证明
   provenance:
