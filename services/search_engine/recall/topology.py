@@ -1,4 +1,4 @@
-"""TopologyRecall — discover related nodes by traversing the Join tree."""
+"""TopologyRecall — discover related nodes by traversing the Abstraction tree."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from libs.storage.neo4j_store import Neo4jGraphStore
 
 
 class TopologyRecall:
-    """Traverse join-type hyperedges from seed nodes to find related propositions.
+    """Traverse abstraction-type hyperedges from seed nodes to find related propositions.
 
     Scores are assigned based on hop distance:
     - Seed nodes receive a score of 1.0
@@ -20,7 +20,7 @@ class TopologyRecall:
         self._store = graph_store
 
     async def recall(self, seed_node_ids: list[int], hops: int = 3) -> list[tuple[int, float]]:
-        """Traverse Join tree from seeds.
+        """Traverse Abstraction tree from seeds.
 
         Returns ``[(node_id, score), ...]`` where score is inversely
         proportional to hop distance.  Seeds themselves get ``score=1.0``,

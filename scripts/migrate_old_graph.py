@@ -99,7 +99,7 @@ def convert_node(old: dict) -> dict:
     return {
         "id": old["id"],
         "type": map_node_type(meta.get("type", "paper-extract")),
-        "subtype": meta.get("node_type"),  # premise, conclusion, conjecture, deduction, join
+        "subtype": meta.get("node_type"),  # premise, conclusion, conjecture, deduction, abstraction
         "title": old.get("title"),
         "content": old.get("content", ""),
         "keywords": keywords,
@@ -140,7 +140,7 @@ def convert_edge(old: dict, topology: dict) -> dict:
     # Extract typed fields from metadata
     probability = meta.get("probability")
     verified = meta.get("verified", False)
-    subtype = meta.get("conclusion_type")  # e.g., "deduction" for meet edges
+    subtype = meta.get("conclusion_type")  # e.g., "deduction" for induction edges
 
     # Build extra from non-metadata fields
     extra = {}

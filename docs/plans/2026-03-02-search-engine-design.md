@@ -16,7 +16,7 @@
 ## 1. 设计原则
 
 - **两个搜索入口**：`search_nodes`（搜节点）和 `search_edges`（搜超边）
-- **三路召回**：向量搜索 + BM25 + Join 树遍历，合并去重排序
+- **三路召回**：向量搜索 + BM25 + Abstraction 树遍历，合并去重排序
 - **search_edges 基于 search_nodes**：先搜节点，再展开到关联超边
 - **调用方可选择召回路径**：按需启用/禁用某路召回
 - **`/search/subgraph` 推迟到 Layer 2 Research API**：通用图模式匹配在十亿级开销大，改为提供预定义模式查询
@@ -29,7 +29,7 @@
 |------|------|--------|---------|
 | **vector** | `storage.vector.search` | 语义相似节点 | 换了说法但意思一样 |
 | **bm25** | `storage.lance.fts_search` | 关键词匹配 | 包含相同术语但 embedding 不相似 |
-| **topology** | `storage.graph.get_subgraph(edge_types=["join"])` | Join 树上的相关节点 | 文本不同但知识结构相关 |
+| **topology** | `storage.graph.get_subgraph(edge_types=["abstraction"])` | Abstraction 树上的相关节点 | 文本不同但知识结构相关 |
 
 **合并策略**：三路结果取并集，按分数归一化后加权排序，去重返回 top-k。
 
@@ -51,7 +51,7 @@ services/search-engine/
 │   ├── __init__.py
 │   ├── vector.py        # VectorRecall — 向量搜索路径
 │   ├── bm25.py          # BM25Recall — 全文搜索路径
-│   └── topology.py      # TopologyRecall — Join 树遍历路径
+│   └── topology.py      # TopologyRecall — Abstraction 树遍历路径
 └── merger.py            # ResultMerger — 多路结果合并去重排序
 ```
 
@@ -95,13 +95,13 @@ class SearchEngine:
 
 ```python
 class NodeFilters(BaseModel):
-    type: list[str] | None = None           # ["paper-extract", "join", ...]
+    type: list[str] | None = None           # ["paper-extract", "abstraction", ...]
     status: list[str] = ["active"]          # 默认只搜 active
     min_belief: float | None = None         # 最低置信度
     keywords: list[str] | None = None       # 关键词过滤
 
 class EdgeFilters(BaseModel):
-    type: list[str] | None = None           # ["meet", "join", "contradiction", ...]
+    type: list[str] | None = None           # ["induction", "abstraction", "contradiction", ...]
     verified: bool | None = None            # 是否已验证
 ```
 
@@ -140,10 +140,10 @@ class BM25Recall:
 
 # services/search-engine/recall/topology.py
 class TopologyRecall:
-    """Join 树遍历路径"""
+    """Abstraction 树遍历路径"""
     def __init__(self, graph_store: Neo4jGraphStore): ...
     async def recall(self, seed_node_ids: list[int], hops: int = 3) -> list[tuple[int, float]]:
-        """从种子节点沿 Join 树遍历，返回 [(node_id, hop_distance), ...]
+        """从种子节点沿 Abstraction 树遍历，返回 [(node_id, hop_distance), ...]
         seed_node_ids 来自 vector/bm25 的 top 结果。"""
 ```
 
@@ -214,7 +214,7 @@ class ResultMerger:
 | | `search_edges` | 先搜节点再展开到超边 |
 | **VectorRecall** | `recall` | 向量搜索 |
 | **BM25Recall** | `recall` | 全文搜索 |
-| **TopologyRecall** | `recall` | Join 树遍历 |
+| **TopologyRecall** | `recall` | Abstraction 树遍历 |
 | **ResultMerger** | `merge` | 多路结果合并去重排序 |
 
 **总计 6 个公开方法。**

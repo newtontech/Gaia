@@ -265,11 +265,11 @@ Closes #20"
 - `test_base.py` — pure pipeline framework
 - `test_context.py` — pure data model
 - `test_embedding_op.py` — tests StubEmbeddingModel, no storage
-- `test_join_op.py` — tests JoinLLM interface, no storage
+- `test_abstraction_op.py` — tests AbstractionLLM interface, no storage
 - `test_verify_op.py` — tests VerifyLLM interface, no storage
 - `test_llm_client.py` — mocks litellm
 - `test_embedding_dashscope.py` — mocks external HTTP
-- `test_join_llm.py` — mocks LLMClient
+- `test_abstraction_llm.py` — mocks LLMClient
 - `test_verify_llm.py` — mocks LLMClient
 - `test_xml_parser.py` — pure XML parsing
 - `test_integration_api.py` — already uses real APIs (skip if no creds)

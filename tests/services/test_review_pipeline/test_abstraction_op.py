@@ -1,8 +1,8 @@
 import pytest
-from services.review_pipeline.operators.join import (
-    CCJoinOperator,
-    CPJoinOperator,
-    StubJoinLLM,
+from services.review_pipeline.operators.abstraction import (
+    CCAbstractionOperator,
+    CPAbstractionOperator,
+    StubAbstractionLLM,
 )
 from services.review_pipeline.context import PipelineContext
 from libs.models import CommitRequest, AddEdgeOp, NewNode
@@ -30,19 +30,19 @@ def context_with_nn():
     return ctx
 
 
-async def test_stub_join_llm():
-    llm = StubJoinLLM()
-    trees = await llm.find_joins("new content", [(100, "existing content")])
+async def test_stub_abstraction_llm():
+    llm = StubAbstractionLLM()
+    trees = await llm.find_abstractions("new content", [(100, "existing content")])
     assert isinstance(trees, list)
 
 
-async def test_cc_join_produces_trees(context_with_nn):
-    op = CCJoinOperator(join_llm=StubJoinLLM())
+async def test_cc_abstraction_produces_trees(context_with_nn):
+    op = CCAbstractionOperator(abstraction_llm=StubAbstractionLLM())
     result = await op.execute(context_with_nn)
-    assert isinstance(result.cc_join_trees, list)
+    assert isinstance(result.cc_abstraction_trees, list)
 
 
-async def test_cp_join_produces_trees(context_with_nn):
-    op = CPJoinOperator(join_llm=StubJoinLLM())
+async def test_cp_abstraction_produces_trees(context_with_nn):
+    op = CPAbstractionOperator(abstraction_llm=StubAbstractionLLM())
     result = await op.execute(context_with_nn)
-    assert isinstance(result.cp_join_trees, list)
+    assert isinstance(result.cp_abstraction_trees, list)

@@ -49,7 +49,7 @@ class Merger:
             # Persist pipeline outputs from review
             bp_results_model: BPResults | None = None
             beliefs_persisted: dict[str, float] = {}
-            join_edges_created: list[str] = []
+            abstraction_edges_created: list[str] = []
 
             review_data = commit.review_results
             if isinstance(review_data, dict) and "overall_verdict" in review_data:
@@ -67,7 +67,7 @@ class Merger:
                 new_node_ids=new_node_ids,
                 new_edge_ids=new_edge_ids,
                 bp_results=bp_results_model,
-                join_edges_created=join_edges_created,
+                abstraction_edges_created=abstraction_edges_created,
                 beliefs_persisted=beliefs_persisted,
             )
         except Exception as e:

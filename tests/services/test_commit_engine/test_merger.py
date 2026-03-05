@@ -81,7 +81,7 @@ async def test_merge_add_edge_with_existing_nodes_only(merger, storage):
                 tail=[NodeRef(node_id=67)],
                 head=[NodeRef(node_id=68)],
                 type="abstraction",
-                reasoning=["merge join"],
+                reasoning=["merge abstraction"],
             )
         ]
     )

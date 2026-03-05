@@ -1,4 +1,4 @@
-"""Verify and Refine operators for join trees."""
+"""Verify and Refine operators for abstraction trees."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from services.review_pipeline.base import Operator
-from services.review_pipeline.context import JoinTree, PipelineContext
+from services.review_pipeline.context import AbstractionTree, PipelineContext
 from services.review_pipeline.llm_client import LLMClient
 from services.review_pipeline.xml_parser import parse_verify_output
 
@@ -19,28 +19,28 @@ def _load_prompt(name: str) -> str:
 
 class VerifyLLM(ABC):
     @abstractmethod
-    async def verify(self, trees: list[JoinTree]) -> list[JoinTree]:
-        """Verify join trees, setting verified=True/False on each."""
+    async def verify(self, trees: list[AbstractionTree]) -> list[AbstractionTree]:
+        """Verify abstraction trees, setting verified=True/False on each."""
         ...
 
 
 class StubVerifyLLM(VerifyLLM):
     """Auto-verifies all trees. For testing and Phase 1."""
 
-    async def verify(self, trees: list[JoinTree]) -> list[JoinTree]:
+    async def verify(self, trees: list[AbstractionTree]) -> list[AbstractionTree]:
         for tree in trees:
             tree.verified = True
         return trees
 
 
 class LiteLLMVerifyClient(VerifyLLM):
-    """Real verification via verify_join prompt + litellm."""
+    """Real verification via verify_abstraction prompt + litellm."""
 
     def __init__(self, llm_client: LLMClient) -> None:
         self._llm = llm_client
-        self._prompt = _load_prompt("verify_join")
+        self._prompt = _load_prompt("verify_abstraction")
 
-    async def verify(self, trees: list[JoinTree]) -> list[JoinTree]:
+    async def verify(self, trees: list[AbstractionTree]) -> list[AbstractionTree]:
         for tree in trees:
             user_input = self._build_input(tree)
             output = await self._llm.complete(self._prompt, user_input)
@@ -63,7 +63,7 @@ class LiteLLMVerifyClient(VerifyLLM):
         return trees
 
     @staticmethod
-    def _build_input(tree: JoinTree) -> str:
+    def _build_input(tree: AbstractionTree) -> str:
         lines = [
             "## PARENT (tail):",
             f"Content: {tree.source_content}",
@@ -77,21 +77,21 @@ class LiteLLMVerifyClient(VerifyLLM):
         return "\n".join(lines)
 
 
-class JoinTreeVerifyOperator(Operator):
-    """First-pass verification of discovered join trees."""
+class AbstractionTreeVerifyOperator(Operator):
+    """First-pass verification of discovered abstraction trees."""
 
     def __init__(self, verify_llm: VerifyLLM | None = None) -> None:
         self._llm = verify_llm or StubVerifyLLM()
 
     async def execute(self, context: PipelineContext) -> PipelineContext:
-        all_trees = context.cc_join_trees + context.cp_join_trees
+        all_trees = context.cc_abstraction_trees + context.cp_abstraction_trees
         if all_trees:
             await self._llm.verify(all_trees)
         return context
 
 
 class RefineOperator(Operator):
-    """Refine join trees — Phase 1: pass-through."""
+    """Refine abstraction trees — Phase 1: pass-through."""
 
     async def execute(self, context: PipelineContext) -> PipelineContext:
         return context
@@ -104,7 +104,7 @@ class VerifyAgainOperator(Operator):
         self._llm = verify_llm or StubVerifyLLM()
 
     async def execute(self, context: PipelineContext) -> PipelineContext:
-        all_trees = context.cc_join_trees + context.cp_join_trees
+        all_trees = context.cc_abstraction_trees + context.cp_abstraction_trees
         if all_trees:
             await self._llm.verify(all_trees)
         context.verified_trees = [t for t in all_trees if t.verified]

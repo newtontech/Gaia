@@ -11,7 +11,7 @@ async def client(tmp_path):
     return create_vector_client(config)
 
 
-def _random_embedding(dim: int = 1024) -> list[float]:
+def _random_embedding(dim: int = 512) -> list[float]:
     vec = np.random.randn(dim).astype(np.float32)
     return (vec / np.linalg.norm(vec)).tolist()
 

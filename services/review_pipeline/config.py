@@ -27,7 +27,7 @@ class ReviewPipelineSettings(BaseModel):
     embedding_max_rps: int = 600
     embedding_http_timeout: int = 30
 
-    join_model: LLMModelConfig = LLMModelConfig()
+    abstraction_model: LLMModelConfig = LLMModelConfig()
     verify_model: LLMModelConfig = LLMModelConfig()
 
 

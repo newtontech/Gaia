@@ -3,7 +3,7 @@ import { Select, Space } from "antd";
 const NODE_TYPES = [
   { label: "All Types", value: "" },
   { label: "paper-extract", value: "paper-extract" },
-  { label: "join", value: "join" },
+  { label: "abstraction", value: "abstraction" },
   { label: "deduction", value: "deduction" },
   { label: "conjecture", value: "conjecture" },
 ];

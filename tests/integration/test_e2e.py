@@ -27,6 +27,8 @@ def app_client(tmp_path):
     dep.initialize(config)
     # Ensure graph is None (no Neo4j in tests)
     dep.storage.graph = None
+    # Force stub embedding so tests don't depend on .env / real API
+    dep.search_engine._embedding_model = _stub_emb
     app = create_app(dependencies=dep)
     client = TestClient(app)
     return client, dep
@@ -39,6 +41,8 @@ async def async_app_client(tmp_path):
     dep = Dependencies(config)
     dep.initialize(config)
     dep.storage.graph = None
+    # Force stub embedding so tests don't depend on .env / real API
+    dep.search_engine._embedding_model = _stub_emb
     app = create_app(dependencies=dep)
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
@@ -204,10 +208,9 @@ class TestCommitWorkflow:
 class TestNodeOperations:
     """Test node CRUD through the API."""
 
-    def test_create_and_read_node(self, app_client):
+    async def test_create_and_read_node(self, async_app_client):
         """Seed a node directly via storage, then read it through the API."""
-        client, dep = app_client
-        import asyncio
+        client, dep = async_app_client
 
         node = Node(
             id=1,
@@ -215,9 +218,9 @@ class TestNodeOperations:
             content="test content",
             keywords=["test"],
         )
-        asyncio.get_event_loop().run_until_complete(dep.storage.lance.save_nodes([node]))
+        await dep.storage.lance.save_nodes([node])
 
-        resp = client.get("/nodes/1")
+        resp = await client.get("/nodes/1")
         assert resp.status_code == 200
         data = resp.json()
         assert data["content"] == "test content"
@@ -280,26 +283,23 @@ class TestNodeOperations:
 class TestSearchWorkflow:
     """Test search through the API."""
 
-    def test_search_after_seeding(self, app_client):
+    async def test_search_after_seeding(self, async_app_client):
         """Seed nodes and vectors, then search for them."""
-        client, dep = app_client
-        import asyncio
+        client, dep = async_app_client
 
         # Seed nodes directly
         nodes = [
             Node(id=1, type="paper-extract", content="YH10 superconductivity prediction"),
             Node(id=2, type="paper-extract", content="LaH10 experimental verification"),
         ]
-        asyncio.get_event_loop().run_until_complete(dep.storage.lance.save_nodes(nodes))
+        await dep.storage.lance.save_nodes(nodes)
 
         # Seed vectors using the same stub model the search engine uses
-        embs = asyncio.get_event_loop().run_until_complete(
-            _stub_emb.embed([n.content for n in nodes])
-        )
-        asyncio.get_event_loop().run_until_complete(dep.storage.vector.insert_batch([1, 2], embs))
+        embs = await _stub_emb.embed([n.content for n in nodes])
+        await dep.storage.vector.insert_batch([1, 2], embs)
 
         # Search via the API
-        resp = client.post(
+        resp = await client.post(
             "/search/nodes",
             json={
                 "text": "superconductivity",
@@ -326,20 +326,19 @@ class TestSearchWorkflow:
         results = resp.json()
         assert isinstance(results, list)
 
-    def test_search_vector_only(self, app_client):
+    async def test_search_vector_only(self, async_app_client):
         """Search using only the vector recall path."""
-        client, dep = app_client
-        import asyncio
+        client, dep = async_app_client
 
         # Seed a node + its embedding using the stub model
         node = Node(id=1, type="paper-extract", content="hydrogen sulfide")
-        asyncio.get_event_loop().run_until_complete(dep.storage.lance.save_nodes([node]))
-        emb = asyncio.get_event_loop().run_until_complete(_embed("hydrogen sulfide"))
-        asyncio.get_event_loop().run_until_complete(dep.storage.vector.insert_batch([1], [emb]))
+        await dep.storage.lance.save_nodes([node])
+        emb = await _embed("hydrogen sulfide")
+        await dep.storage.vector.insert_batch([1], [emb])
 
         # Search using only vector path — "hydrogen sulfide" query will produce
         # the same embedding as the seeded vector, guaranteeing a hit
-        resp = client.post(
+        resp = await client.post(
             "/search/nodes",
             json={
                 "text": "hydrogen sulfide",
@@ -353,15 +352,14 @@ class TestSearchWorkflow:
         # With the same text, we should find the node
         assert len(results) >= 1
 
-    def test_search_bm25_only(self, app_client):
+    async def test_search_bm25_only(self, async_app_client):
         """Search using only the BM25 recall path."""
-        client, dep = app_client
-        import asyncio
+        client, dep = async_app_client
 
         node = Node(id=1, type="paper-extract", content="superconductor critical temperature")
-        asyncio.get_event_loop().run_until_complete(dep.storage.lance.save_nodes([node]))
+        await dep.storage.lance.save_nodes([node])
 
-        resp = client.post(
+        resp = await client.post(
             "/search/nodes",
             json={
                 "text": "superconductor",
@@ -375,17 +373,16 @@ class TestSearchWorkflow:
         # BM25 should find the node by keyword match
         assert len(results) >= 1
 
-    def test_search_result_structure(self, app_client):
+    async def test_search_result_structure(self, async_app_client):
         """Verify the search result structure has expected fields."""
-        client, dep = app_client
-        import asyncio
+        client, dep = async_app_client
 
         node = Node(id=1, type="paper-extract", content="structure test node")
-        asyncio.get_event_loop().run_until_complete(dep.storage.lance.save_nodes([node]))
-        emb = asyncio.get_event_loop().run_until_complete(_embed("structure test node"))
-        asyncio.get_event_loop().run_until_complete(dep.storage.vector.insert_batch([1], [emb]))
+        await dep.storage.lance.save_nodes([node])
+        emb = await _embed("structure test node")
+        await dep.storage.vector.insert_batch([1], [emb])
 
-        resp = client.post(
+        resp = await client.post(
             "/search/nodes",
             json={
                 "text": "structure",

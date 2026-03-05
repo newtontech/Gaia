@@ -1,10 +1,10 @@
-"""Tests for LiteLLMJoinClient."""
+"""Tests for LiteLLMAbstractionClient."""
 
 from unittest.mock import AsyncMock
 
 import pytest
 
-from services.review_pipeline.operators.join import LiteLLMJoinClient
+from services.review_pipeline.operators.abstraction import LiteLLMAbstractionClient
 
 
 SAMPLE_LLM_RESPONSE = """\
@@ -36,11 +36,11 @@ def mock_llm_client():
 
 
 @pytest.fixture
-def join_client(mock_llm_client):
-    return LiteLLMJoinClient(mock_llm_client)
+def abstraction_client(mock_llm_client):
+    return LiteLLMAbstractionClient(mock_llm_client)
 
 
-async def test_find_joins_returns_correct_relations(join_client):
+async def test_find_abstractions_returns_correct_relations(abstraction_client):
     candidates = [
         (10, "Band gap of MoS2 is 1.8 eV"),
         (20, "Band gap of monolayer MoS2 is 1.8 eV"),
@@ -48,7 +48,7 @@ async def test_find_joins_returns_correct_relations(join_client):
         (40, "Band gap of MoS2 is 2.1 eV"),
         (50, "Thermal conductivity of graphene"),
     ]
-    trees = await join_client.find_joins("Band gap of MoS2", candidates)
+    trees = await abstraction_client.find_abstractions("Band gap of MoS2", candidates)
 
     assert len(trees) == 4  # unrelated excluded
     by_target = {t.target_node_id: t for t in trees}
@@ -63,14 +63,14 @@ async def test_find_joins_returns_correct_relations(join_client):
         assert t.verified is False
 
 
-async def test_find_joins_empty_candidates(join_client):
-    trees = await join_client.find_joins("some content", [])
+async def test_find_abstractions_empty_candidates(abstraction_client):
+    trees = await abstraction_client.find_abstractions("some content", [])
     assert trees == []
 
 
-async def test_find_joins_sends_correct_prompt(join_client, mock_llm_client):
+async def test_find_abstractions_sends_correct_prompt(abstraction_client, mock_llm_client):
     candidates = [(5, "test content")]
-    await join_client.find_joins("anchor text", candidates)
+    await abstraction_client.find_abstractions("anchor text", candidates)
 
     call_args = mock_llm_client.complete.call_args
     system_prompt = call_args.args[0]

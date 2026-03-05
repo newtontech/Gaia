@@ -1,13 +1,13 @@
 """Tests for XML parsing utilities."""
 
-from services.review_pipeline.xml_parser import parse_join_output, parse_verify_output
+from services.review_pipeline.xml_parser import parse_abstraction_output, parse_verify_output
 
 
 # ---------------------------------------------------------------------------
-# parse_join_output
+# parse_abstraction_output
 # ---------------------------------------------------------------------------
 
-SAMPLE_JOIN_XML = """\
+SAMPLE_ABSTRACTION_XML = """\
 <analysis anchor="0">
   <candidate id="42" relation="equivalence">
     <reason>Both state the same result for band gap of MoS2.</reason>
@@ -28,8 +28,8 @@ SAMPLE_JOIN_XML = """\
 """
 
 
-def test_parse_join_output_basic():
-    trees = parse_join_output(SAMPLE_JOIN_XML, anchor_index=3)
+def test_parse_abstraction_output_basic():
+    trees = parse_abstraction_output(SAMPLE_ABSTRACTION_XML, anchor_index=3)
     assert len(trees) == 4  # unrelated is excluded
 
     by_target = {t.target_node_id: t for t in trees}
@@ -45,19 +45,19 @@ def test_parse_join_output_basic():
         assert t.reasoning != ""
 
 
-def test_parse_join_output_markdown_wrapped():
-    wrapped = f"```xml\n{SAMPLE_JOIN_XML}\n```"
-    trees = parse_join_output(wrapped, anchor_index=0)
+def test_parse_abstraction_output_markdown_wrapped():
+    wrapped = f"```xml\n{SAMPLE_ABSTRACTION_XML}\n```"
+    trees = parse_abstraction_output(wrapped, anchor_index=0)
     assert len(trees) == 4
 
 
-def test_parse_join_output_empty_analysis():
+def test_parse_abstraction_output_empty_analysis():
     xml = '<analysis anchor="0"></analysis>'
-    trees = parse_join_output(xml, anchor_index=0)
+    trees = parse_abstraction_output(xml, anchor_index=0)
     assert trees == []
 
 
-def test_parse_join_output_special_chars_in_reason():
+def test_parse_abstraction_output_special_chars_in_reason():
     xml = """\
 <analysis anchor="0">
   <candidate id="1" relation="equivalence">
@@ -65,7 +65,7 @@ def test_parse_join_output_special_chars_in_reason():
   </candidate>
 </analysis>
 """
-    trees = parse_join_output(xml, anchor_index=0)
+    trees = parse_abstraction_output(xml, anchor_index=0)
     assert len(trees) == 1
     assert "&" in trees[0].reasoning
 

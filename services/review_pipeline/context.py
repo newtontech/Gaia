@@ -23,7 +23,7 @@ class NewNodeInfo(BaseModel):
     position: str  # e.g. "tail[0]", "head[1]"
 
 
-class JoinTree(BaseModel):
+class AbstractionTree(BaseModel):
     """A discovered relationship between a new node and an existing node."""
 
     source_node_index: int  # index into PipelineContext.new_nodes
@@ -44,9 +44,9 @@ class PipelineContext:
         self.affected_node_ids: list[int] = []
         self.embeddings: dict[int, list[float]] = {}  # new_node index -> vector
         self.nn_results: dict[int, list[tuple[int, float]]] = {}  # index -> [(node_id, sim)]
-        self.cc_join_trees: list[JoinTree] = []
-        self.cp_join_trees: list[JoinTree] = []
-        self.verified_trees: list[JoinTree] = []
+        self.cc_abstraction_trees: list[AbstractionTree] = []
+        self.cp_abstraction_trees: list[AbstractionTree] = []
+        self.verified_trees: list[AbstractionTree] = []
         self.bp_results: dict[int, float] = {}  # node_id -> belief
         self.cancelled: bool = False
         self.step_results: dict[str, dict] = {}  # step_name -> metadata

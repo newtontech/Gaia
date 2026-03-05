@@ -22,7 +22,7 @@ Add to `tests/libs/test_models.py`:
 
 ```python
 from libs.models import (
-    NNCandidate, QualityMetrics, JoinTreeResults, ContradictionResult,
+    NNCandidate, QualityMetrics, AbstractionTreeResults, ContradictionResult,
     OverlapResult, OperationReviewDetail, BPResults, DetailedReviewResult,
 )
 
@@ -45,7 +45,7 @@ def test_operation_review_detail_defaults():
         verdict="pass",
         embedding_generated=True,
         nn_candidates=[],
-        join_trees=JoinTreeResults(cc=[], cp=[]),
+        abstraction_trees=AbstractionTreeResults(cc=[], cp=[]),
         contradictions=[],
         overlaps=[],
     )
@@ -73,7 +73,7 @@ def test_detailed_review_result():
                 verdict="pass",
                 embedding_generated=True,
                 nn_candidates=[NNCandidate(node_id="10", similarity=0.9)],
-                join_trees=JoinTreeResults(cc=[], cp=[]),
+                abstraction_trees=AbstractionTreeResults(cc=[], cp=[]),
                 contradictions=[],
                 overlaps=[],
             )
@@ -117,7 +117,7 @@ class QualityMetrics(BaseModel):
     novelty: float
 
 
-class JoinTreeResults(BaseModel):
+class AbstractionTreeResults(BaseModel):
     cc: list[dict] = []
     cp: list[dict] = []
 
@@ -140,7 +140,7 @@ class OperationReviewDetail(BaseModel):
     embedding_generated: bool
     nn_candidates: list[NNCandidate] = []
     quality: QualityMetrics | None = None
-    join_trees: JoinTreeResults = JoinTreeResults()
+    abstraction_trees: AbstractionTreeResults = AbstractionTreeResults()
     contradictions: list[ContradictionResult] = []
     overlaps: list[OverlapResult] = []
 
@@ -195,11 +195,11 @@ def test_merge_result_with_bp_details():
             converged=True,
             affected_nodes=["1"],
         ),
-        join_edges_created=["10"],
+        abstraction_edges_created=["10"],
         beliefs_persisted={"1": 0.9},
     )
     assert result.bp_results.converged is True
-    assert result.join_edges_created == ["10"]
+    assert result.abstraction_edges_created == ["10"]
     assert result.beliefs_persisted == {"1": 0.9}
 
 
@@ -211,7 +211,7 @@ def test_merge_result_backward_compat():
         errors=[],
     )
     assert result.bp_results is None
-    assert result.join_edges_created == []
+    assert result.abstraction_edges_created == []
     assert result.beliefs_persisted == {}
 ```
 
@@ -231,7 +231,7 @@ class MergeResult(BaseModel):
     new_edge_ids: list[str] = []
     errors: list[str] = []
     bp_results: BPResults | None = None
-    join_edges_created: list[str] = []
+    abstraction_edges_created: list[str] = []
     beliefs_persisted: dict[str, float] = {}
 ```
 
@@ -671,7 +671,7 @@ from services.job_manager.manager import JobManager
 from services.job_manager.models import Job, JobType
 from services.review_pipeline.base import Pipeline
 from services.review_pipeline.context import PipelineContext
-from libs.models import DetailedReviewResult, OperationReviewDetail, JoinTreeResults
+from libs.models import DetailedReviewResult, OperationReviewDetail, AbstractionTreeResults
 
 
 class CommitEngine:
@@ -726,11 +726,11 @@ class CommitEngine:
                     {"node_id": str(nid), "similarity": sim}
                     for nid, sim in context.nn_results.get(i, [])
                 ],
-                join_trees=JoinTreeResults(
+                abstraction_trees=AbstractionTreeResults(
                     cc=[t.model_dump() if hasattr(t, 'model_dump') else t.__dict__
-                        for t in context.cc_join_trees if t.source_node_index == i],
+                        for t in context.cc_abstraction_trees if t.source_node_index == i],
                     cp=[t.model_dump() if hasattr(t, 'model_dump') else t.__dict__
-                        for t in context.cp_join_trees if t.source_node_index == i],
+                        for t in context.cp_abstraction_trees if t.source_node_index == i],
                 ),
                 contradictions=[],
                 overlaps=[],
@@ -883,8 +883,8 @@ Update `services/gateway/deps.py` to wire Pipeline into CommitEngine:
 from services.review_pipeline.base import Pipeline
 from services.review_pipeline.operators.embedding import EmbeddingOperator
 from services.review_pipeline.operators.nn_search import NNSearchOperator
-from services.review_pipeline.operators.join import CCJoinOperator, CPJoinOperator, StubJoinLLM
-from services.review_pipeline.operators.verify import JoinTreeVerifyOperator, VerifyAgainOperator, RefineOperator, StubVerifyLLM
+from services.review_pipeline.operators.abstraction import CCAbstractionOperator, CPAbstractionOperator, StubAbstractionLLM
+from services.review_pipeline.operators.verify import AbstractionTreeVerifyOperator, VerifyAgainOperator, RefineOperator, StubVerifyLLM
 from services.review_pipeline.operators.bp import BPOperator
 from libs.embedding import StubEmbeddingModel
 
@@ -897,7 +897,7 @@ def initialize(self, ...):
         NNSearchOperator(self.storage.vector, k=20),
         CCJoinOperator(StubJoinLLM(), self.storage),
         CPJoinOperator(StubJoinLLM(), self.storage),
-        JoinTreeVerifyOperator(StubVerifyLLM()),
+        AbstractionTreeVerifyOperator(StubVerifyLLM()),
         RefineOperator(),
         VerifyAgainOperator(StubVerifyLLM()),
         BPOperator(self.storage),
@@ -1055,7 +1055,7 @@ git commit -m "feat: internalize embedding generation in search endpoints (#8)"
 Add to `tests/services/test_commit_engine/test_merger.py`:
 
 ```python
-from libs.models import BPResults, DetailedReviewResult, OperationReviewDetail, JoinTreeResults
+from libs.models import BPResults, DetailedReviewResult, OperationReviewDetail, AbstractionTreeResults
 
 
 async def test_merge_persists_belief_updates(merger, storage, reviewed_commit):
@@ -1105,8 +1105,8 @@ Expected: FAIL
 Update `services/commit_engine/merger.py` `merge()` method to:
 1. Check `commit.review_results` for `DetailedReviewResult` data
 2. After applying operations, persist belief updates: for each `(node_id, belief)` in `bp_results.belief_updates`, call `storage.lance.update_node(node_id, belief=belief)`
-3. Create join edges from verified join trees in `review_results.operations[].join_trees`
-4. Populate `MergeResult.bp_results`, `join_edges_created`, `beliefs_persisted`
+3. Create abstraction edges from verified abstraction trees in `review_results.operations[].abstraction_trees`
+4. Populate `MergeResult.bp_results`, `abstraction_edges_created`, `beliefs_persisted`
 
 ```python
 async def merge(self, commit: Commit) -> MergeResult:
@@ -1115,7 +1115,7 @@ async def merge(self, commit: Commit) -> MergeResult:
     # Persist pipeline outputs
     bp_results_model = None
     beliefs_persisted = {}
-    join_edges_created = []
+    abstraction_edges_created = []
 
     review_data = commit.review_results
     if isinstance(review_data, dict) and "overall_verdict" in review_data:
@@ -1133,7 +1133,7 @@ async def merge(self, commit: Commit) -> MergeResult:
         new_edge_ids=new_edge_ids,
         errors=errors,
         bp_results=bp_results_model,
-        join_edges_created=join_edges_created,
+        abstraction_edges_created=abstraction_edges_created,
         beliefs_persisted=beliefs_persisted,
     )
 ```
@@ -1147,7 +1147,7 @@ Expected: ALL PASS
 
 ```bash
 git add services/commit_engine/merger.py tests/services/test_commit_engine/test_merger.py
-git commit -m "feat: enhance Merger to persist belief updates and join edges (#14)"
+git commit -m "feat: enhance Merger to persist belief updates and abstraction edges (#14)"
 ```
 
 ---

@@ -147,9 +147,9 @@ Delete the smoke test file after confirming it works.
 
 ---
 
-### Task 2: Rename Edge Types — join→abstraction, meet→induction (Issue #25)
+### Task 2: Rename Edge Types — join→abstraction, meet→induction (Issue #25) ✅ DONE
 
-This is a cross-cutting rename. The approach: systematic find-and-replace, then verify all tests pass.
+This cross-cutting rename has been completed. The edge type `join` was renamed to `abstraction` and `meet` to `induction` across all code, tests, fixtures, frontend, and documentation.
 
 **Step 1: Audit all occurrences**
 
@@ -170,12 +170,12 @@ Search the codebase for `"join"` and `"meet"` used as edge type strings (not Pyt
 **Step 2: Update models and core code**
 
 In `libs/models.py`:
-- Update HyperEdge type comment/annotation: `join` → `abstraction`, `meet` → `induction`
-- Update Node type comment if it references `join`
+- HyperEdge type comment/annotation updated: `join` → `abstraction`, `meet` → `induction`
+- Node type comment updated: `join` → `abstraction`
 
 In `services/review_pipeline/operators/join.py`:
-- Update docstrings and comments: "join" relationship → "abstraction" relationship
-- Class names `CCJoinOperator`, `CPJoinOperator` — **keep the class names** (they describe the operation pattern CC/CP join, not the edge type). Only update the edge `type` string they produce.
+- Docstrings and comments updated: "join" relationship → "abstraction" relationship
+- Class names `CCJoinOperator`, `CPJoinOperator` — **kept** (they describe the operation pattern CC/CP join, not the edge type). Only the edge `type` string they produce was updated.
 
 In `services/review_pipeline/xml_parser.py`:
 - Update any type string mappings
@@ -186,22 +186,22 @@ In `services/review_pipeline/prompts/*.md`:
 **Step 3: Update fixture data**
 
 In `tests/fixtures/edges.json`:
-- Replace `"type": "join"` → `"type": "abstraction"`
-- Replace `"type": "meet"` → `"type": "induction"`
+- Replace `"type": "abstraction"` (was `"type": "join"`)
+- Replace `"type": "induction"` (was `"type": "meet"`)
 
 In `tests/fixtures/nodes.json`:
-- Replace `"type": "join"` → `"type": "abstraction"` if present
+- Replace `"type": "abstraction"` (was `"type": "join"`) if present
 
 **Step 4: Update all test files**
 
 Search all `tests/` for edge type string references and update:
-- `"join"` as edge type → `"abstraction"`
-- `"meet"` as edge type → `"induction"`
+- `"abstraction"` (was `"join"` as edge type)
+- `"induction"` (was `"meet"` as edge type)
 
 Be careful not to change:
 - Python `join()` method calls
 - `CCJoinOperator` / `CPJoinOperator` class names
-- `join_trees` field names (these refer to the join operation, not the edge type)
+- `abstraction_trees` field names (these refer to the abstraction operation)
 
 **Step 5: Update frontend**
 

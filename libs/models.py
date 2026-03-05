@@ -120,7 +120,7 @@ class QualityMetrics(BaseModel):
     novelty: float
 
 
-class JoinTreeResults(BaseModel):
+class AbstractionTreeResults(BaseModel):
     cc: list[dict] = []
     cp: list[dict] = []
 
@@ -143,7 +143,7 @@ class OperationReviewDetail(BaseModel):
     embedding_generated: bool
     nn_candidates: list[NNCandidate] = []
     quality: QualityMetrics | None = None
-    join_trees: JoinTreeResults = JoinTreeResults()
+    abstraction_trees: AbstractionTreeResults = AbstractionTreeResults()
     contradictions: list[ContradictionResult] = []
     overlaps: list[OverlapResult] = []
 
@@ -169,7 +169,7 @@ class MergeResult(BaseModel):
     new_edge_ids: list[int] = []
     errors: list[str] = []
     bp_results: BPResults | None = None
-    join_edges_created: list[str] = []
+    abstraction_edges_created: list[str] = []
     beliefs_persisted: dict[str, float] = {}
 
 

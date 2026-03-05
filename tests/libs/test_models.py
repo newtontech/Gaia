@@ -16,7 +16,7 @@ from libs.models import (
     MergeResult,
     NNCandidate,
     QualityMetrics,
-    JoinTreeResults,
+    AbstractionTreeResults,
     ContradictionResult,
     OverlapResult,
     OperationReviewDetail,
@@ -176,8 +176,8 @@ def test_quality_metrics():
     assert q.novelty == 0.6
 
 
-def test_join_tree_results_defaults():
-    jt = JoinTreeResults()
+def test_abstraction_tree_results_defaults():
+    jt = AbstractionTreeResults()
     assert jt.cc == []
     assert jt.cp == []
 
@@ -202,7 +202,7 @@ def test_operation_review_detail_defaults():
         verdict="pass",
         embedding_generated=True,
         nn_candidates=[],
-        join_trees=JoinTreeResults(cc=[], cp=[]),
+        abstraction_trees=AbstractionTreeResults(cc=[], cp=[]),
         contradictions=[],
         overlaps=[],
     )
@@ -230,7 +230,7 @@ def test_detailed_review_result():
                 verdict="pass",
                 embedding_generated=True,
                 nn_candidates=[NNCandidate(node_id="10", similarity=0.9)],
-                join_trees=JoinTreeResults(cc=[], cp=[]),
+                abstraction_trees=AbstractionTreeResults(cc=[], cp=[]),
                 contradictions=[],
                 overlaps=[],
             )
@@ -262,11 +262,11 @@ def test_merge_result_with_bp_details():
             converged=True,
             affected_nodes=["1"],
         ),
-        join_edges_created=["10"],
+        abstraction_edges_created=["10"],
         beliefs_persisted={"1": 0.9},
     )
     assert result.bp_results.converged is True
-    assert result.join_edges_created == ["10"]
+    assert result.abstraction_edges_created == ["10"]
     assert result.beliefs_persisted == {"1": 0.9}
 
 
@@ -278,7 +278,7 @@ def test_merge_result_backward_compat():
         errors=[],
     )
     assert result.bp_results is None
-    assert result.join_edges_created == []
+    assert result.abstraction_edges_created == []
     assert result.beliefs_persisted == {}
 
 

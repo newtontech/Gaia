@@ -20,7 +20,7 @@ class EmbeddingModel(ABC):
 class StubEmbeddingModel(EmbeddingModel):
     """Deterministic stub: hashes text to produce reproducible vectors."""
 
-    def __init__(self, dim: int = 1024) -> None:
+    def __init__(self, dim: int = 512) -> None:
         self._dim = dim
 
     async def embed(self, texts: list[str]) -> list[list[float]]:

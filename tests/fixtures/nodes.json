@@ -409,7 +409,7 @@
       "refine_history": [
         {
           "action": "rewrite",
-          "reasoning": "The original parent combined opposing specific outcomes from the two children (one reports slight improvement, the other reports suppression/destruction), asserting that literature reports span both directions. That union claim is not entailed by either child individually (union error), and the edge was misclassified as a \"contradiction_join\" rather than a partial overlap. Both children do, however, individually entail the weaker, common claim that annealing at 450°C in flowing O₂ changes the superconducting transition (each reports a change, albeit in opposite directions). The rewrite removes any assertion about the direction or about divergent reports and keeps only the intersectional, self-contained factual claim that is supported by every child."
+          "reasoning": "The original parent combined opposing specific outcomes from the two children (one reports slight improvement, the other reports suppression/destruction), asserting that literature reports span both directions. That union claim is not entailed by either child individually (union error), and the edge was misclassified as a \"contradiction_abstraction\" rather than a partial overlap. Both children do, however, individually entail the weaker, common claim that annealing at 450°C in flowing O₂ changes the superconducting transition (each reports a change, albeit in opposite directions). The rewrite removes any assertion about the direction or about divergent reports and keeps only the intersectional, self-contained factual claim that is supported by every child."
         }
       ]
     },
