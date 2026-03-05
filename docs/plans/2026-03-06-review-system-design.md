@@ -79,14 +79,13 @@ claim:
   content: "同一物体不可能既比 H 快又比 H 慢 — 矛盾"
   type: deduction
   why: "两个有效推导从同一前提得出互相矛盾的结论"
-premises:                              # premise[] 展开为完整内容
-  - id: 5005
-    content: "推导 A: 轻球拖拽重球 → 组合体 HL 比 H 慢"
-  - id: 5006
-    content: "推导 B: 组合体更重 → 组合体 HL 比 H 快"
-context:                               # context[] 展开
-  - id: ...
-    content: "..."
+  premise:                             # 强引用，展开为完整内容
+    - id: 5005
+      content: "推导 A: 轻球拖拽重球 → 组合体 HL 比 H 慢"
+    - id: 5006
+      content: "推导 B: 组合体更重 → 组合体 HL 比 H 快"
+  context:                             # 弱引用（本例无）
+    []
 ```
 
 ### 3.3 输出格式
