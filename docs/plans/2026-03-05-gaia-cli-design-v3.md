@@ -173,7 +173,8 @@ claims = []                        # 弱引用，无具体 claim
 gaia init [name]              # 初始化 knowledge package
 gaia claim "结论" --why "推理" --cite id1,id2 [--context id3]
                               # 添加一条命题（自动创建 node + edge）
-gaia build [--review]         # 结构校验 + 本地 BP [+ 本地 review]
+gaia build                    # 结构校验 + 本地 BP（快，离线）
+gaia review [id...]           # 调大模型评审（慢，需 API key）
 gaia show <id>                # 查看命题详情（belief, 引用链）
 gaia search "query"           # 语义搜索（向量 + BM25）
 gaia subgraph <id>            # 查看以某命题为中心的子图
@@ -222,11 +223,12 @@ $ gaia claim "光在引力场弯曲" \
 ### 3.3 设计要点
 
 1. **`claim` 是唯一的写入命令** — 同时创建 node + edge，Agent 不需要理解图结构
-2. **`build` = 校验 + 推理** — 检查 YAML 格式、引用完整性，跑本地 BP，输出 belief 变化摘要
-3. **无 `commit`/`push`** — 版本控制完全交给 git
-4. **`--cite` 支持跨包引用** — 格式 `pkg:claim_id@commit`
-5. **所有命令支持 `--json` 输出** — Agent 解析 JSON，人类看默认 pretty-print
-6. **`search` 在本地运行** — 使用嵌入式 LanceDB
+2. **`build` = 校验 + BP** — 快速、离线。检查 YAML 格式、引用完整性，跑本地 BP
+3. **`review` = 大模型评审** — 慢、需 API key。可指定 claim ID 或全包。内部并发调 API，逐条流式输出
+4. **无 `commit`/`push`** — 版本控制完全交给 git
+5. **`--cite` 支持跨包引用** — 格式 `pkg:claim_id@commit`
+6. **所有命令支持 `--json` 输出** — Agent 解析 JSON，人类看默认 pretty-print
+7. **`search` 在本地运行** — 使用嵌入式 LanceDB
 
 ---
 
@@ -420,11 +422,13 @@ irrelevant: []                     # 建议删除
 
 ### 7.3 三种 Review 场景
 
-| 场景 | 执行者 | 可信度 | 激励 |
-|------|--------|--------|------|
-| **本地** `gaia build --review` | 用户自选模型 | 自用，无需信任 | 自己要用准确结果 |
-| **Server 直连** `gaia publish` | Server 控制的模型 | 高，Server 可控 | 维护知识图谱质量 |
-| **GitHub 模式** PR 到 registry | Server bot 自动评审 | 高，Server 可控 | 发布与评审分离 |
+| 场景 | 触发方式 | 执行者 | 结果存储 |
+|------|---------|--------|---------|
+| **本地** | `gaia review [id...]` | 用户自选模型 | 仅本地，用于本地 BP |
+| **GitHub 模式** | PR 到 registry repo | Server（webhook 触发） | Server DB + GitHub PR 评论 |
+| **Server 直连** | `gaia publish` | Server | Server DB |
+
+本地 `gaia review` 与 `gaia build` 分离：`build` 快速离线（校验 + BP），`review` 调大模型（慢，需 API key）。支持指定 claim ID 或全包 review，内部并发调 API，逐条流式输出。
 
 ### 7.4 GitHub Review Bot 流程
 

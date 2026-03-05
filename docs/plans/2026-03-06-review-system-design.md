@@ -191,17 +191,21 @@ missing_premises: ["<description>", ...]
 
 | 场景 | 触发方式 | 执行者 | 结果存储 |
 |------|---------|--------|---------|
-| **本地 Review** | `gaia build --review` | 用户自选模型 | 仅本地，用于本地 BP |
+| **本地 Review** | `gaia review [id...]` | 用户自选模型 | 仅本地，用于本地 BP |
 | **GitHub 模式** | PR 到 registry repo | Server（webhook 触发） | Server DB + GitHub PR 评论 |
 | **Server 直连** | `gaia publish` | Server | Server DB |
 
 三种场景的共同点：都使用同一套 review skill 协议。区别在于谁执行、结果存哪里。
 
+`gaia review` 与 `gaia build` 职责分离：
+- `build` — 快速、离线：结构校验 + 本地 BP（秒级）
+- `review` — 慢、需 API key：调大模型评审推理质量（分钟级）
+
 ### 4.2 本地 Review
 
 ```bash
-$ gaia build --review
-  Reviewing 20 claims with local model...
+$ gaia review
+  Reviewing 20 claims with local model (concurrency: 5)...
 
   | Claim | Score | Issue |
   |-------|-------|-------|
@@ -215,10 +219,22 @@ $ gaia build --review
     5012 (真空等速): 0.95 ↑
 ```
 
+```bash
+# 也可以指定 claim ID
+$ gaia review 5007
+  [1/1] 5007 "矛盾" → 0.92 ✓
+
+$ gaia review 5005 5006 5007
+  [1/3] 5005 "推导A" → 0.95 ✓
+  [2/3] 5006 "推导B" → 0.95 ✓
+  [3/3] 5007 "矛盾"  → 0.92 ✓
+```
+
 - 用户自选模型（通过 `~/.gaia/config.toml` 配置）
+- 内部并发调 API（默认 concurrency=5），逐条流式输出
 - Review score 作为本地 BP 的 hyperedge probability
 - 结果仅供本地使用，不上报 Server
-- 适合 Agent 快速探索、迭代
+- 适合 Agent 写完几条 claim 后立即 review
 
 ### 4.3 Server 直连 Review
 
