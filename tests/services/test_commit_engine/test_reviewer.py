@@ -24,23 +24,11 @@ def _make_commit() -> Commit:
     )
 
 
-async def test_stub_always_approves():
-    client = StubLLMClient()
-    result = await client.review_commit(_make_commit())
-    assert result.approved is True
-
-
 async def test_reviewer_with_stub():
     reviewer = Reviewer(llm_client=StubLLMClient())
     result = await reviewer.review(_make_commit())
     assert result.approved is True
     assert result.issues == []
-
-
-async def test_reviewer_no_client_auto_approves():
-    reviewer = Reviewer()
-    result = await reviewer.review(_make_commit())
-    assert result.approved is True
 
 
 async def test_reviewer_with_rejecting_client():
@@ -52,14 +40,3 @@ async def test_reviewer_with_rejecting_client():
     result = await reviewer.review(_make_commit())
     assert result.approved is False
     assert "contradiction detected" in result.issues
-
-
-async def test_reviewer_passes_depth():
-    """Verify depth parameter is stored/accessible (for future LLM use)."""
-    reviewer = Reviewer(llm_client=StubLLMClient())
-    # Quick review should still work
-    result = await reviewer.review(_make_commit(), depth="quick")
-    assert result.approved is True
-    # Deep review should still work
-    result = await reviewer.review(_make_commit(), depth="deep")
-    assert result.approved is True

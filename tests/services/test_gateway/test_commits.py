@@ -152,3 +152,30 @@ async def test_get_review_status_no_review(client):
     commit_id = resp.json()["commit_id"]
     resp = await client.get(f"/commits/{commit_id}/review")
     assert resp.status_code == 404
+
+
+async def test_list_commits(client):
+    """GET /commits returns list of commits."""
+    # Submit a commit first
+    resp = await client.post(
+        "/commits",
+        json={
+            "message": "list test",
+            "operations": [
+                {
+                    "op": "add_edge",
+                    "tail": [{"content": "p"}],
+                    "head": [{"node_id": 1}],
+                    "type": "induction",
+                    "reasoning": ["test"],
+                }
+            ],
+        },
+    )
+    assert resp.status_code == 200
+    # List commits
+    resp = await client.get("/commits")
+    assert resp.status_code == 200
+    commits = resp.json()
+    assert isinstance(commits, list)
+    assert len(commits) >= 1

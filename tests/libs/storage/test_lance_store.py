@@ -123,3 +123,51 @@ async def test_update_beliefs_fixture_nodes(seeded_store):
     beliefs = await seeded_store.get_beliefs_bulk(list(belief_map.keys()))
     for nid, expected in belief_map.items():
         assert beliefs[nid] == pytest.approx(expected)
+
+
+async def test_list_nodes(store):
+    """list_nodes returns paginated results."""
+    nodes = [Node(id=i, type="paper-extract", content=f"node {i}") for i in range(10, 15)]
+    await store.save_nodes(nodes)
+    result = await store.list_nodes(page=1, size=3)
+    assert len(result) <= 3
+    result_all = await store.list_nodes(page=1, size=100)
+    assert len(result_all) >= 5
+
+
+async def test_list_nodes_type_filter(store):
+    """list_nodes filters by node_type."""
+    await store.save_nodes(
+        [
+            Node(id=20, type="paper-extract", content="paper"),
+            Node(id=21, type="conjecture", content="guess"),
+        ]
+    )
+    results = await store.list_nodes(node_type="conjecture")
+    assert all(n.type == "conjecture" for n in results)
+
+
+async def test_count_nodes(store):
+    """count_nodes returns correct total."""
+    await store.save_nodes(
+        [
+            Node(id=30, type="paper-extract", content="a"),
+            Node(id=31, type="paper-extract", content="b"),
+            Node(id=32, type="conjecture", content="c"),
+        ]
+    )
+    total = await store.count_nodes()
+    assert total >= 3
+    paper_count = await store.count_nodes(node_type="paper-extract")
+    assert paper_count >= 2
+    conjecture_count = await store.count_nodes(node_type="conjecture")
+    assert conjecture_count >= 1
+
+
+async def test_belief_sentinel_zero_treated_as_none(store):
+    """0.0 belief is treated as None (sentinel value in LanceDB)."""
+    node = Node(id=40, type="paper-extract", content="test", belief=None)
+    await store.save_nodes([node])
+    loaded = await store.load_node(40)
+    assert loaded is not None
+    assert loaded.belief is None  # None stored as 0.0, loaded back as None

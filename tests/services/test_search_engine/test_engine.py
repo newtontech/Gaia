@@ -23,6 +23,11 @@ async def test_search_nodes_basic(search):
         assert r.node is not None
         assert r.score > 0
         assert len(r.sources) > 0
+    # Top result should contain superconductivity-related content
+    top_content = str(results[0].node.content).lower()
+    assert any(term in top_content for term in ["superconducti", "tc=", "cuprate", "oxide"]), (
+        f"Top result should be superconductivity-related, got: {top_content[:100]}"
+    )
 
 
 async def test_search_nodes_with_type_filter(search):
@@ -53,7 +58,7 @@ async def test_search_nodes_vector_only(search):
         k=10,
         paths=["vector"],
     )
-    # Vector recall may or may not find results depending on embeddings
+    assert len(results) > 0, "Vector search should find results since embeddings are seeded"
     for r in results:
         assert "vector" in r.sources
 

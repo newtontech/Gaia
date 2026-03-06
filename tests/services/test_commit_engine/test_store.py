@@ -59,3 +59,35 @@ async def test_save_multiple(store):
     assert c1 is not None
     assert c2 is not None
     assert c1.commit_id != c2.commit_id
+
+
+async def test_list_commits(store):
+    """list_commits returns all commits sorted by created_at descending."""
+    from datetime import datetime, timezone
+
+    c1 = _make_commit("list-1")
+    c1.created_at = datetime(2024, 1, 1, tzinfo=timezone.utc)
+    c2 = _make_commit("list-2")
+    c2.created_at = datetime(2024, 6, 1, tzinfo=timezone.utc)
+
+    await store.save(c1)
+    await store.save(c2)
+    commits = await store.list_commits()
+    assert len(commits) >= 2
+    # Should be sorted descending by created_at
+    ids = [c.commit_id for c in commits]
+    assert ids.index("list-2") < ids.index("list-1")
+
+
+async def test_update_nonexistent_raises(store):
+    """update() raises FileNotFoundError for missing commit."""
+    with pytest.raises(FileNotFoundError):
+        await store.update("nonexistent-id", status="merged")
+
+
+async def test_update_invalid_field_raises(store):
+    """update() raises ValueError for unknown field."""
+    commit = _make_commit("field-err")
+    await store.save(commit)
+    with pytest.raises(ValueError, match="no field"):
+        await store.update("field-err", nonexistent_field="value")

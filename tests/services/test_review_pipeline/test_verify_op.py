@@ -1,7 +1,6 @@
 import pytest
 from services.review_pipeline.operators.verify import (
     AbstractionTreeVerifyOperator,
-    RefineOperator,
     VerifyAgainOperator,
     StubVerifyLLM,
 )
@@ -32,12 +31,6 @@ async def test_verify_marks_trees(context_with_trees):
     # Stub auto-verifies all trees
     all_trees = result.cc_abstraction_trees + result.cp_abstraction_trees
     assert all(t.verified for t in all_trees)
-
-
-async def test_refine_passes_through(context_with_trees):
-    op = RefineOperator()
-    result = await op.execute(context_with_trees)
-    assert len(result.cc_abstraction_trees) == 2
 
 
 async def test_verify_again_filters(context_with_trees):

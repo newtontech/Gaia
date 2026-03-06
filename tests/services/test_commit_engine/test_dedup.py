@@ -23,9 +23,9 @@ async def test_check_finds_duplicates_via_bm25(checker):
     )
     assert len(candidates) == 1  # one input
     # BM25 should find fixture nodes mentioning thallium oxide
-    if len(candidates[0]) > 0:
-        assert candidates[0][0].node_id > 0
-        assert candidates[0][0].score > 0
+    assert len(candidates[0]) > 0, "BM25 should find fixture nodes matching 'thallium oxide'"
+    assert candidates[0][0].node_id > 0
+    assert candidates[0][0].score > 0
 
 
 async def test_check_filters_below_threshold(checker):

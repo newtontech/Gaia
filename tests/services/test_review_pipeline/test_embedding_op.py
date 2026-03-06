@@ -23,14 +23,6 @@ def context_with_new_nodes():
     return PipelineContext.from_commit_request(req)
 
 
-async def test_stub_embedding_model():
-    model = StubEmbeddingModel(dim=128)
-    vecs = await model.embed(["hello", "world"])
-    assert len(vecs) == 2
-    assert len(vecs[0]) == 128
-    assert all(isinstance(v, float) for v in vecs[0])
-
-
 async def test_embedding_operator_generates_vectors(context_with_new_nodes):
     op = EmbeddingOperator(model=StubEmbeddingModel(dim=128))
     result = await op.execute(context_with_new_nodes)

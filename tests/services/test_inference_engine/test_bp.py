@@ -52,9 +52,9 @@ def test_chain_propagation():
     fg = _two_step_chain()
     bp = BeliefPropagation(damping=0.5, max_iterations=50)
     beliefs = bp.run(fg)
-    # Beliefs should decrease along the chain
-    assert beliefs[1] >= beliefs[2] or abs(beliefs[1] - beliefs[2]) < 0.2
-    assert beliefs[2] >= beliefs[3] or abs(beliefs[2] - beliefs[3]) < 0.2
+    # Source node (1, prior=0.9) should have highest belief
+    # End-of-chain node (3) should have lowest
+    assert beliefs[1] >= beliefs[3], f"Source should >= end: {beliefs[1]} vs {beliefs[3]}"
 
 
 def test_convergence():
@@ -112,13 +112,16 @@ def test_multi_tail_factor():
 
 
 def test_damping_effect():
-    """Higher damping should change beliefs more aggressively."""
+    """Higher damping should cause beliefs to deviate more from prior."""
     fg = _simple_chain()
-    bp_low = BeliefPropagation(damping=0.1, max_iterations=5)
-    bp_high = BeliefPropagation(damping=0.9, max_iterations=5)
+    bp_low = BeliefPropagation(damping=0.1, max_iterations=50)
+    bp_high = BeliefPropagation(damping=0.9, max_iterations=50)
     beliefs_low = bp_low.run(fg)
     beliefs_high = bp_high.run(fg)
-    # With very few iterations, high damping should deviate more from prior
-    # This is a rough test -- just verify both produce valid results
-    assert 0.0 <= beliefs_low[2] <= 1.0
-    assert 0.0 <= beliefs_high[2] <= 1.0
+    # Node 2 prior is 1.0; after BP it should decrease.
+    # High damping should deviate more from the prior.
+    deviation_low = abs(beliefs_low[2] - 1.0)
+    deviation_high = abs(beliefs_high[2] - 1.0)
+    assert deviation_high > deviation_low, (
+        f"High damping should deviate more: low={deviation_low}, high={deviation_high}"
+    )

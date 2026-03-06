@@ -443,8 +443,12 @@ class TestFullPipeline:
             },
         )
         assert resp.status_code == 200
-        # Note: FTS index may need recreation; results depend on LanceDB FTS timing.
-        # The key assertion is that the API works end-to-end without errors.
+        results = resp.json()
+        assert len(results) > 0, "Should find the newly merged LaH10 node via BM25"
+        found_contents = [str(r["node"]["content"]).lower() for r in results]
+        assert any("lah10" in c for c in found_contents), (
+            f"LaH10 node not found in results: {found_contents}"
+        )
 
     def test_multiple_commits_then_search(self, app_client):
         """Multiple commits followed by a search aggregating all data."""
@@ -485,6 +489,7 @@ class TestFullPipeline:
         assert resp.status_code == 200
         results = resp.json()
         assert isinstance(results, list)
+        assert len(results) > 0, "Should find nodes about ambient pressure"
 
     def test_submit_merge_verify_node_persisted(self, app_client):
         """Verify that a merged commit actually creates a readable node."""

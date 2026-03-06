@@ -38,33 +38,24 @@ async def test_get_node_not_found(client):
 
 async def test_get_hyperedge_no_graph(client):
     c, dep = client
-    # graph is None in local mode
-    if dep.storage.graph is None:
-        resp = await c.get("/hyperedges/1")
-        assert resp.status_code == 503
+    dep.storage.graph = None
+    resp = await c.get("/hyperedges/1")
+    assert resp.status_code == 503
 
 
-async def test_subgraph_with_direction_param(client):
+async def test_subgraph_no_graph_returns_503(client):
+    """Subgraph requires graph store; returns 503 without it."""
     c, dep = client
+    dep.storage.graph = None
     resp = await c.get("/nodes/1/subgraph?hops=2&direction=upstream&max_nodes=100")
-    # 503 when graph store not available (no Neo4j), 200 otherwise
-    assert resp.status_code in (200, 503)
-    if resp.status_code == 200:
-        data = resp.json()
-        assert "node_ids" in data
-        assert "edge_ids" in data
+    assert resp.status_code == 503
 
 
-async def test_subgraph_with_edge_types_param(client):
+async def test_subgraph_hydrated_no_graph_returns_503(client):
     c, dep = client
-    resp = await c.get("/nodes/1/subgraph?hops=1&edge_types=abstraction,induction")
-    assert resp.status_code in (200, 503)
-
-
-async def test_subgraph_hydrated_with_params(client):
-    c, dep = client
+    dep.storage.graph = None
     resp = await c.get("/nodes/1/subgraph/hydrated?hops=1&direction=downstream&max_nodes=50")
-    assert resp.status_code in (200, 503)
+    assert resp.status_code == 503
 
 
 async def test_subgraph_invalid_direction(client):
@@ -72,3 +63,68 @@ async def test_subgraph_invalid_direction(client):
     resp = await c.get("/nodes/1/subgraph?direction=sideways")
     # FastAPI should reject invalid Literal value with 422
     assert resp.status_code == 422
+
+
+async def test_list_nodes_empty(client):
+    """GET /nodes returns empty paginated result when no data."""
+    c, dep = client
+    resp = await c.get("/nodes")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["items"] == []
+    assert data["total"] == 0
+    assert data["page"] == 1
+    assert data["size"] == 50
+
+
+async def test_list_nodes_with_data(client):
+    """GET /nodes returns seeded nodes with pagination."""
+    c, dep = client
+    await _seed_node(dep, 1, "node A")
+    await _seed_node(dep, 2, "node B")
+    resp = await c.get("/nodes?page=1&size=10")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] == 2
+    assert len(data["items"]) == 2
+
+
+async def test_list_nodes_type_filter(client):
+    """GET /nodes?type=paper-extract filters by type."""
+    c, dep = client
+    await _seed_node(dep, 1, "node A")
+    resp = await c.get("/nodes?type=paper-extract")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["total"] >= 1
+    for item in data["items"]:
+        assert item["type"] == "paper-extract"
+
+
+async def test_list_hyperedges_no_graph(client):
+    """GET /hyperedges returns 503 when graph store unavailable."""
+    c, dep = client
+    dep.storage.graph = None
+    resp = await c.get("/hyperedges")
+    assert resp.status_code == 503
+
+
+async def test_contradictions_no_graph(client):
+    """GET /contradictions returns 503 when graph store unavailable."""
+    c, dep = client
+    dep.storage.graph = None
+    resp = await c.get("/contradictions")
+    assert resp.status_code == 503
+
+
+async def test_stats(client):
+    """GET /stats returns system statistics."""
+    c, dep = client
+    await _seed_node(dep, 1, "test")
+    resp = await c.get("/stats")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["node_count"] >= 1
+    assert "graph_available" in data
+    assert "edge_count" in data
+    assert "node_types" in data

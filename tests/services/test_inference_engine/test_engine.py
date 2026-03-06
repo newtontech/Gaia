@@ -35,12 +35,12 @@ async def test_compute_local_bp_returns_beliefs_for_subgraph(engine):
 async def test_compute_local_bp_writes_back(engine, storage):
     """After BP, updated beliefs should be persisted in LanceDB."""
     beliefs = await engine.compute_local_bp([67], hops=2)
-    if beliefs:
-        # Check that at least one node had its belief written back
-        for node_id, expected_belief in beliefs.items():
-            node = await storage.lance.load_node(node_id)
-            if node:
-                assert node.belief is not None
+    assert len(beliefs) > 0, "BP should compute beliefs for fixture nodes with edges"
+    # Check that at least one node had its belief written back
+    for node_id, expected_belief in beliefs.items():
+        node = await storage.lance.load_node(node_id)
+        assert node is not None, f"Node {node_id} should exist in LanceDB"
+        assert node.belief is not None, f"Node {node_id} belief should be persisted"
 
 
 async def test_compute_local_bp_no_graph(storage):

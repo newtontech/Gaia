@@ -30,19 +30,15 @@ def context_with_nn():
     return ctx
 
 
-async def test_stub_abstraction_llm():
-    llm = StubAbstractionLLM()
-    trees = await llm.find_abstractions("new content", [(100, "existing content")])
-    assert isinstance(trees, list)
-
-
-async def test_cc_abstraction_produces_trees(context_with_nn):
+async def test_cc_abstraction_with_stub_returns_empty(context_with_nn):
+    """With stub LLM, CC abstraction returns empty trees (no real LLM)."""
     op = CCAbstractionOperator(abstraction_llm=StubAbstractionLLM())
     result = await op.execute(context_with_nn)
-    assert isinstance(result.cc_abstraction_trees, list)
+    assert result.cc_abstraction_trees == []  # stub produces no abstractions
 
 
-async def test_cp_abstraction_produces_trees(context_with_nn):
+async def test_cp_abstraction_with_stub_returns_empty(context_with_nn):
+    """With stub LLM, CP abstraction returns empty trees (no real LLM)."""
     op = CPAbstractionOperator(abstraction_llm=StubAbstractionLLM())
     result = await op.execute(context_with_nn)
-    assert isinstance(result.cp_abstraction_trees, list)
+    assert result.cp_abstraction_trees == []  # stub produces no abstractions

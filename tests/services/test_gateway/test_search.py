@@ -40,7 +40,9 @@ async def test_search_nodes(client):
         json={"text": "superconductivity", "k": 10, "paths": ["vector", "bm25"]},
     )
     assert resp.status_code == 200
-    assert isinstance(resp.json(), list)
+    results = resp.json()
+    assert isinstance(results, list)
+    assert len(results) > 0, "Should find seeded superconductivity nodes"
 
 
 async def test_search_nodes_empty(tmp_path):
