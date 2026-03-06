@@ -88,12 +88,14 @@ class BeliefPropagation:
                     # Retraction: strong tail evidence *decreases* head belief
                     factor_msg = 1.0 - factor_msg
                 elif edge_type == "contradiction":
-                    # Contradiction: inhibit both sides — head gets inverted
-                    # message, and tail beliefs are also reduced
-                    factor_msg = 1.0 - factor_msg
+                    # Contradiction: tail=[A,B] (conflicting premises), head=[C] (conclusion)
+                    # Forward to head C: standard message (confirm the contradiction)
+                    # factor_msg stays as tail_belief * prob — no inversion
+
+                    # Backward to tail: inhibit premises using old_beliefs for stability
                     for t in tail_ids:
                         head_belief_avg = (
-                            float(np.mean([beliefs.get(h, 1.0) for h in head_ids]))
+                            float(np.mean([old_beliefs.get(h, 1.0) for h in head_ids]))
                             if head_ids
                             else 0.0
                         )
