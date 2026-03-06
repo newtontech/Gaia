@@ -125,3 +125,47 @@ def test_damping_effect():
     assert deviation_high > deviation_low, (
         f"High damping should deviate more: low={deviation_low}, high={deviation_high}"
     )
+
+
+# ---------------------------------------------------------------------------
+# Type-aware BP tests (retraction + contradiction)
+# ---------------------------------------------------------------------------
+
+
+def test_retraction_edge():
+    """A retraction edge should decrease the head node's belief."""
+    fg = FactorGraph()
+    fg.add_variable(1, 0.9)  # Strong tail evidence
+    fg.add_variable(2, 0.9)  # High prior on head
+    fg.add_factor(edge_id=100, tail=[1], head=[2], probability=0.8, edge_type="retraction")
+    bp = BeliefPropagation(damping=1.0, max_iterations=50)
+    beliefs = bp.run(fg)
+    # Retraction inverts the factor message: head belief should drop
+    assert beliefs[2] < 0.9, f"Retraction should reduce head belief, got {beliefs[2]}"
+
+
+def test_contradiction_inhibits_both_sides():
+    """A contradiction edge should reduce beliefs on both tail and head nodes."""
+    fg = FactorGraph()
+    fg.add_variable(1, 0.9)
+    fg.add_variable(2, 0.9)
+    fg.add_factor(edge_id=100, tail=[1], head=[2], probability=0.8, edge_type="contradiction")
+    bp = BeliefPropagation(damping=1.0, max_iterations=50)
+    beliefs = bp.run(fg)
+    # Both sides should be reduced from their priors
+    assert beliefs[1] < 0.9, f"Contradiction should reduce tail belief, got {beliefs[1]}"
+    assert beliefs[2] < 0.9, f"Contradiction should reduce head belief, got {beliefs[2]}"
+
+
+def test_contradiction_asymmetric():
+    """A contradiction with asymmetric priors should reduce the weaker side more."""
+    fg = FactorGraph()
+    fg.add_variable(1, 0.95)  # Strong prior
+    fg.add_variable(2, 0.6)  # Weaker prior
+    fg.add_factor(edge_id=100, tail=[1], head=[2], probability=0.9, edge_type="contradiction")
+    bp = BeliefPropagation(damping=1.0, max_iterations=50)
+    beliefs = bp.run(fg)
+    # Both should be reduced, and node 2 (weaker) should end up lower
+    assert beliefs[2] < beliefs[1], (
+        f"Weaker node should have lower belief: node1={beliefs[1]}, node2={beliefs[2]}"
+    )

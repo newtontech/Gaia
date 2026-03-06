@@ -73,6 +73,7 @@ class BeliefPropagation:
                 tail_ids: list[int] = factor["tail"]
                 head_ids: list[int] = factor["head"]
                 prob: float = factor["probability"]
+                edge_type: str = factor.get("edge_type", "deduction")
 
                 # Factor message: product of tail beliefs * edge probability
                 if tail_ids:
@@ -81,6 +82,28 @@ class BeliefPropagation:
                     tail_belief = 1.0
 
                 factor_msg = tail_belief * prob
+
+                # Type-aware message transformation
+                if edge_type == "retraction":
+                    # Retraction: strong tail evidence *decreases* head belief
+                    factor_msg = 1.0 - factor_msg
+                elif edge_type == "contradiction":
+                    # Contradiction: inhibit both sides — head gets inverted
+                    # message, and tail beliefs are also reduced
+                    factor_msg = 1.0 - factor_msg
+                    for t in tail_ids:
+                        head_belief_avg = (
+                            float(np.mean([beliefs.get(h, 1.0) for h in head_ids]))
+                            if head_ids
+                            else 0.0
+                        )
+                        contra_msg = 1.0 - head_belief_avg * prob
+                        prior_t = graph.variables.get(t, 1.0)
+                        new_t = prior_t * contra_msg
+                        new_t = min(max(new_t, 0.0), 1.0)
+                        beliefs[t] = self._damping * new_t + (1 - self._damping) * old_beliefs.get(
+                            t, prior_t
+                        )
 
                 # Update head nodes: combine prior with incoming factor message
                 for h in head_ids:
