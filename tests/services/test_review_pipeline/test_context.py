@@ -1,4 +1,4 @@
-from services.review_pipeline.context import PipelineContext, JoinTree
+from services.review_pipeline.context import PipelineContext, AbstractionTree
 
 
 def test_context_init_from_add_edge_ops():
@@ -39,8 +39,8 @@ def test_context_init_from_modify_ops():
     assert ctx.affected_node_ids == [1]
 
 
-def test_join_tree_model():
-    tree = JoinTree(
+def test_abstraction_tree_model():
+    tree = AbstractionTree(
         source_node_index=0,
         target_node_id=251,
         relation="partial_overlap",

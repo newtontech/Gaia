@@ -15,16 +15,16 @@ from services.job_manager.store import InMemoryJobStore
 from services.review_pipeline.base import Pipeline
 from services.review_pipeline.operators.bp import BPOperator
 from services.review_pipeline.operators.embedding import EmbeddingOperator
-from services.review_pipeline.operators.join import (
-    CCJoinOperator,
-    CPJoinOperator,
-    JoinLLM,
-    LiteLLMJoinClient,
-    StubJoinLLM,
+from services.review_pipeline.operators.abstraction import (
+    CCAbstractionOperator,
+    CPAbstractionOperator,
+    AbstractionLLM,
+    LiteLLMAbstractionClient,
+    StubAbstractionLLM,
 )
 from services.review_pipeline.operators.nn_search import NNSearchOperator
 from services.review_pipeline.operators.verify import (
-    JoinTreeVerifyOperator,
+    AbstractionTreeVerifyOperator,
     LiteLLMVerifyClient,
     RefineOperator,
     StubVerifyLLM,
@@ -54,8 +54,8 @@ def _build_embedding_model() -> EmbeddingModel:
     return StubEmbeddingModel()
 
 
-def _build_llm_clients() -> tuple[JoinLLM, VerifyLLM]:
-    """Build join/verify LLM clients based on environment variables.
+def _build_llm_clients() -> tuple[AbstractionLLM, VerifyLLM]:
+    """Build abstraction/verify LLM clients based on environment variables.
 
     Uses LiteLLM when DP_INTERNAL_BASE_URL + DP_INTERNAL_API_KEY are set.
     """
@@ -67,10 +67,10 @@ def _build_llm_clients() -> tuple[JoinLLM, VerifyLLM]:
 
         config = LLMModelConfig(provider="dptech_internal", name="gpt-5-mini")
         llm_client = LLMClient(config)
-        log.info("Using dptech_internal LLM for join/verify (url=%s)", base_url)
-        return LiteLLMJoinClient(llm_client), LiteLLMVerifyClient(llm_client)
-    log.info("No LLM configured, using stub join/verify")
-    return StubJoinLLM(), StubVerifyLLM()
+        log.info("Using dptech_internal LLM for abstraction/verify (url=%s)", base_url)
+        return LiteLLMAbstractionClient(llm_client), LiteLLMVerifyClient(llm_client)
+    log.info("No LLM configured, using stub abstraction/verify")
+    return StubAbstractionLLM(), StubVerifyLLM()
 
 
 class Dependencies:
@@ -90,7 +90,7 @@ class Dependencies:
         self.storage = StorageManager(config)
 
         embedding_model = _build_embedding_model()
-        join_llm, verify_llm = _build_llm_clients()
+        abstraction_llm, verify_llm = _build_llm_clients()
 
         self.search_engine = SearchEngine(self.storage, embedding_model=embedding_model)
         commit_store = CommitStore(storage_path=config.lancedb_path + "/commits")
@@ -98,9 +98,9 @@ class Dependencies:
             steps=[
                 EmbeddingOperator(embedding_model),
                 NNSearchOperator(self.storage.vector, k=20),
-                CCJoinOperator(join_llm, self.storage),
-                CPJoinOperator(join_llm, self.storage),
-                JoinTreeVerifyOperator(verify_llm),
+                CCAbstractionOperator(abstraction_llm, self.storage),
+                CPAbstractionOperator(abstraction_llm, self.storage),
+                AbstractionTreeVerifyOperator(verify_llm),
                 RefineOperator(),
                 VerifyAgainOperator(verify_llm),
                 BPOperator(self.storage),

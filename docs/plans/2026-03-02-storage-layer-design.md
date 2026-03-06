@@ -124,7 +124,7 @@ class LanceStore:
 ```python
 class Node(BaseModel):
     id: int
-    type: str                                # paper-extract | join | deduction | conjecture | ...
+    type: str                                # paper-extract | abstraction | deduction | conjecture | ...
     subtype: str | None = None
     title: str | None = None
     content: str | dict | list
@@ -174,7 +174,7 @@ class Neo4jGraphStore:
         """从指定节点出发，获取 N-hop 邻域。
         返回 (node_ids, hyperedge_ids)。
         知识图 1-hop = Neo4j 2-hop（节点→超边→节点）。
-        edge_types: 过滤超边类型，None=全部，["join"]=只沿 Join 边遍历。
+        edge_types: 过滤超边类型，None=全部，["abstraction"]=只沿 Abstraction 边遍历。
         上层按需用 get_hyperedge 补全超边详情。"""
 ```
 
@@ -183,7 +183,7 @@ class Neo4jGraphStore:
 ```python
 class HyperEdge(BaseModel):
     id: int
-    type: str                              # paper-extract | join | meet | contradiction | retraction
+    type: str                              # paper-extract | abstraction | induction | contradiction | retraction
     subtype: str | None = None
     tail: list[int]                        # 前提 node IDs
     head: list[int]                        # 结论 node IDs
@@ -201,18 +201,18 @@ class HyperEdge(BaseModel):
 
 ```cypher
 -- Neo4j 标签: :Proposition (对应 Node), :Hyperedge (对应 HyperEdge)
--- 创建 Meet 超边（多个前提 → 一个结论）
+-- 创建 Induction 超边（多个前提 → 一个结论）
 MERGE (a:Proposition {id: $tail_0})
 MERGE (b:Proposition {id: $tail_1})
 MERGE (c:Proposition {id: $head_0})
-CREATE (e:Hyperedge:Meet {id: $eid, probability: $prob, verified: false})
+CREATE (e:Hyperedge:Induction {id: $eid, probability: $prob, verified: false})
 CREATE (a)-[:TAIL]->(e), (b)-[:TAIL]->(e), (e)-[:HEAD]->(c)
 
 -- get_subgraph: 3-hop 邻域 (edge_types=None, 全部类型)
 MATCH path = (start:Proposition)-[:TAIL|HEAD*1..6]-(node)
 WHERE start.id IN $node_ids AND node:Proposition
 
--- get_subgraph: 沿 Join 树遍历 (edge_types=["join"])
+-- get_subgraph: 沿 Abstraction 树遍历 (edge_types=["abstraction"])
 MATCH path = (start:Proposition)-[:TAIL|HEAD*1..6]-(node)
 WHERE start.id IN $node_ids AND node:Proposition
   AND ALL(n IN [x IN nodes(path) WHERE x:Hyperedge] WHERE n.type IN $edge_types)

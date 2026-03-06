@@ -6,7 +6,7 @@
 
 **Goal:** Implement the v3 single-input APIs: async review with job management, updated commit/merge, search without external embedding, and enhanced read routes.
 
-**Architecture:** A `JobManager` handles async job lifecycle (submit/cancel/status/result). Review route submits a background pipeline job. Search generates embeddings internally via the same `EmbeddingModel`. Merge persists review pipeline results (embeddings, beliefs, join edges).
+**Architecture:** A `JobManager` handles async job lifecycle (submit/cancel/status/result). Review route submits a background pipeline job. Search generates embeddings internally via the same `EmbeddingModel`. Merge persists review pipeline results (embeddings, beliefs, abstraction edges).
 
 **Tech Stack:** Python 3.12+, FastAPI, Pydantic v2, asyncio, review_pipeline from Plan 1
 
@@ -912,7 +912,7 @@ async def test_subgraph_with_direction(client):
 
 
 async def test_subgraph_with_edge_types(client):
-    resp = await client.get("/nodes/1/subgraph?hops=1&edge_types=paper-extract,join")
+    resp = await client.get("/nodes/1/subgraph?hops=1&edge_types=paper-extract,abstraction")
     assert resp.status_code == 200
 ```
 

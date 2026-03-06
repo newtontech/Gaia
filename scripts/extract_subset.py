@@ -21,7 +21,7 @@ FIXTURES_DIR = REPO_ROOT / "tests" / "fixtures"
 EMBEDDINGS_DB = Path("/tmp/entailment_test_graph/embeddings.db")
 PAPERS_SRC = Path.home() / "project" / "test_claude" / "超导文章" / "High-Tc"
 
-# 9 edges covering all 4 types: paper-extract, join, contradiction, meet
+# 9 edges covering all 4 types: paper-extract, abstraction, contradiction, induction
 SELECTED_EDGE_IDS = {10, 13, 40, 325, 365, 529, 734, 806, 807}
 
 # 3 source papers referenced by nodes in the selected subgraph

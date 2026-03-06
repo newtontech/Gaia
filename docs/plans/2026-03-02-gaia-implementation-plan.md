@@ -158,7 +158,7 @@ def test_node_defaults():
 
 
 def test_node_all_types():
-    for t in ("paper-extract", "join", "deduction", "conjecture"):
+    for t in ("paper-extract", "abstraction", "deduction", "conjecture"):
         node = Node(id=1, type=t, content="x")
         assert node.type == t
 
@@ -176,7 +176,7 @@ def test_hyperedge_defaults():
 
 
 def test_hyperedge_types():
-    for t in ("paper-extract", "join", "meet", "contradiction", "retraction"):
+    for t in ("paper-extract", "abstraction", "induction", "contradiction", "retraction"):
         edge = HyperEdge(id=1, type=t, tail=[1], head=[2])
         assert edge.type == t
 
@@ -185,7 +185,7 @@ def test_add_edge_op():
     op = AddEdgeOp(
         tail=[NewNode(content="premise")],
         head=[NodeRef(node_id=42)],
-        type="meet",
+        type="induction",
         reasoning=["logical deduction"],
     )
     assert op.op == "add_edge"
@@ -225,7 +225,7 @@ from pydantic import BaseModel
 
 class Node(BaseModel):
     id: int
-    type: str  # paper-extract | join | deduction | conjecture | ...
+    type: str  # paper-extract | abstraction | deduction | conjecture | ...
     subtype: str | None = None
     title: str | None = None
     content: str | dict | list
@@ -240,7 +240,7 @@ class Node(BaseModel):
 
 class HyperEdge(BaseModel):
     id: int
-    type: str  # paper-extract | join | meet | contradiction | retraction
+    type: str  # paper-extract | abstraction | induction | contradiction | retraction
     subtype: str | None = None
     tail: list[int]
     head: list[int]
@@ -862,11 +862,11 @@ async def test_get_subgraph_hops_limit(store):
 
 
 async def test_get_subgraph_edge_type_filter(store):
-    await store.create_hyperedge(_edge(1, [10], [11], type="join"))
-    await store.create_hyperedge(_edge(2, [11], [12], type="meet"))
-    node_ids, edge_ids = await store.get_subgraph([10], hops=2, edge_types=["join"])
+    await store.create_hyperedge(_edge(1, [10], [11], type="abstraction"))
+    await store.create_hyperedge(_edge(2, [11], [12], type="induction"))
+    node_ids, edge_ids = await store.get_subgraph([10], hops=2, edge_types=["abstraction"])
     assert 11 in node_ids
-    assert 12 not in node_ids  # meet edge filtered out
+    assert 12 not in node_ids  # induction edge filtered out
 ```
 
 **Step 2: Run test to verify it fails**
@@ -1412,10 +1412,10 @@ class BM25Recall:
 class TopologyRecall:
     def __init__(self, graph_store: Neo4jGraphStore): ...
     async def recall(self, seed_node_ids: list[int], hops: int = 3) -> list[tuple[int, float]]:
-        """Traverse Join tree from seeds. Returns [(node_id, hop_distance), ...]"""
+        """Traverse Abstraction tree from seeds. Returns [(node_id, hop_distance), ...]"""
 ```
 
-**Implementation:** Call `graph_store.get_subgraph(seed_node_ids, hops, edge_types=["join"])`, then assign scores inversely proportional to hop distance.
+**Implementation:** Call `graph_store.get_subgraph(seed_node_ids, hops, edge_types=["abstraction"])`, then assign scores inversely proportional to hop distance.
 
 **TDD Steps:** Write test → verify fail → implement → verify pass → commit.
 

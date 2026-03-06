@@ -4,9 +4,9 @@
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build the review pipeline framework and all operators (embedding, NN search, CC/CP join, verify, refine, BP) as independent, testable modules.
+**Goal:** Build the review pipeline framework and all operators (embedding, NN search, CC/CP abstraction, verify, refine, BP) as independent, testable modules.
 
-**Architecture:** A `Pipeline` orchestrator executes a chain of `Operator` instances, passing a shared `PipelineContext` between them. Each operator reads from and writes to the context. `ParallelStep` runs multiple operators concurrently. LLM-dependent operators (join, verify, refine) use a pluggable interface with stubs for Phase 1.
+**Architecture:** A `Pipeline` orchestrator executes a chain of `Operator` instances, passing a shared `PipelineContext` between them. Each operator reads from and writes to the context. `ParallelStep` runs multiple operators concurrently. LLM-dependent operators (abstraction, verify, refine) use a pluggable interface with stubs for Phase 1.
 
 **Tech Stack:** Python 3.12+, Pydantic v2, asyncio, existing inference_engine/bp.py, existing search_engine
 
@@ -24,7 +24,7 @@
 
 ```python
 # tests/services/test_review_pipeline/test_context.py
-from services.review_pipeline.context import PipelineContext, NewNodeInfo, JoinTree
+from services.review_pipeline.context import PipelineContext, NewNodeInfo, AbstractionTree
 
 
 def test_context_init_from_add_edge_ops():
@@ -65,8 +65,8 @@ def test_context_init_from_modify_ops():
     assert ctx.affected_node_ids == [1]
 
 
-def test_join_tree_model():
-    tree = JoinTree(
+def test_abstraction_tree_model():
+    tree = AbstractionTree(
         source_node_index=0,
         target_node_id=251,
         relation="partial_overlap",
@@ -112,7 +112,7 @@ class NewNodeInfo(BaseModel):
     position: str  # e.g. "tail[0]", "head[1]"
 
 
-class JoinTree(BaseModel):
+class AbstractionTree(BaseModel):
     """A discovered relationship between a new node and an existing node."""
     source_node_index: int  # index into PipelineContext.new_nodes
     target_node_id: int
@@ -130,9 +130,9 @@ class PipelineContext:
         self.affected_node_ids: list[int] = []
         self.embeddings: dict[int, list[float]] = {}  # new_node index -> vector
         self.nn_results: dict[int, list[tuple[int, float]]] = {}  # index -> [(node_id, sim)]
-        self.cc_join_trees: list[JoinTree] = []
-        self.cp_join_trees: list[JoinTree] = []
-        self.verified_trees: list[JoinTree] = []
+        self.cc_abstraction_trees: list[AbstractionTree] = []
+        self.cp_abstraction_trees: list[AbstractionTree] = []
+        self.verified_trees: list[AbstractionTree] = []
         self.bp_results: dict[int, float] = {}  # node_id -> belief
         self.cancelled: bool = False
         self.step_results: dict[str, dict] = {}  # step_name -> metadata
@@ -599,22 +599,22 @@ git commit -m "feat: add NNSearchOperator wrapping vector search client"
 
 ---
 
-### Task 5: CC/CP Join Operators (stub)
+### Task 5: CC/CP Abstraction Operators (stub)
 
 **Files:**
-- Create: `services/review_pipeline/operators/join.py`
-- Test: `tests/services/test_review_pipeline/test_join_op.py`
+- Create: `services/review_pipeline/operators/abstraction.py`
+- Test: `tests/services/test_review_pipeline/test_abstraction_op.py`
 
 **Step 1: Write the failing test**
 
 ```python
-# tests/services/test_review_pipeline/test_join_op.py
+# tests/services/test_review_pipeline/test_abstraction_op.py
 import pytest
-from services.review_pipeline.operators.join import (
-    CCJoinOperator,
-    CPJoinOperator,
-    JoinLLM,
-    StubJoinLLM,
+from services.review_pipeline.operators.abstraction import (
+    CCAbstractionOperator,
+    CPAbstractionOperator,
+    AbstractionLLM,
+    StubAbstractionLLM,
 )
 from services.review_pipeline.context import PipelineContext
 from libs.models import CommitRequest, AddEdgeOp, NewNode
@@ -642,36 +642,36 @@ def context_with_nn():
     return ctx
 
 
-async def test_stub_join_llm():
-    llm = StubJoinLLM()
-    trees = await llm.find_joins("new content", [(100, "existing content")])
+async def test_stub_abstraction_llm():
+    llm = StubAbstractionLLM()
+    trees = await llm.find_abstractions("new content", [(100, "existing content")])
     assert isinstance(trees, list)
 
 
-async def test_cc_join_produces_trees(context_with_nn):
-    op = CCJoinOperator(join_llm=StubJoinLLM())
+async def test_cc_abstraction_produces_trees(context_with_nn):
+    op = CCAbstractionOperator(abstraction_llm=StubAbstractionLLM())
     result = await op.execute(context_with_nn)
-    assert isinstance(result.cc_join_trees, list)
+    assert isinstance(result.cc_abstraction_trees, list)
 
 
-async def test_cp_join_produces_trees(context_with_nn):
-    op = CPJoinOperator(join_llm=StubJoinLLM())
+async def test_cp_abstraction_produces_trees(context_with_nn):
+    op = CPAbstractionOperator(abstraction_llm=StubAbstractionLLM())
     result = await op.execute(context_with_nn)
-    assert isinstance(result.cp_join_trees, list)
+    assert isinstance(result.cp_abstraction_trees, list)
 ```
 
 **Step 2: Run test to verify it fails**
 
-Run: `pytest tests/services/test_review_pipeline/test_join_op.py -v`
+Run: `pytest tests/services/test_review_pipeline/test_abstraction_op.py -v`
 Expected: FAIL
 
 **Step 3: Write minimal implementation**
 
 ```python
-# services/review_pipeline/operators/join.py
-"""CC/CP Join Operators — discover relationships between new and existing nodes.
+# services/review_pipeline/operators/abstraction.py
+"""CC/CP Abstraction Operators — discover relationships between new and existing nodes.
 
-Phase 1: StubJoinLLM returns empty results. Future phases plug in real LLM.
+Phase 1: StubAbstractionLLM returns empty results. Future phases plug in real LLM.
 """
 
 from __future__ import annotations
@@ -679,18 +679,18 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from services.review_pipeline.base import Operator
-from services.review_pipeline.context import JoinTree, PipelineContext
+from services.review_pipeline.context import AbstractionTree, PipelineContext
 
 
-class JoinLLM(ABC):
-    """Abstract interface for LLM-based join discovery."""
+class AbstractionLLM(ABC):
+    """Abstract interface for LLM-based abstraction discovery."""
 
     @abstractmethod
-    async def find_joins(
+    async def find_abstractions(
         self,
         new_content: str,
         candidates: list[tuple[int, str]],
-    ) -> list[JoinTree]:
+    ) -> list[AbstractionTree]:
         """Find relationships between new content and candidate nodes.
 
         Args:
@@ -698,76 +698,76 @@ class JoinLLM(ABC):
             candidates: List of (node_id, content) pairs to compare against.
 
         Returns:
-            List of discovered join trees.
+            List of discovered abstraction trees.
         """
         ...
 
 
-class StubJoinLLM(JoinLLM):
+class StubAbstractionLLM(AbstractionLLM):
     """Always returns empty results. For testing and Phase 1."""
 
-    async def find_joins(
+    async def find_abstractions(
         self,
         new_content: str,
         candidates: list[tuple[int, str]],
-    ) -> list[JoinTree]:
+    ) -> list[AbstractionTree]:
         return []
 
 
-class CCJoinOperator(Operator):
+class CCAbstractionOperator(Operator):
     """Discover conclusion-conclusion relationships."""
 
-    def __init__(self, join_llm: JoinLLM | None = None) -> None:
-        self._llm = join_llm or StubJoinLLM()
+    def __init__(self, abstraction_llm: AbstractionLLM | None = None) -> None:
+        self._llm = abstraction_llm or StubAbstractionLLM()
 
     async def execute(self, context: PipelineContext) -> PipelineContext:
         if not context.nn_results:
             return context
-        # In future: load candidate node contents, call LLM to find CC joins
+        # In future: load candidate node contents, call LLM to find CC abstractions
         # Phase 1: stub returns empty
         for idx in context.nn_results:
             candidates = [(nid, "") for nid, _ in context.nn_results[idx]]
-            trees = await self._llm.find_joins(
+            trees = await self._llm.find_abstractions(
                 context.new_nodes[idx].content if idx < len(context.new_nodes) else "",
                 candidates,
             )
             for tree in trees:
                 tree.source_node_index = idx
-            context.cc_join_trees.extend(trees)
+            context.cc_abstraction_trees.extend(trees)
         return context
 
 
-class CPJoinOperator(Operator):
+class CPAbstractionOperator(Operator):
     """Discover conclusion-premise relationships."""
 
-    def __init__(self, join_llm: JoinLLM | None = None) -> None:
-        self._llm = join_llm or StubJoinLLM()
+    def __init__(self, abstraction_llm: AbstractionLLM | None = None) -> None:
+        self._llm = abstraction_llm or StubAbstractionLLM()
 
     async def execute(self, context: PipelineContext) -> PipelineContext:
         if not context.nn_results:
             return context
         for idx in context.nn_results:
             candidates = [(nid, "") for nid, _ in context.nn_results[idx]]
-            trees = await self._llm.find_joins(
+            trees = await self._llm.find_abstractions(
                 context.new_nodes[idx].content if idx < len(context.new_nodes) else "",
                 candidates,
             )
             for tree in trees:
                 tree.source_node_index = idx
-            context.cp_join_trees.extend(trees)
+            context.cp_abstraction_trees.extend(trees)
         return context
 ```
 
 **Step 4: Run test to verify it passes**
 
-Run: `pytest tests/services/test_review_pipeline/test_join_op.py -v`
+Run: `pytest tests/services/test_review_pipeline/test_abstraction_op.py -v`
 Expected: PASS
 
 **Step 5: Commit**
 
 ```bash
-git add services/review_pipeline/operators/join.py tests/services/test_review_pipeline/test_join_op.py
-git commit -m "feat: add CC/CP JoinOperators with pluggable LLM interface"
+git add services/review_pipeline/operators/abstraction.py tests/services/test_review_pipeline/test_abstraction_op.py
+git commit -m "feat: add CC/CP AbstractionOperators with pluggable LLM interface"
 ```
 
 ---
@@ -784,13 +784,13 @@ git commit -m "feat: add CC/CP JoinOperators with pluggable LLM interface"
 # tests/services/test_review_pipeline/test_verify_op.py
 import pytest
 from services.review_pipeline.operators.verify import (
-    JoinTreeVerifyOperator,
+    AbstractionTreeVerifyOperator,
     RefineOperator,
     VerifyAgainOperator,
     VerifyLLM,
     StubVerifyLLM,
 )
-from services.review_pipeline.context import JoinTree, PipelineContext
+from services.review_pipeline.context import AbstractionTree, PipelineContext
 from libs.models import CommitRequest, ModifyNodeOp
 
 
@@ -801,35 +801,35 @@ def context_with_trees():
         operations=[ModifyNodeOp(node_id=1, changes={"x": 1})],
     )
     ctx = PipelineContext.from_commit_request(req)
-    ctx.cc_join_trees = [
-        JoinTree(source_node_index=0, target_node_id=100, relation="partial_overlap"),
-        JoinTree(source_node_index=0, target_node_id=200, relation="equivalent"),
+    ctx.cc_abstraction_trees = [
+        AbstractionTree(source_node_index=0, target_node_id=100, relation="partial_overlap"),
+        AbstractionTree(source_node_index=0, target_node_id=200, relation="equivalent"),
     ]
-    ctx.cp_join_trees = [
-        JoinTree(source_node_index=1, target_node_id=300, relation="subsumes"),
+    ctx.cp_abstraction_trees = [
+        AbstractionTree(source_node_index=1, target_node_id=300, relation="subsumes"),
     ]
     return ctx
 
 
 async def test_verify_marks_trees(context_with_trees):
-    op = JoinTreeVerifyOperator(verify_llm=StubVerifyLLM())
+    op = AbstractionTreeVerifyOperator(verify_llm=StubVerifyLLM())
     result = await op.execute(context_with_trees)
     # Stub auto-verifies all trees
-    all_trees = result.cc_join_trees + result.cp_join_trees
+    all_trees = result.cc_abstraction_trees + result.cp_abstraction_trees
     assert all(t.verified for t in all_trees)
 
 
 async def test_refine_passes_through(context_with_trees):
     op = RefineOperator()
     result = await op.execute(context_with_trees)
-    assert len(result.cc_join_trees) == 2
+    assert len(result.cc_abstraction_trees) == 2
 
 
 async def test_verify_again_filters(context_with_trees):
     # Mark one as verified, one not
-    context_with_trees.cc_join_trees[0].verified = True
-    context_with_trees.cc_join_trees[1].verified = False
-    context_with_trees.cp_join_trees[0].verified = True
+    context_with_trees.cc_abstraction_trees[0].verified = True
+    context_with_trees.cc_abstraction_trees[1].verified = False
+    context_with_trees.cp_abstraction_trees[0].verified = True
 
     op = VerifyAgainOperator(verify_llm=StubVerifyLLM())
     result = await op.execute(context_with_trees)
@@ -845,7 +845,7 @@ Expected: FAIL
 
 ```python
 # services/review_pipeline/operators/verify.py
-"""Verify and Refine operators for join trees.
+"""Verify and Refine operators for abstraction trees.
 
 Phase 1: StubVerifyLLM auto-verifies all trees.
 """
@@ -855,40 +855,40 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from services.review_pipeline.base import Operator
-from services.review_pipeline.context import JoinTree, PipelineContext
+from services.review_pipeline.context import AbstractionTree, PipelineContext
 
 
 class VerifyLLM(ABC):
     @abstractmethod
-    async def verify(self, trees: list[JoinTree]) -> list[JoinTree]:
-        """Verify join trees, setting verified=True/False on each."""
+    async def verify(self, trees: list[AbstractionTree]) -> list[AbstractionTree]:
+        """Verify abstraction trees, setting verified=True/False on each."""
         ...
 
 
 class StubVerifyLLM(VerifyLLM):
     """Auto-verifies all trees. For testing and Phase 1."""
 
-    async def verify(self, trees: list[JoinTree]) -> list[JoinTree]:
+    async def verify(self, trees: list[AbstractionTree]) -> list[AbstractionTree]:
         for tree in trees:
             tree.verified = True
         return trees
 
 
-class JoinTreeVerifyOperator(Operator):
-    """First-pass verification of discovered join trees."""
+class AbstractionTreeVerifyOperator(Operator):
+    """First-pass verification of discovered abstraction trees."""
 
     def __init__(self, verify_llm: VerifyLLM | None = None) -> None:
         self._llm = verify_llm or StubVerifyLLM()
 
     async def execute(self, context: PipelineContext) -> PipelineContext:
-        all_trees = context.cc_join_trees + context.cp_join_trees
+        all_trees = context.cc_abstraction_trees + context.cp_abstraction_trees
         if all_trees:
             await self._llm.verify(all_trees)
         return context
 
 
 class RefineOperator(Operator):
-    """Refine join trees — Phase 1: pass-through."""
+    """Refine abstraction trees — Phase 1: pass-through."""
 
     async def execute(self, context: PipelineContext) -> PipelineContext:
         return context
@@ -901,7 +901,7 @@ class VerifyAgainOperator(Operator):
         self._llm = verify_llm or StubVerifyLLM()
 
     async def execute(self, context: PipelineContext) -> PipelineContext:
-        all_trees = context.cc_join_trees + context.cp_join_trees
+        all_trees = context.cc_abstraction_trees + context.cp_abstraction_trees
         if all_trees:
             await self._llm.verify(all_trees)
         context.verified_trees = [t for t in all_trees if t.verified]
@@ -1085,7 +1085,7 @@ from unittest.mock import AsyncMock, MagicMock
 from services.review_pipeline.pipeline import build_review_pipeline, ReviewPipelineConfig
 from services.review_pipeline.context import PipelineContext
 from services.review_pipeline.operators.embedding import StubEmbeddingModel
-from services.review_pipeline.operators.join import StubJoinLLM
+from services.review_pipeline.operators.abstraction import StubAbstractionLLM
 from services.review_pipeline.operators.verify import StubVerifyLLM
 from libs.models import (
     CommitRequest, AddEdgeOp, ModifyNodeOp, NewNode, Node, HyperEdge,
@@ -1116,7 +1116,7 @@ async def test_full_pipeline_add_edge(mock_storage):
     """Full pipeline runs all steps for add_edge operations."""
     config = ReviewPipelineConfig(
         embedding_model=StubEmbeddingModel(dim=128),
-        join_llm=StubJoinLLM(),
+        abstraction_llm=StubAbstractionLLM(),
         verify_llm=StubVerifyLLM(),
     )
     pipeline = build_review_pipeline(config, mock_storage)
@@ -1141,10 +1141,10 @@ async def test_full_pipeline_add_edge(mock_storage):
 
 
 async def test_pipeline_modify_only_runs_bp(mock_storage):
-    """Modify-only commits skip embedding/join, only run BP."""
+    """Modify-only commits skip embedding/abstraction, only run BP."""
     config = ReviewPipelineConfig(
         embedding_model=StubEmbeddingModel(dim=128),
-        join_llm=StubJoinLLM(),
+        abstraction_llm=StubAbstractionLLM(),
         verify_llm=StubVerifyLLM(),
     )
     pipeline = build_review_pipeline(config, mock_storage)
@@ -1179,10 +1179,10 @@ from typing import TYPE_CHECKING
 from services.review_pipeline.base import Operator, ParallelStep, Pipeline
 from services.review_pipeline.operators.bp import BPOperator
 from services.review_pipeline.operators.embedding import EmbeddingModel, EmbeddingOperator
-from services.review_pipeline.operators.join import CCJoinOperator, CPJoinOperator, JoinLLM
+from services.review_pipeline.operators.abstraction import CCAbstractionOperator, CPAbstractionOperator, AbstractionLLM
 from services.review_pipeline.operators.nn_search import NNSearchOperator
 from services.review_pipeline.operators.verify import (
-    JoinTreeVerifyOperator,
+    AbstractionTreeVerifyOperator,
     RefineOperator,
     VerifyAgainOperator,
     VerifyLLM,
@@ -1195,7 +1195,7 @@ if TYPE_CHECKING:
 @dataclass
 class ReviewPipelineConfig:
     embedding_model: EmbeddingModel
-    join_llm: JoinLLM | None = None
+    abstraction_llm: AbstractionLLM | None = None
     verify_llm: VerifyLLM | None = None
     nn_k: int = 20
     bp_hops: int = 3
@@ -1207,7 +1207,7 @@ def build_review_pipeline(
 ) -> Pipeline:
     """Build the full review pipeline.
 
-    The pipeline is: Embedding → NN Search → CC/CP Join (parallel) →
+    The pipeline is: Embedding → NN Search → CC/CP Abstraction (parallel) →
     Verify → Refine → Verify Again → BP.
 
     Operators that find no input data (e.g. no new_nodes) are no-ops.
@@ -1216,10 +1216,10 @@ def build_review_pipeline(
         EmbeddingOperator(model=config.embedding_model),
         NNSearchOperator(vector_client=storage.vector, k=config.nn_k),
         ParallelStep(
-            CCJoinOperator(join_llm=config.join_llm),
-            CPJoinOperator(join_llm=config.join_llm),
+            CCAbstractionOperator(abstraction_llm=config.abstraction_llm),
+            CPAbstractionOperator(abstraction_llm=config.abstraction_llm),
         ),
-        JoinTreeVerifyOperator(verify_llm=config.verify_llm),
+        AbstractionTreeVerifyOperator(verify_llm=config.verify_llm),
         RefineOperator(),
         VerifyAgainOperator(verify_llm=config.verify_llm),
         BPOperator(storage=storage, hops=config.bp_hops),

@@ -302,7 +302,7 @@ class AddEdgeOp(Operation):
     op: Literal["add_edge"] = "add_edge"
     tail: list[NewNode | NodeRef]          # {"content": ...} 或 {"node_id": 102}
     head: list[NewNode | NodeRef]
-    type: str                               # paper-extract | join | meet | contradiction
+    type: str                               # paper-extract | abstraction | induction | contradiction
     reasoning: list
 
 class ModifyEdgeOp(Operation):

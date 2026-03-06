@@ -10,7 +10,7 @@ import re
 
 from lxml import etree
 
-from services.review_pipeline.context import JoinTree
+from services.review_pipeline.context import AbstractionTree
 
 # ---------------------------------------------------------------------------
 # XML cleaning helpers (adapted from reference xml_utils.py)
@@ -79,10 +79,10 @@ def _parse_xml(text: str) -> etree._Element:
 
 
 # ---------------------------------------------------------------------------
-# Join (asymmetric) output parsing
+# Abstraction (asymmetric) output parsing
 # ---------------------------------------------------------------------------
 
-# Maps (relation, direction) from XML to our JoinTree.relation vocabulary
+# Maps (relation, direction) from XML to our AbstractionTree.relation vocabulary
 _RELATION_MAP = {
     ("equivalence", None): "equivalent",
     ("subsumption", "candidate_more_specific"): "subsumed_by",
@@ -91,18 +91,18 @@ _RELATION_MAP = {
 }
 
 
-def parse_join_output(xml_text: str, anchor_index: int) -> list[JoinTree]:
-    """Parse asymmetric join XML into JoinTree objects.
+def parse_abstraction_output(xml_text: str, anchor_index: int) -> list[AbstractionTree]:
+    """Parse asymmetric abstraction XML into AbstractionTree objects.
 
     Args:
         xml_text: Raw LLM output (possibly wrapped in markdown fences).
         anchor_index: The ``source_node_index`` for every resulting tree.
 
     Returns:
-        List of JoinTree for non-unrelated candidates.
+        List of AbstractionTree for non-unrelated candidates.
     """
     root = _parse_xml(xml_text)
-    trees: list[JoinTree] = []
+    trees: list[AbstractionTree] = []
 
     for cand in root.findall("candidate"):
         relation = (cand.get("relation") or "").strip().lower()
@@ -122,7 +122,7 @@ def parse_join_output(xml_text: str, anchor_index: int) -> list[JoinTree]:
         reason = (cand.findtext("reason") or "").strip()
 
         trees.append(
-            JoinTree(
+            AbstractionTree(
                 source_node_index=anchor_index,
                 target_node_id=target_id,
                 relation=mapped,
@@ -134,12 +134,12 @@ def parse_join_output(xml_text: str, anchor_index: int) -> list[JoinTree]:
 
 
 # ---------------------------------------------------------------------------
-# Verify-join output parsing
+# Verify-abstraction output parsing
 # ---------------------------------------------------------------------------
 
 
 def parse_verify_output(xml_text: str) -> dict:
-    """Parse verify-join XML into a result dict.
+    """Parse verify-abstraction XML into a result dict.
 
     Returns:
         Dict with keys: ``passed`` (bool), ``checks`` (list[dict]),

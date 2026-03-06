@@ -61,7 +61,7 @@ GET /commits/{id}/review/result
 
 **Pipeline integration:**
 - Pipeline.run() receives commit operations
-- Runs 6 operators: embedding → NN search → CC join → CP join → verify → BP
+- Runs 6 operators: embedding → NN search → CC abstraction → CP abstraction → verify → BP
 - Returns DetailedReviewResult
 - PipelineContext tracks step progress, reports to Job.progress
 
@@ -86,7 +86,7 @@ class QualityMetrics(BaseModel):
     substantiveness: float # 0-1
     novelty: float         # 0-1
 
-class JoinTreeResults(BaseModel):
+class AbstractionTreeResults(BaseModel):
     cc: list[dict]  # conclusion-conclusion trees
     cp: list[dict]  # conclusion-premise trees
 
@@ -106,7 +106,7 @@ class OperationReviewDetail(BaseModel):
     embedding_generated: bool
     nn_candidates: list[NNCandidate]
     quality: QualityMetrics | None
-    join_trees: JoinTreeResults
+    abstraction_trees: AbstractionTreeResults
     contradictions: list[ContradictionResult]
     overlaps: list[OverlapResult]
 
@@ -127,7 +127,7 @@ class DetailedReviewResult(BaseModel):
 When `POST /commits/{id}/merge` is called after review:
 1. Merger reads DetailedReviewResult from the commit
 2. Persists belief updates to node records in LanceDB
-3. Creates new HyperEdge for each verified join tree (type=abstraction/induction)
+3. Creates new HyperEdge for each verified abstraction tree (type=abstraction/induction)
 4. Creates contradiction edges if detected
 5. Returns enriched MergeResult with BP details
 
@@ -210,7 +210,7 @@ class MergeResult(BaseModel):
     errors: list[str]
     # New fields
     bp_results: BPResults | None
-    join_edges_created: list[str]
+    abstraction_edges_created: list[str]
     beliefs_persisted: dict[str, float]  # node_id → new belief
 ```
 
@@ -225,5 +225,5 @@ Merger populates these from the review pipeline's DetailedReviewResult during me
 | Pipeline integration | Replace Reviewer with Pipeline | Clean break, no dual-mode complexity |
 | Embedding sharing | Reuse EmbeddingModel ABC | One interface, one DI injection point |
 | Search API compat | Breaking change | Clean v3 API, no deprecation baggage |
-| Pipeline output persistence | Full persistence in merge | Beliefs, join edges, contradictions all written during merge |
+| Pipeline output persistence | Full persistence in merge | Beliefs, abstraction edges, contradictions all written during merge |
 | Implementation order | Pipeline-first | Critical path, highest risk, unblocks Plan C |

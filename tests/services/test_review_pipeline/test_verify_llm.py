@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from services.review_pipeline.context import JoinTree
+from services.review_pipeline.context import AbstractionTree
 from services.review_pipeline.operators.verify import LiteLLMVerifyClient
 
 
@@ -59,7 +59,7 @@ def verify_client(mock_llm):
 
 async def test_verify_pass(verify_client, mock_llm):
     mock_llm.complete.return_value = SAMPLE_PASS_RESPONSE
-    tree = JoinTree(source_node_index=0, target_node_id=42, relation="equivalent")
+    tree = AbstractionTree(source_node_index=0, target_node_id=42, relation="equivalent")
 
     result = await verify_client.verify([tree])
 
@@ -71,7 +71,7 @@ async def test_verify_pass(verify_client, mock_llm):
 
 async def test_verify_fail(verify_client, mock_llm):
     mock_llm.complete.return_value = SAMPLE_FAIL_RESPONSE
-    tree = JoinTree(source_node_index=0, target_node_id=99, relation="subsumes")
+    tree = AbstractionTree(source_node_index=0, target_node_id=99, relation="subsumes")
 
     result = await verify_client.verify([tree])
 
@@ -83,8 +83,8 @@ async def test_verify_fail(verify_client, mock_llm):
 async def test_verify_multiple_trees(verify_client, mock_llm):
     mock_llm.complete.side_effect = [SAMPLE_PASS_RESPONSE, SAMPLE_FAIL_RESPONSE]
     trees = [
-        JoinTree(source_node_index=0, target_node_id=42, relation="equivalent"),
-        JoinTree(source_node_index=0, target_node_id=99, relation="subsumes"),
+        AbstractionTree(source_node_index=0, target_node_id=42, relation="equivalent"),
+        AbstractionTree(source_node_index=0, target_node_id=99, relation="subsumes"),
     ]
 
     result = await verify_client.verify(trees)
@@ -97,7 +97,7 @@ async def test_verify_multiple_trees(verify_client, mock_llm):
 
 async def test_verify_sends_prompt_with_content(verify_client, mock_llm):
     mock_llm.complete.return_value = SAMPLE_PASS_RESPONSE
-    tree = JoinTree(
+    tree = AbstractionTree(
         source_node_index=1,
         target_node_id=10,
         relation="subsumed_by",

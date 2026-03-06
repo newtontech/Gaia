@@ -1,5 +1,5 @@
 import pytest
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from services.gateway.app import create_app
 from services.gateway.deps import Dependencies
 from libs.storage import StorageConfig
@@ -8,12 +8,16 @@ from libs.embedding import StubEmbeddingModel
 
 
 @pytest.fixture
-def client(tmp_path):
+async def client(tmp_path):
     config = StorageConfig(lancedb_path=str(tmp_path / "lance"))
     dep = Dependencies(config)
     dep.initialize(config)
+    # Force stub embedding so tests don't depend on .env / real API
+    dep.search_engine._embedding_model = StubEmbeddingModel()
     app = create_app(dependencies=dep)
-    return TestClient(app), dep
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        yield c, dep
 
 
 async def _seed_data(dep):
@@ -28,12 +32,10 @@ async def _seed_data(dep):
     await dep.storage.vector.insert_batch([1, 2], embs)
 
 
-def test_search_nodes(client):
+async def test_search_nodes(client):
     c, dep = client
-    import asyncio
-
-    asyncio.get_event_loop().run_until_complete(_seed_data(dep))
-    resp = c.post(
+    await _seed_data(dep)
+    resp = await c.post(
         "/search/nodes",
         json={"text": "superconductivity", "k": 10, "paths": ["vector", "bm25"]},
     )
@@ -41,17 +43,15 @@ def test_search_nodes(client):
     assert isinstance(resp.json(), list)
 
 
-def test_search_nodes_empty():
+async def test_search_nodes_empty(tmp_path):
     """Search with no data should return empty list."""
-    import tempfile
-
-    with tempfile.TemporaryDirectory() as tmp:
-        config = StorageConfig(lancedb_path=tmp + "/lance")
-        dep = Dependencies(config)
-        dep.initialize(config)
-        app = create_app(dependencies=dep)
-        c = TestClient(app)
-        resp = c.post(
+    config = StorageConfig(lancedb_path=str(tmp_path / "lance"))
+    dep = Dependencies(config)
+    dep.initialize(config)
+    app = create_app(dependencies=dep)
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
+        resp = await c.post(
             "/search/nodes",
             json={
                 "text": "test",

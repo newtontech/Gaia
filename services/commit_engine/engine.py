@@ -17,7 +17,7 @@ from libs.models import (
     CommitRequest,
     CommitResponse,
     DetailedReviewResult,
-    JoinTreeResults,
+    AbstractionTreeResults,
     MergeResult,
     NNCandidate,
     OperationReviewDetail,
@@ -125,14 +125,18 @@ class CommitEngine:
                 NNCandidate(node_id=str(nid), similarity=sim)
                 for nid, sim in context.nn_results.get(i, [])
             ]
-            cc_trees = [t.model_dump() for t in context.cc_join_trees if t.source_node_index == i]
-            cp_trees = [t.model_dump() for t in context.cp_join_trees if t.source_node_index == i]
+            cc_trees = [
+                t.model_dump() for t in context.cc_abstraction_trees if t.source_node_index == i
+            ]
+            cp_trees = [
+                t.model_dump() for t in context.cp_abstraction_trees if t.source_node_index == i
+            ]
             detail = OperationReviewDetail(
                 op_index=node_info.op_index,
                 verdict="pass",
                 embedding_generated=i in context.embeddings,
                 nn_candidates=nn_cands,
-                join_trees=JoinTreeResults(cc=cc_trees, cp=cp_trees),
+                abstraction_trees=AbstractionTreeResults(cc=cc_trees, cp=cp_trees),
                 contradictions=[],
                 overlaps=[],
             )

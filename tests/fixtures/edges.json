@@ -173,7 +173,7 @@
       "Both propositions concern the same material family (Tl‑Ba‑Cu‑O / Tl‑Ca/Ba‑Cu‑O) and the same annealing condition (450°C in flowing oxygen) but assert incompatible outcomes: Proposition 86 reports a slight improvement of superconducting properties after annealing, whereas Proposition 85 reports a depression or complete destruction of the superconducting transition under the same annealing treatment. These claims cannot both be true for the same sample under the same assumptions, hence they are contradictory."
     ],
     "metadata": {
-      "subtype": "contradiction_join",
+      "subtype": "contradiction_abstraction",
       "round": 0,
       "refined": true,
       "verification_checks": [
@@ -193,7 +193,7 @@
       "quality": {
         "classification_correct": false,
         "suggested_classification": "partial_overlap",
-        "classification_reason": "The edge was labeled \"contradiction_join\", but with two children that make different specific claims (improvement vs. depression/destruction) the correct relation is partial_overlap: the parent is a generalization common to both children. \"Subsumption\" would be inappropriate because there are multiple children; \"unrelated\" is wrong because both children share the common claim captured by the parent.",
+        "classification_reason": "The edge was labeled \"contradiction_abstraction\", but with two children that make different specific claims (improvement vs. depression/destruction) the correct relation is partial_overlap: the parent is a generalization common to both children. \"Subsumption\" would be inappropriate because there are multiple children; \"unrelated\" is wrong because both children share the common claim captured by the parent.",
         "union_error": false,
         "union_error_detail": "",
         "tightness": 5,
@@ -221,7 +221,7 @@
       "Proposition 251 is a theoretical prediction that an fcc YH10 phase exists and is superconducting with $T_{c}$ ≈303 K at 400 GPa (or 305–326 K at 250 GPa). Proposition 269 explicitly states that, contrary to those theoretical predictions, YH10 does not form in the explored pressure–temperature range up to 410 GPa and 2250 K and that instead the P6_3/mmc YH9 phase remains the hydrogen-richest stable yttrium hydride. These two claims about whether an fcc YH10 phase forms/stably exists under comparable high-pressure conditions are logically incompatible."
     ],
     "metadata": {
-      "subtype": "contradiction_join",
+      "subtype": "contradiction_abstraction",
       "round": 0,
       "refined": true,
       "verification_checks": [
@@ -241,7 +241,7 @@
       "quality": {
         "classification_correct": false,
         "suggested_classification": "partial_overlap",
-        "classification_reason": "The current subtype label (\"contradiction_join\") does not match the expected taxonomy and is not accurate here. There are two children that both share and assert the same core theoretical claim (existence of theoretical predictions for an fcc $YH_{10}$ with high $T_{c}$), so the appropriate label for a join of two propositions sharing common content is \"partial_overlap.\" It is not a subsumption (that would require exactly one child), and the children are not unrelated.",
+        "classification_reason": "The current subtype label (\"contradiction_abstraction\") does not match the expected taxonomy and is not accurate here. There are two children that both share and assert the same core theoretical claim (existence of theoretical predictions for an fcc $YH_{10}$ with high $T_{c}$), so the appropriate label for an abstraction of two propositions sharing common content is \"partial_overlap.\" It is not a subsumption (that would require exactly one child), and the children are not unrelated.",
         "union_error": false,
         "union_error_detail": "",
         "tightness": 4,
@@ -314,8 +314,8 @@
       "confirmed": true,
       "verification_reasoning": "Proposition 251 asserts the existence (thermodynamic/dynamical stability in theoretical calculations) of an fcc $YH_{10}$ phase with $T_{c}\\sim303\\,$K at pressures 250–400 GPa. Proposition 269 asserts that \"$YH_{10}$ does not form\" anywhere in the pressure–temperature window up to 410 GPa and 2250 K and that the hydrogen-richest stable phase there is $P6_3/mmc$ $YH_{9}$. Those two claims make directly incompatible statements about the same composition and overlapping pressure range (251: stable/existing at 250–400 GPa; 269: does not form up to 410 GPa), so they are logically contradictory as statements about phase formation/stability under the same nominal pressure range.",
       "cross_validated": true,
-      "known_from": "join",
-      "known_join_node": 1576
+      "known_from": "abstraction",
+      "known_abstraction_node": 1576
     },
     "extra": {
       "quality": {

@@ -16,10 +16,10 @@ import pytest
 from dotenv import load_dotenv
 
 from services.review_pipeline.config import LLMModelConfig
-from services.review_pipeline.context import JoinTree
+from services.review_pipeline.context import AbstractionTree
 from services.review_pipeline.llm_client import LLMClient
 from services.review_pipeline.operators.embedding_dashscope import DashScopeEmbeddingModel
-from services.review_pipeline.operators.join import LiteLLMJoinClient
+from services.review_pipeline.operators.abstraction import LiteLLMAbstractionClient
 from services.review_pipeline.operators.verify import LiteLLMVerifyClient
 
 # Auto-load .env from project root (must run before skip guards read env vars)
@@ -63,8 +63,8 @@ def llm_client():
 
 
 @pytest.fixture
-def join_client(llm_client):
-    return LiteLLMJoinClient(llm_client)
+def abstraction_client(llm_client):
+    return LiteLLMAbstractionClient(llm_client)
 
 
 @pytest.fixture
@@ -140,23 +140,23 @@ async def test_llm_client_basic(llm_client):
 
 
 # ---------------------------------------------------------------------------
-# Join integration tests
+# Abstraction integration tests
 # ---------------------------------------------------------------------------
 
 
 @skip_no_llm
-async def test_join_real_api(join_client):
-    """Verify join classification returns valid JoinTrees with real LLM."""
+async def test_abstraction_real_api(abstraction_client):
+    """Verify abstraction classification returns valid AbstractionTrees with real LLM."""
     anchor = "The band gap of monolayer MoS2 is 1.8 eV."
     candidates = [
         (1, "The electronic band gap of single-layer MoS2 is approximately 1.8 eV."),
         (2, "The band gap of bulk MoS2 is 1.2 eV."),
         (3, "Graphene has zero band gap and is a semimetal."),
     ]
-    trees = await join_client.find_joins(anchor, candidates)
+    trees = await abstraction_client.find_abstractions(anchor, candidates)
 
     print(f"\n{'=' * 60}")
-    print(f"JOIN RESULTS ({len(trees)} trees):")
+    print(f"ABSTRACTION RESULTS ({len(trees)} trees):")
     for t in trees:
         print(f"  target={t.target_node_id} relation={t.relation}")
         print(f"    reasoning: {t.reasoning[:200]}")
@@ -164,7 +164,7 @@ async def test_join_real_api(join_client):
 
     assert isinstance(trees, list)
     for tree in trees:
-        assert isinstance(tree, JoinTree)
+        assert isinstance(tree, AbstractionTree)
         assert tree.source_node_index == 0
         assert tree.target_node_id in (1, 2, 3)
         assert tree.relation in ("equivalent", "subsumes", "subsumed_by", "contradiction")
@@ -186,7 +186,7 @@ async def test_join_real_api(join_client):
 async def test_verify_real_api(verify_client):
     """Verify the verification client sets pass/fail with real LLM."""
     trees = [
-        JoinTree(
+        AbstractionTree(
             source_node_index=0,
             target_node_id=1,
             relation="equivalent",
@@ -209,7 +209,7 @@ async def test_verify_real_api(verify_client):
 
 
 # ---------------------------------------------------------------------------
-# End-to-end: Embed → Join → Verify
+# End-to-end: Embed → Abstraction → Verify
 # ---------------------------------------------------------------------------
 
 
@@ -217,8 +217,8 @@ async def test_verify_real_api(verify_client):
     not (_has_llm_creds and _has_embed_creds),
     reason="Need both LLM and embedding credentials",
 )
-async def test_e2e_embed_join_verify(embedding_model, join_client, verify_client):
-    """Full pipeline: embed texts, join-classify, then verify."""
+async def test_e2e_embed_abstraction_verify(embedding_model, abstraction_client, verify_client):
+    """Full pipeline: embed texts, abstraction-classify, then verify."""
     texts = [
         "The band gap of monolayer MoS2 is 1.8 eV.",
         "Single-layer MoS2 has a direct band gap of approximately 1.8 eV.",
@@ -235,13 +235,13 @@ async def test_e2e_embed_join_verify(embedding_model, join_client, verify_client
     print(f"{'=' * 60}")
     print(f"Step 1 — Embed: 2 vectors, dim={len(vectors[0])}")
 
-    # Step 2: Join — use first text as anchor, second as candidate
-    trees = await join_client.find_joins(
+    # Step 2: Abstraction — use first text as anchor, second as candidate
+    trees = await abstraction_client.find_abstractions(
         texts[0],
         [(100, texts[1])],
     )
     assert len(trees) >= 0  # LLM may or may not find a relation
-    print(f"Step 2 — Join: {len(trees)} trees found")
+    print(f"Step 2 — Abstraction: {len(trees)} trees found")
     for t in trees:
         print(f"  target={t.target_node_id} relation={t.relation} reason={t.reasoning[:150]}")
 

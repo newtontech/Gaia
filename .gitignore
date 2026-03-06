@@ -28,6 +28,14 @@ htmlcov/
 # Worktrees
 .worktrees/
 
+# Logs
+logs/
+*.log
+
+# Temporary test/review artifacts
+review_*.json
+review_*.md
+
 # Data (local databases, large files)
 data/
 

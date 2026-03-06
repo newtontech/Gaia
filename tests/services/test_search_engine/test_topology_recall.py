@@ -31,7 +31,7 @@ async def test_recall_seeds_have_higher_score(mock_graph_store):
     assert scores[10] >= scores[12]
 
 
-async def test_recall_calls_get_subgraph_with_join_filter(mock_graph_store):
+async def test_recall_calls_get_subgraph_with_abstraction_filter(mock_graph_store):
     recall = TopologyRecall(mock_graph_store)
     await recall.recall([10], hops=2)
     mock_graph_store.get_subgraph.assert_called_once_with([10], hops=2, edge_types=["abstraction"])

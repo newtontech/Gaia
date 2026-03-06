@@ -191,7 +191,7 @@ async def get_edge(
 async def get_node_subgraph(
     node_id: int,
     hops: int = 1,
-    edge_types: str | None = None,      # 逗号分隔: "join,meet"
+    edge_types: str | None = None,      # 逗号分隔: "abstraction,induction"
     storage: StorageManager = Depends(get_storage),
 ) -> SubgraphResponse:
     types = edge_types.split(",") if edge_types else None
