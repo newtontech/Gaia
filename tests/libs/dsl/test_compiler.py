@@ -44,10 +44,7 @@ def test_direct_dependency_creates_edge():
     fg = compile_factor_graph(pkg)
     # refutation_chain: heavier_falls_faster --direct--> aristotle_contradicted
     # Find a factor connecting these two variables
-    has_direct = any(
-        f for f in fg.factors
-        if "heavier_falls_faster" in str(f.get("tail", []))
-    )
+    has_direct = any(f for f in fg.factors if "heavier_falls_faster" in str(f.get("tail", [])))
     assert has_direct
 
 
@@ -58,15 +55,10 @@ def test_indirect_dependency_excluded_from_edges():
     fg = compile_factor_graph(pkg)
     # thought_experiment_env is used as indirect in refutation_chain
     # It should NOT appear as a tail in that factor
-    refutation_factors = [
-        f for f in fg.factors
-        if f.get("name") == "refutation_chain.step_2"
-    ]
+    refutation_factors = [f for f in fg.factors if f.get("name") == "refutation_chain.step_2"]
     if refutation_factors:
         factor = refutation_factors[0]
-        assert "thought_experiment_env" not in [
-            t for t in factor.get("tail", [])
-        ]
+        assert "thought_experiment_env" not in [t for t in factor.get("tail", [])]
 
 
 def test_exported_only_in_factor_graph():

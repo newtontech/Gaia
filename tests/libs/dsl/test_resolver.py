@@ -14,7 +14,9 @@ def test_resolve_simple_ref():
     resolved = resolve_refs(pkg)
     # reasoning module refs heavier_falls_faster from aristotle
     reasoning = next(m for m in resolved.loaded_modules if m.name == "reasoning")
-    ref = next(d for d in reasoning.declarations if d.type == "ref" and d.name == "heavier_falls_faster")
+    ref = next(
+        d for d in reasoning.declarations if d.type == "ref" and d.name == "heavier_falls_faster"
+    )
     assert ref._resolved is not None
     assert isinstance(ref._resolved, Claim)
     assert "重的物体" in ref._resolved.content
@@ -42,6 +44,7 @@ def test_resolve_undefined_ref_raises():
     pkg = load_package(FIXTURE_DIR)
     # Add a bad ref
     from libs.dsl.models import Ref
+
     bad_module = next(m for m in pkg.loaded_modules if m.name == "reasoning")
     bad_module.declarations.append(Ref(name="nonexistent", target="fake_module.fake_name"))
     with pytest.raises(ResolveError, match="fake_module"):

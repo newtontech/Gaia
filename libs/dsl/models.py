@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, PrivateAttr
 
 # ── Terminals ──────────────────────────────────────────────
 
+
 class Param(BaseModel):
     name: str
     type: str
@@ -24,6 +25,7 @@ class Manifest(BaseModel):
 
 
 # ── Steps (in a ChainExpr) ────────────────────────────────
+
 
 class StepRef(BaseModel):
     step: int
@@ -49,6 +51,7 @@ Step = StepRef | StepApply | StepLambda
 
 
 # ── Declarations (unified — everything is Knowledge) ──────
+
 
 class Declaration(BaseModel):
     """Base for all declarations. Subclasses set type as a literal."""
@@ -121,6 +124,7 @@ class Module(BaseModel):
 
 
 # ── Package ───────────────────────────────────────────────
+
 
 class Package(BaseModel):
     name: str

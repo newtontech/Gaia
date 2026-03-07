@@ -107,9 +107,11 @@ def _compile_chain(
                     head.append(next_step.ref)
 
             if tail or head:
-                fg.factors.append({
-                    "name": factor_name,
-                    "tail": tail,
-                    "head": head,
-                    "probability": probability,
-                })
+                fg.factors.append(
+                    {
+                        "name": factor_name,
+                        "tail": tail,
+                        "head": head,
+                        "probability": probability,
+                    }
+                )
