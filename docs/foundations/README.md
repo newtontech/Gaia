@@ -18,6 +18,7 @@ Gaia now has a documented re-baselining diagnosis in [../architecture-rebaseline
 The execution plan for that reset lives here:
 
 - [Foundation Reset Plan](foundation-reset-plan.md)
+- [System Overview](system-overview.md)
 - [Product Scope](product-scope.md)
 - [Domain Model](domain-model.md)
 - [Shared Knowledge Package V1 Static](shared/knowledge-package-static.md)
