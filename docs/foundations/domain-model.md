@@ -24,16 +24,18 @@ It does not define:
 
 ## Core Layers
 
-Gaia currently uses three conceptual layers:
+Gaia currently uses four conceptual layers:
 
 1. reusable global knowledge objects
 2. local reasoning steps with explicit dependencies
-3. package-level organization
+3. modules — coherent reasoning units, each establishing one conclusion
+4. packages — collections of modules
 
 The corresponding V1 terms are:
 
 - `knowledge_artifact`
 - `step`
+- `module`
 - `package`
 
 ## Shared Knowledge Objects
@@ -96,15 +98,15 @@ Examples:
 - a tool call
 - another explicit process step
 
-`action` is used when a reasoning gap is nontrivial enough that it should be made explicit in a reasoning chain.
+`action` is used when a reasoning gap between two artifacts is nontrivial enough that it should be made explicit. If the reasoning is trivial or locally obvious, the `action` may be omitted.
 
 ## Local Reasoning Structure
 
 ### `step`
 
-A `step` is one local occurrence of a `knowledge_artifact` inside a `package`.
+A `step` is one local occurrence of a `knowledge_artifact` inside a `module`.
 
-It exists because the same global artifact can be reused in multiple packages and in different local roles.
+It exists because the same global artifact can be reused in multiple modules and packages, in different local roles.
 
 Each step declares its logical dependencies explicitly via `input`, with dependency strength:
 
@@ -115,20 +117,29 @@ These are local step relations, not global artifact properties. The same artifac
 
 ### Narrative ordering
 
-A package's `reasoning_steps` list defines a narrative reading order. This ordering carries no implicit logical dependency — all dependencies are declared via `input` on each step.
+A module's `steps` list defines a narrative reading order. This ordering carries no implicit logical dependency — all dependencies are declared via `input` on each step.
 
 V1 does not impose a rigid formal grammar on which artifact kinds may follow which others. The governing rule is:
 
 - the narrative should make sense as a reading order
-- if there is a nontrivial reasoning gap, it should be made explicit via an `action`
+- if there is a nontrivial reasoning gap between two artifacts, it should be made explicit via an `action`
+- if the reasoning is trivial or locally obvious, the `action` may be omitted
 
-This means direct artifact → artifact transitions are allowed when the reasoning is trivial or locally obvious.
+### Implicit hypergraph
 
-## Package Organization
+The logical structure within a module is a hypergraph, derived from step `input` declarations. Each step with strong inputs defines a reasoning link: the strong input artifacts are the **premises**, the step's own artifact is the **conclusion**. This hypergraph is not a separate schema object — it is always derived.
+
+## Module and Package Organization
+
+### `module`
+
+A `module` groups related steps into a single reasoning unit that establishes exactly one conclusion claim.
+
+This is analogous to a module in a codebase: it groups related logic and has a clear output. If a reasoning thread has multiple conclusions, it should be split into multiple modules.
 
 ### `package`
 
-A `package` is a reusable container of knowledge artifacts and reasoning steps.
+A `package` is a reusable container of modules.
 
 Typical examples include:
 
@@ -137,7 +148,14 @@ Typical examples include:
 - a structured note
 - a project unit
 
-A package contains `reasoning_steps` in narrative order. Starting points (leaves with no `input`) and conclusions (artifacts with no downstream strong dependents) are derived from the dependency graph, not declared separately.
+A package also carries editorial annotations that capture the author's intent:
+
+- `motivation_artifact_ids` — what motivated this research
+- `key_claim_ids` — the most important conclusions
+- `follow_up_question_ids` — questions opened for future work
+- `shared_setting_ids` — settings shared across modules
+
+These are editorial judgments, not derivable from graph structure alone.
 
 ## Important Non-Equivalences
 
@@ -153,7 +171,7 @@ Examples:
 
 - a statement-form gap is a `claim`, not a `question`
 - a definition is a `setting`, not a generic `claim`
-- adjacent steps in `reasoning_steps` do not imply logical dependency — all dependencies are explicit via `input`
+- adjacent steps in a module's narrative order do not imply logical dependency — all dependencies are explicit via `input`
 
 ## Deferred Distinctions
 

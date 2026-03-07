@@ -82,9 +82,9 @@ It carries package metadata and dependency declarations.
 It serializes the V1 static package schema:
 
 - `knowledge_artifact`
-- `reasoning_chain`
-- `chain_step`
-- package-level roles
+- `step`
+- `module`
+- `package`-level roles
 
 #### 3. `reviews/*.yaml` are sidecar review artifacts
 
@@ -146,17 +146,22 @@ It serializes one complete V1 static `package`.
 schema_version: gaia.knowledge_package.v1
 package_id: pkg_...
 
+modules:
+  - module_id: mod_...
+    summary: "Short description of what this module establishes"
+    conclusion_artifact_id: ka_...
+    steps:
+      - step_id: s_...
+        artifact_id: ka_...
+        input:
+          - ref: s_...
+            strength: strong
+
 knowledge_artifacts:
   - artifact_id: ka_...
     artifact_kind: claim
     content_mode: nl
     content: "Current methods do not explain X."
-
-reasoning_chains:
-  - chain_id: rc_...
-    chain_steps:
-      - step_id: cs_...
-        artifact_id: ka_...
 
 motivation_artifact_ids: []
 key_claim_ids: []
@@ -170,11 +175,11 @@ metadata: {}
 
 - `schema_version`
 - `package_id`
-- `knowledge_artifacts`
-- `reasoning_chains`
+- `modules`
 
 ### Optional top-level fields
 
+- `knowledge_artifacts` (artifacts may also be defined externally and referenced by `artifact_id`)
 - `motivation_artifact_ids`
 - `key_claim_ids`
 - `follow_up_question_ids`
@@ -210,17 +215,17 @@ schema_version: gaia.review_report.v1
 review_id: rr_...
 package_id: pkg_...
 
-chain_reviews:
-  - chain_id: rc_...
-    output_artifact_id: ka_...
-    output_artifact_kind: claim
+module_reviews:
+  - module_id: mod_...
+    conclusion_artifact_id: ka_...
+    conclusion_artifact_kind: claim
     conditional_prior: 0.72
     weak_points:
-      - target_step_id: cs_...
+      - target_step_id: s_...
         proposed_artifact_kind: setting
         proposed_content: "Assume near-vacuum conditions."
         dependency_strength: strong
-        rationale: "Without this setting, the chain does not support the output claim."
+        rationale: "Without this setting, the module does not support the conclusion claim."
 
 notes: "Optional package-level notes."
 metadata: {}
@@ -231,15 +236,15 @@ metadata: {}
 - `schema_version`
 - `review_id`
 - `package_id`
-- `chain_reviews`
+- `module_reviews`
 
-### `chain_reviews[]`
+### `module_reviews[]`
 
-Each `chain_review` should contain:
+Each `module_review` should contain:
 
-- `chain_id`
-- `output_artifact_id`
-- `output_artifact_kind`
+- `module_id`
+- `conclusion_artifact_id`
+- `conclusion_artifact_kind`
 
 Optional fields:
 
@@ -265,11 +270,11 @@ The review report is a sidecar artifact.
 
 #### 2. `conditional_prior` is local
 
-If present, `conditional_prior` is a local reasoning-chain-level score. It is not a future global belief score.
+If present, `conditional_prior` is a local module-level score. It is not a future global belief score.
 
-#### 3. `conditional_prior` is mainly for claim-output chains
+#### 3. `conditional_prior` is mainly for claim-conclusion modules
 
-For question-output chains, `conditional_prior` is usually omitted.
+For question-conclusion modules, `conditional_prior` is usually omitted.
 
 #### 4. Multiple reports are allowed
 
