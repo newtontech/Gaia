@@ -1,4 +1,7 @@
 # 推理模块 — 伽利略的核心论证
+# 演示两种推理形式：
+#   1. InferAction — 通用推理方法，带参数，可复用
+#   2. Lambda — 一次性具体推理步骤，无参数
 
 type: reasoning_module
 name: reasoning
@@ -17,48 +20,36 @@ declarations:
     name: vacuum_env
     target: setting.vacuum_env
 
-  # === 动作（函数） ===
+  # === 通用推理方法（InferAction，带参数，可复用） ===
+
+  # 归谬法 — 通用逻辑方法
   - type: infer_action
-    name: tied_balls_reductio
+    name: reductio_ad_absurdum
     params:
-      - name: doctrine
+      - name: hypothesis
         type: claim
       - name: env
         type: setting
     return_type: claim
     content: >
-      运用归谬法：如果重的物体下落更快，那么把一个重球
-      和一个轻球绑在一起就会产生矛盾。组合体更重（应该
-      下落更快），但轻球会拖慢重球（应该下落更慢）。
-      亚里士多德的定律自相矛盾。
+      对 {hypothesis} 运用归谬法：假设该命题为真，
+      在 {env} 条件下推导出内部矛盾，从而证明该命题为假。
     prior: 0.9
 
+  # 综合推理 — 从多条证据线汇聚得出结论
   - type: infer_action
-    name: identify_confound
+    name: synthesize
     params:
-      - name: observation
+      - name: evidence_a
         type: claim
-    return_type: claim
-    content: >
-      识别出空气阻力才是造成下落速度差异的真正原因，
-      而非重量。在密度越大的介质中，速度差异越小；
-      推及真空，差异将完全消失。
-    prior: 0.85
-
-  - type: infer_action
-    name: synthesize_conclusion
-    params:
-      - name: refutation
-        type: claim
-      - name: confound
+      - name: evidence_b
         type: claim
       - name: env
         type: setting
     return_type: claim
     content: >
-      综合对亚里士多德的逻辑反驳和空气阻力作为混淆因素
-      的识别，得出预测：在真空中，所有物体无论轻重都以
-      相同速率下落。
+      综合 {evidence_a} 和 {evidence_b} 两条独立的证据线，
+      在 {env} 条件下推导出统一的结论。
     prior: 0.9
 
   # === 中间结论和最终结论 ===
@@ -79,14 +70,14 @@ declarations:
 
   # === 推理链 ===
 
-  # 链1：绑球归谬法
+  # 链1：归谬法反驳（使用通用 InferAction）
   - type: chain_expr
     name: refutation_chain
     steps:
       - step: 1
         ref: heavier_falls_faster
       - step: 2
-        apply: tied_balls_reductio
+        apply: reductio_ad_absurdum
         args:
           - ref: heavier_falls_faster
             dependency: direct
@@ -96,29 +87,30 @@ declarations:
       - step: 3
         ref: aristotle_contradicted
 
-  # 链2：识别空气阻力为混淆因素
+  # 链2：识别混淆因素（使用 Lambda — 一次性具体推理）
   - type: chain_expr
     name: confound_chain
     steps:
       - step: 1
         ref: heavier_falls_faster
       - step: 2
-        apply: identify_confound
-        args:
-          - ref: heavier_falls_faster
-            dependency: direct
+        lambda: >
+          观察到在密度越大的介质中，轻重物体的下落速度差异越小。
+          水中的差异小于空气中，油中的差异小于水中。
+          因此真正造成速度差异的原因是空气阻力，而非重量本身。
+          推及真空（无阻力），差异将完全消失。
         prior: 0.85
       - step: 3
         ref: air_resistance_is_confound
 
-  # 链3：综合最终预测
+  # 链3：综合最终预测（使用通用 InferAction）
   - type: chain_expr
     name: synthesis_chain
     steps:
       - step: 1
         ref: aristotle_contradicted
       - step: 2
-        apply: synthesize_conclusion
+        apply: synthesize
         args:
           - ref: aristotle_contradicted
             dependency: direct
