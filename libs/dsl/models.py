@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, PrivateAttr
 
 
 # ── Terminals ──────────────────────────────────────────────
@@ -97,6 +97,7 @@ class ChainExpr(Declaration):
 class Ref(Declaration):
     type: str = "ref"
     target: str = ""
+    _resolved: Declaration | None = PrivateAttr(default=None)  # populated by resolver
 
 
 # ── Module ────────────────────────────────────────────────
@@ -129,5 +130,6 @@ class Package(BaseModel):
     export: list[str] = Field(default_factory=list)
     # Populated after loading module files:
     loaded_modules: list[Module] = Field(default_factory=list, exclude=True)
+    _index: dict[str, Declaration] = PrivateAttr(default_factory=dict)  # populated by resolver
 
     model_config = {"populate_by_name": True}
