@@ -30,6 +30,10 @@ Those belong to later documents:
 
 ## Design Rationale
 
+### Gaia as a probabilistic functional programming language
+
+Gaia is, at its core, a **probabilistic functional programming language for epistemic inference**. This document (V1) defines the deterministic FP core — closures, inferences, chains, modules, and packages. The probabilistic layer — priors, dependency strength as conditioning, and belief propagation as inference — is defined in [V3: Probabilistic Semantics](probabilistic-semantics.md). Together they form a complete probabilistic FP system where writing a knowledge package is writing a probabilistic program, and running BP is performing posterior inference.
+
 ### Why a package/module system for knowledge?
 
 Gaia's knowledge package model borrows its structural design from programming language module systems. The core insight is that **structured knowledge and structured code face the same organizational problems**: namespacing, dependency declaration, encapsulation, and reuse across contexts.

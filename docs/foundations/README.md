@@ -23,6 +23,7 @@ The execution plan for that reset lives here:
 - [Domain Model](domain-model.md)
 - [Shared Knowledge Package V1 Static](shared/knowledge-package-static.md)
 - [Shared Knowledge Package V1 File Formats](shared/knowledge-package-file-formats.md)
+- [V3 Probabilistic Semantics](shared/probabilistic-semantics.md)
 - [Gaia CLI Runtime Boundaries](cli/boundaries.md)
 
 ## Intended outputs
@@ -33,11 +34,12 @@ The plan is to establish a small set of durable foundation docs before major cod
 2. `domain-model.md`
 3. `shared/knowledge-package-static.md` (shared V1 closure/module/package schema)
 4. `shared/knowledge-package-file-formats.md` (shared V1 package file formats and review-report format)
-5. `cli/boundaries.md` (Gaia CLI runtime layering on top of shared contracts)
-6. `graph-spec.md`
-7. `storage-schema.md`
-8. `module-boundaries.md`
-9. `api-contract.md`
+5. `shared/probabilistic-semantics.md` (V3 probabilistic FP semantics, priors, BP)
+6. `cli/boundaries.md` (Gaia CLI runtime layering on top of shared contracts)
+7. `graph-spec.md`
+8. `storage-schema.md`
+9. `module-boundaries.md`
+10. `api-contract.md`
 
 Those files do not all exist yet. This directory is the place where they should be created and kept current.
 
