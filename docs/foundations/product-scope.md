@@ -2,13 +2,83 @@
 
 ## Purpose
 
-This document defines Gaia's product positioning and current baseline on `main`.
+This document defines Gaia's product positioning, theoretical foundation, and current baseline on `main`.
 
-Its job is simple:
+Its job is:
 
+- state the theoretical foundation — why Gaia exists and why existing tools cannot replace it
 - state the decided product direction
 - state what is currently shipped on `main`
 - state what is not yet shipped but is on the roadmap
+
+## Theoretical Foundation
+
+### The goal: a Large Knowledge Model
+
+Gaia's goal is to build a **Large Knowledge Model (LKM)** — a billion-scale reasoning hypergraph where propositions are nodes and reasoning relationships are hyperedges. The LKM is constructed automatically by AI agents on the cloud, not manually by humans.
+
+This requires a **machine-readable, machine-writable knowledge representation** that supports:
+
+1. **Structured reasoning** — not free-text, but typed knowledge objects (claims, questions, settings, actions) connected by explicit inference steps
+2. **Probabilistic belief** — knowledge is not true/false but carries degrees of belief, because scientific knowledge is inherently uncertain
+3. **Composable modules** — knowledge must be packaged, exported, imported, and composed, like code in a programming language
+4. **Automated inference** — the system must propagate beliefs through the graph automatically when new evidence arrives
+
+These requirements together define a programming language. Gaia is that language.
+
+### Gaia as a probabilistic functional programming language
+
+Gaia is a **probabilistic functional programming language** specialized for knowledge representation and epistemic inference.
+
+It follows the standard architecture of probabilistic PLs: a **deterministic host language** with a **probabilistic layer** on top.
+
+| Layer | What it provides | PL analogy |
+|-------|-----------------|------------|
+| **V1 — Deterministic FP core** | Closures (values), inferences (lambdas), chains (composition), modules (with imports/exports), packages | Haskell, OCaml |
+| **V3 — Probabilistic layer** | Priors, dependency strength (conditioning), belief propagation (inference) | Church's `flip`/`observe`, Hakaru's `measure` monad, Pyro's `sample`/`observe` |
+
+The theoretical positioning:
+
+- **Pólya** (*Mathematics and Plausible Reasoning*, 1954) — reasoning extends beyond deductive proof to plausible inference
+- **Jaynes** (*Probability Theory: The Logic of Science*, 2003) — probability is the logic of plausible reasoning, a generalization of deductive logic to degrees of belief
+- **Cox's theorem** — any consistent system of plausible reasoning is isomorphic to probability theory
+
+Gaia aspires to be **Curry-Howard for plausible reasoning**: just as functional programming languages (Haskell, Lean) are grounded in the Curry-Howard correspondence between proofs and programs, Gaia extends this from deductive certainty to plausible belief. This is an open research direction, not an established theorem — the full Curry-Howard correspondence for probabilistic computation remains an active area of study (cf. "Curry and Howard Meet Borel", LICS 2022).
+
+### Why existing tools cannot replace Gaia
+
+**Why not existing probabilistic PLs (Pyro, Stan, Church, Hakaru)?**
+
+These languages model **statistical probability** — distributions over random variables for data modeling. Gaia models **epistemic probability** — degrees of belief in the truth of propositions.
+
+| | Statistical probability (Pyro/Stan) | Epistemic probability (Gaia) |
+|---|---|---|
+| Probability of what | Random variables (numerical) | Propositions (knowledge closures) |
+| Probability means | Frequency / measure over outcomes | Degree of belief in truth |
+| Conditioning on | Observed data | Dependency strength (strong/weak) |
+| Graph model | DAG (Bayesian network) | Hypergraph (multi-premise → multi-conclusion) |
+| Inference computes | Posterior distribution | Belief scores on propositions |
+| Inference algorithm | MCMC, variational inference | Loopy BP on hypergraphs |
+
+The mathematical foundation is the same (Bayesian probability), but the domain structure is fundamentally different — like SQL and Haskell both being grounded in set theory, but SQL exists because relational data needs its own language.
+
+**Why not existing FP languages (Haskell, OCaml)?**
+
+These provide the deductive logic layer but have no built-in probabilistic reasoning. You could build Gaia on top of Haskell, but you would need to add the entire probabilistic layer (priors, belief propagation, conditioning semantics, hypergraph inference) — at which point you have built a new language.
+
+**Why not existing knowledge graphs (Neo4j, OWL, RDF)?**
+
+These provide graph storage and deterministic querying, but have no probabilistic inference. They can tell you "A is connected to B" but not "how much should you believe B given evidence for A?" Gaia uses graph databases (Neo4j, Kuzu) as storage backends, but the knowledge representation and inference layers are what make Gaia a language, not just a database.
+
+### Gaia's unique combination
+
+Gaia combines three capabilities that no existing tool provides together:
+
+1. **Functional knowledge structure** (V1) — closures, inferences, chains, modules, packages — a typed, composable knowledge representation inspired by Haskell/OCaml module systems
+2. **Epistemic probabilistic reasoning** (V3) — priors, beliefs, dependency strength, contradiction/retraction semantics — grounded in Jaynes' probability-as-logic tradition
+3. **Hypergraph belief propagation** — loopy BP on factor graphs derived from the knowledge package structure, computing self-consistent beliefs across the entire LKM
+
+This combination enables the core product: **AI agents write knowledge packages (probabilistic programs), the cloud runs belief propagation (posterior inference), and the result is a Large Knowledge Model where every proposition carries a calibrated degree of belief.**
 
 ## Product Direction (Decided)
 
