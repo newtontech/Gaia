@@ -26,6 +26,51 @@ Those belong to implementation-level documents.
 
 ## Gaia as a Probabilistic Functional Programming Language
 
+### Core thesis: Curry-Howard for plausible reasoning
+
+Functional programming is grounded in mathematical logic via the **Curry-Howard correspondence**: propositions are types, proofs are programs, and type checking verifies that a proof is valid. This gives FP languages like Haskell and Lean their power — they are programming languages where writing a program is constructing a deductive proof.
+
+Gaia extends this from **deductive reasoning** (certainty) to **plausible reasoning** (degrees of belief):
+
+```text
+Mathematical logic  ──(Curry-Howard)──→  FP (Haskell, Lean)
+        │
+        │  Pólya / Jaynes / Cox
+        ↓
+Plausible reasoning ──(Gaia)──→  Probabilistic FP for knowledge
+```
+
+The intellectual foundation comes from three key results:
+
+- **Pólya** (*Mathematics and Plausible Reasoning*, 1954) — mathematical reasoning extends beyond deductive proof to plausible inference: "this is likely true given the evidence"
+- **Jaynes** (*Probability Theory: The Logic of Science*, 2003) — probability theory is not about frequencies or random experiments, but about **the logic of plausible reasoning** — a generalization of deductive logic to degrees of belief
+- **Cox's theorem** — any system of plausible reasoning that satisfies basic consistency axioms is isomorphic to probability theory
+
+Gaia's design follows directly from this:
+
+| Deductive logic (FP) | Plausible reasoning (Gaia) |
+|-----------------------|---------------------------|
+| Proposition (true / false) | Closure (belief ∈ [0, 1]) |
+| Axiom (assumed true) | Closure with prior = 1.0 |
+| Theorem (proven) | Exported claim with high belief after BP |
+| Deductive proof | Chain (plausible inference) |
+| Logical entailment A ⊢ B | Strong dependency (A supports B with probability p) |
+| Modus ponens | Forward BP message |
+| Type checking (is the proof valid?) | BP convergence (are beliefs self-consistent?) |
+| Proof irrelevance | Weak dependency (contextual, does not affect truth) |
+
+This also clarifies how Gaia differs from **statistical** probabilistic programming:
+
+| | Deductive (FP) | Plausible (Gaia) | Statistical (Pyro/Stan) |
+|-|---------------|-----------------|----------------------|
+| **Objects** | Propositions | Knowledge closures | Random variables |
+| **Probability means** | — (only true/false) | Degree of belief (epistemic) | Frequency / measure |
+| **Inference** | Type checking | Belief propagation | MCMC / variational inference |
+| **Goal** | Is the proof valid? | Are beliefs self-consistent? | What is the posterior distribution? |
+| **Theoretical basis** | Constructive logic | Cox's theorem | Kolmogorov measure theory |
+
+Gaia is not a statistical tool. It is **Curry-Howard for plausible reasoning**: a programming language where writing a knowledge package is constructing a plausible argument, and running BP is computing how much you should believe the conclusions given the premises.
+
 ### The two-layer architecture
 
 Gaia follows the standard architecture of probabilistic programming languages: a **deterministic host language** with a **probabilistic layer** on top.

@@ -30,9 +30,11 @@ Those belong to later documents:
 
 ## Design Rationale
 
-### Gaia as a probabilistic functional programming language
+### Gaia as Curry-Howard for plausible reasoning
 
-Gaia is, at its core, a **probabilistic functional programming language for epistemic inference**. This document (V1) defines the deterministic FP core — closures, inferences, chains, modules, and packages. The probabilistic layer — priors, dependency strength as conditioning, and belief propagation as inference — is defined in [V3: Probabilistic Semantics](probabilistic-semantics.md). Together they form a complete probabilistic FP system where writing a knowledge package is writing a probabilistic program, and running BP is performing posterior inference.
+Gaia is **Curry-Howard for plausible reasoning**: a probabilistic functional programming language where writing a knowledge package is constructing a plausible argument, and running belief propagation is computing how much you should believe the conclusions given the premises.
+
+This document (V1) defines the **deterministic FP core** — closures (values), inferences (lambdas), chains (composition), modules, and packages. The **probabilistic layer** — priors, dependency strength as conditioning, and belief propagation as inference — is defined in [V3: Probabilistic Semantics](probabilistic-semantics.md). Together they extend the Curry-Howard correspondence from deductive proof to plausible reasoning, following Pólya, Jaynes, and Cox's theorem.
 
 ### Why a package/module system for knowledge?
 
