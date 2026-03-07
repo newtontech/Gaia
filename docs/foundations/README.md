@@ -31,7 +31,7 @@ The plan is to establish a small set of durable foundation docs before major cod
 
 1. `product-scope.md`
 2. `domain-model.md`
-3. `shared/knowledge-package-static.md` (shared V1 knowledge_artifact/step/module/package schema)
+3. `shared/knowledge-package-static.md` (shared V1 closure/module/package schema)
 4. `shared/knowledge-package-file-formats.md` (shared V1 package file formats and review-report format)
 5. `cli/boundaries.md` (Gaia CLI runtime layering on top of shared contracts)
 6. `graph-spec.md`
@@ -45,7 +45,7 @@ Those files do not all exist yet. This directory is the place where they should 
 
 Reasoning design is now intentionally split by layer:
 
-- V1 static: shared `knowledge_artifact / step / module / package` structure
+- V1 static: shared `closure / module / package` structure
 - V1 file formats: shared package file formats and review-report exchange format
 - V2: global Gaia graph integration
 - V3: probabilistic semantics, prior/belief, and BP

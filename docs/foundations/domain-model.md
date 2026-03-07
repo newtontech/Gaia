@@ -24,27 +24,26 @@ It does not define:
 
 ## Core Layers
 
-Gaia currently uses four conceptual layers:
+Gaia V1 uses three conceptual layers:
 
-1. reusable global knowledge objects
-2. local reasoning steps with explicit dependencies
-3. modules — coherent units that group steps and export selected steps
-4. packages — collections of modules that export selected steps
+1. global `closure` — a self-contained, reusable knowledge object
+2. local `module` — a coherent unit that groups closures into a chain with imports and exports
+3. local `package` — a collection of modules that exports selected closures
 
-The corresponding V1 terms are:
+The design follows a **state-action model** inspired by functional programming:
 
-- `knowledge_artifact`
-- `step`
-- `module`
-- `package`
+- closures are the **states** — self-contained objects that can be passed around independently
+- inferences are the **actions** — local reasoning steps that connect closures within a module's chain
 
 ## Shared Knowledge Objects
 
-### `knowledge_artifact`
+### `closure`
 
-A `knowledge_artifact` is a globally identifiable, reusable knowledge object.
+A `closure` is a globally identifiable, self-contained knowledge object.
 
-V1 keeps the shared artifact set intentionally small:
+The name comes from functional programming: like an FP closure that captures its free variables and can be passed around independently, a knowledge closure carries its content and metadata and can be exported, imported, and referenced without knowing the chain it was created in.
+
+V1 keeps the closure kind set intentionally small:
 
 - `claim`
 - `question`
@@ -64,7 +63,7 @@ Examples:
 - a reusable code result
 - a reusable Lean theorem/proof result
 
-`claim` is the default type for statement-like content.
+`claim` is the default kind for statement-like content.
 
 ### `question`
 
@@ -90,54 +89,54 @@ V1 uses `setting` to unify:
 
 ### `action`
 
-An `action` is a reusable process object.
+An `action` is a self-contained, reusable process description.
+
+It represents a process such as an inference method, a tool, or another canonicalized procedure. The action closure describes **what** the process is; the `inference` entries in a module's chain describe **how** it was applied in a specific context.
 
 Examples:
 
-- an inferential move
-- a tool call
-- another explicit process step
-
-`action` is used when a reasoning gap between two artifacts is nontrivial enough that it should be made explicit. If the reasoning is trivial or locally obvious, the `action` may be omitted.
+- an inference method description
+- a tool call specification
+- another explicit process description
 
 ## Local Reasoning Structure
 
-### `step`
+### `inference`
 
-A `step` is one local occurrence of a `knowledge_artifact` inside a `module`. Each step belongs to exactly one module.
+An `inference` is a local reasoning step within a module's chain. It connects closures by filling logical gaps, providing explanations, or describing how an action was applied.
 
-It exists because the same global artifact can be reused in multiple modules and packages, as different steps in different local roles.
+Unlike closures, inferences are **not** self-contained — they depend on their surrounding context in the chain. They are never exported or referenced from outside the module.
 
-Each step declares its logical dependencies explicitly via `input`, with dependency strength:
+In the state-action model: closures are the **states**, inferences are the **actions**.
 
-- **strong** — if the referenced artifact is wrong, this step is likely wrong too
-- **weak** — the referenced artifact is relevant context, but this step can stand on its own
+### Chain model
 
-These are local step relations, not global artifact properties. The same artifact can be a strong dependency in one step and a weak dependency in another.
+A module's `chain` defines the narrative reading order: an alternation of closures and inferences.
 
-### Narrative ordering
+```text
+closure → inference → closure → inference → closure
+```
 
-A module's `steps` list defines a narrative reading order. This ordering carries no implicit logical dependency — all dependencies are declared via `input` on each step.
+When the logical transition between two closures is trivial or locally obvious, the inference may be omitted — two adjacent closures in the chain imply a trivial transition.
 
-V1 does not impose a rigid formal grammar on which artifact kinds may follow which others. The governing rule is:
+### Cross-module dependencies
 
-- the narrative should make sense as a reading order
-- if there is a nontrivial reasoning gap between two artifacts, it should be made explicit via an `action`
-- if the reasoning is trivial or locally obvious, the `action` may be omitted
+Modules declare cross-module dependencies via `imports`, with dependency strength:
 
-### Implicit hypergraph
+- **strong** — if the imported closure is wrong, this module's conclusions are likely wrong too. This is a logical dependency that affects truth value.
+- **weak** — the imported closure is relevant context, but this module's conclusions can stand on their own.
 
-The logical structure within a module is a hypergraph, derived from step `input` declarations. Each step with strong inputs defines a reasoning link: the strong input artifacts are the **premises**, the step's own artifact is the **conclusion**. This hypergraph is not a separate schema object — it is always derived.
+These are local module relations, not global closure properties. The same closure can be a strong dependency in one module and a weak dependency in another.
 
 ## Module and Package Organization
 
 ### `module`
 
-A `module` groups related steps into a coherent unit and exports selected steps as its public interface. This is analogous to a module in a codebase: it groups related logic and has clear outputs via `export`.
+A `module` groups closures into a coherent unit via a chain of closures and inferences. It imports closures from other modules and exports selected closures as its public interface. This is analogous to a module in Rust or Julia: it groups related logic, declares its dependencies (`imports`), and exposes a public interface (`exports`).
 
 Modules have an optional `role` that describes their purpose within the package:
 
-- `reasoning` — establishes conclusions through premises, actions, and inferences
+- `reasoning` — establishes conclusions through premises, inferences, and results
 - `setting` — establishes shared context (definitions, environment, assumptions)
 - `motivation` — establishes why the research was undertaken
 - `follow_up_question` — establishes open questions for future work
@@ -147,7 +146,7 @@ Module roles replace the need for separate editorial fields on packages. The mot
 
 ### `package`
 
-A `package` is a reusable container of modules. It exports selected steps from its modules as the package's public interface.
+A `package` is a reusable container of modules. It exports selected closures from its modules as the package's public interface.
 
 Typical examples include:
 
@@ -156,7 +155,7 @@ Typical examples include:
 - a structured note
 - a project unit
 
-The package's `modules[]` list order defines the recommended reading order for the package (narrative ordering). The package's `exports[]` list is a curated subset of step_ids from its modules — the key results this package offers to the outside world.
+The package's `modules[]` list order defines the recommended reading order for the package (narrative ordering). The package's `exports[]` list is a curated subset of closure_ids from its modules — the key results this package offers to the outside world.
 
 ## Important Non-Equivalences
 
@@ -164,19 +163,20 @@ The following should not be treated as equivalent:
 
 - `claim` and `question`
 - `claim` and `setting`
-- `action` and `claim`
-- global `knowledge_artifact` identity and local `step` occurrence
+- `action` (closure kind) and `inference` (local chain entry)
+- global `closure` identity and local chain occurrence
 - narrative ordering and logical dependency
 
 Examples:
 
 - a statement-form gap is a `claim`, not a `question`
 - a definition is a `setting`, not a generic `claim`
-- adjacent steps in a module's narrative order do not imply logical dependency — all dependencies are explicit via `input`
+- an `action` closure describes **what** a process is; an `inference` describes **how** it was applied locally
+- adjacent closures in a module's chain do not imply logical dependency — all dependencies are declared via `imports`
 
 ## Deferred Distinctions
 
-V1 intentionally does not yet split the artifact system into more detailed epistemic kinds such as:
+V1 intentionally does not yet split the closure system into more detailed epistemic kinds such as:
 
 - `observation`
 - `assumption`
@@ -202,5 +202,5 @@ For now:
 When a new design needs a new noun, prefer to:
 
 1. reuse `claim`, `question`, `setting`, or `action` if one already fits
-2. place local dependency semantics on `step`, not on the global artifact kind
+2. place local dependency semantics on module `imports`, not on the global closure kind
 3. defer finer epistemic distinctions until they are required by graph or probabilistic semantics

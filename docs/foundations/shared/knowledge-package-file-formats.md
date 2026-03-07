@@ -81,10 +81,9 @@ It carries package metadata and dependency declarations.
 
 It serializes the V1 static package schema:
 
-- `knowledge_artifact`
-- `step`
-- `module`
-- `package`-level roles
+- `closure` (global knowledge objects)
+- `module` (chains of closures and inferences, with imports and exports)
+- `package`-level exports
 
 #### 3. `reviews/*.yaml` are sidecar review artifacts
 
@@ -146,25 +145,27 @@ It serializes one complete V1 static `package`.
 schema_version: gaia.knowledge_package.v1
 package_id: pkg_...
 
+closures:
+  - closure_id: cl_...
+    closure_kind: claim
+    content_mode: nl
+    content: "Current methods do not explain X."
+
 modules:
   - module_id: mod_...
     role: reasoning
     summary: "Short description of what this module establishes"
-    exports: [s_...]
-    steps:
-      - step_id: s_...
-        artifact_id: ka_...
-        input:
-          - ref: s_...
-            strength: strong
+    imports:
+      - closure: cl_...
+        from: mod_...
+        strength: strong
+    exports: [cl_...]
+    chain:
+      - closure: cl_...
+      - inference: "Applying the definition to contrast behaviors"
+      - closure: cl_...
 
-knowledge_artifacts:
-  - artifact_id: ka_...
-    artifact_kind: claim
-    content_mode: nl
-    content: "Current methods do not explain X."
-
-exports: [s_...]
+exports: [cl_...]
 
 metadata: {}
 ```
@@ -177,7 +178,7 @@ metadata: {}
 
 ### Optional top-level fields
 
-- `knowledge_artifacts` (artifacts may also be defined externally and referenced by `artifact_id`)
+- `closures` (closures may also be defined externally and referenced by `closure_id`)
 - `exports`
 - `metadata`
 
@@ -212,12 +213,12 @@ package_id: pkg_...
 
 module_reviews:
   - module_id: mod_...
-    exported_step_id: s_...
-    exported_artifact_kind: claim
+    exported_closure_id: cl_...
+    exported_closure_kind: claim
     conditional_prior: 0.72
     weak_points:
-      - target_step_id: s_...
-        proposed_artifact_kind: setting
+      - target_closure_id: cl_...
+        proposed_closure_kind: setting
         proposed_content: "Assume near-vacuum conditions."
         dependency_strength: strong
         rationale: "Without this setting, the module does not support the exported claim."
@@ -238,8 +239,8 @@ metadata: {}
 Each `module_review` should contain:
 
 - `module_id`
-- `exported_step_id`
-- `exported_artifact_kind`
+- `exported_closure_id`
+- `exported_closure_kind`
 
 Optional fields:
 
@@ -251,8 +252,8 @@ Optional fields:
 
 Each weak point may contain:
 
-- `target_step_id`
-- `proposed_artifact_kind`
+- `target_closure_id`
+- `proposed_closure_kind`
 - `proposed_content`
 - `dependency_strength`
 - `rationale`
@@ -265,7 +266,7 @@ The review report is a sidecar artifact.
 
 #### 2. `conditional_prior` is local
 
-If present, `conditional_prior` is a local score for one exported step. It is not a future global belief score.
+If present, `conditional_prior` is a local score for one exported closure. It is not a future global belief score.
 
 #### 3. `conditional_prior` is mainly for claim exports
 
