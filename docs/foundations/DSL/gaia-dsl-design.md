@@ -504,15 +504,18 @@ declarations:
   - type: chain_expr
     name: main_derivation
     steps:
-      - ref: premise
-      - apply: contrastive_analysis
+      - step: 1
+        ref: premise
+      - step: 2
+        apply: contrastive_analysis
         args:
           - ref: premise
             dependency: direct    # V3
           - ref: vacuum_setting
             dependency: indirect  # V3
         prior: 0.85              # V3
-      - ref: conclusion
+      - step: 3
+        ref: conclusion
 
 export:
   - conclusion
@@ -523,17 +526,20 @@ export:
 ```yaml
 steps:
   # KnowledgeRef — reference to declared knowledge
-  - ref: premise
+  - step: 1
+    ref: premise
 
   # Application — call an action
-  - apply: contrastive_analysis
+  - step: 2
+    apply: contrastive_analysis
     args:
       - ref: premise
         dependency: direct        # V3
     prior: 0.85                   # V3
 
   # Lambda — anonymous single-parameter function
-  - lambda: "Obviously follows from the definition"
+  - step: 3
+    lambda: "Obviously follows from the definition"
     prior: 0.95                   # V3
 ```
 
