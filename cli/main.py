@@ -19,8 +19,28 @@ def build(
     path: str = typer.Argument(".", help="Path to knowledge package directory"),
 ) -> None:
     """Elaborate: parse + resolve + instantiate params."""
-    typer.echo(f"gaia build {path} — not yet implemented")
-    raise typer.Exit(1)
+    from libs.dsl.build_store import save_build
+    from libs.dsl.elaborator import elaborate_package
+    from libs.dsl.loader import load_package
+    from libs.dsl.resolver import resolve_refs
+
+    pkg_path = Path(path)
+    try:
+        pkg = load_package(pkg_path)
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
+
+    pkg = resolve_refs(pkg)
+    elaborated = elaborate_package(pkg)
+
+    build_dir = pkg_path / ".gaia" / "build"
+    save_build(elaborated, build_dir)
+
+    n_mods = len(pkg.loaded_modules)
+    n_prompts = len(elaborated.prompts)
+    typer.echo(f"Built {pkg.name}: {n_mods} modules, {n_prompts} elaborated prompts")
+    typer.echo(f"Artifacts: {build_dir}/")
 
 
 @app.command()
