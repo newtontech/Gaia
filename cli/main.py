@@ -503,22 +503,52 @@ def show(
 
 @app.command()
 def search(
-    query: str = typer.Argument(..., help="Search query text"),
+    query: str = typer.Argument(None, help="Search query text"),
     db_path: str = typer.Option(
         None,
         "--db-path",
         help="LanceDB path (default: GAIA_LANCEDB_PATH or ./data/lancedb/gaia)",
     ),
     limit: int = typer.Option(10, "--limit", "-k", help="Max results"),
+    node_id: int = typer.Option(None, "--id", help="Look up a node by ID"),
 ) -> None:
     """Search published nodes in local LanceDB."""
     import asyncio
     import os
 
+    if query is None and node_id is None:
+        typer.echo("Error: provide either a QUERY or --id <id>", err=True)
+        raise typer.Exit(1)
+
     if db_path is None:
         db_path = os.environ.get("GAIA_LANCEDB_PATH", "./data/lancedb/gaia")
 
-    asyncio.run(_search_db(query, db_path, limit))
+    if node_id is not None:
+        asyncio.run(_lookup_node(node_id, db_path))
+    else:
+        asyncio.run(_search_db(query, db_path, limit))
+
+
+async def _lookup_node(node_id: int, db_path: str) -> None:
+    """Look up a single node by ID."""
+    from libs.storage.lance_store import LanceStore
+
+    store = LanceStore(db_path)
+    try:
+        nodes = await store.load_nodes_bulk([node_id])
+        if not nodes:
+            typer.echo(f"Node {node_id} not found.")
+            return
+        n = nodes[0]
+        typer.echo(f"[{n.id}] {n.title or '?'} ({n.type})")
+        typer.echo(f"  prior: {n.prior}  belief: {n.belief}")
+        content = n.content if isinstance(n.content, str) else str(n.content)
+        if content.strip():
+            typer.echo(f"  content: {content.strip()}")
+        if n.keywords:
+            typer.echo(f"  keywords: {', '.join(n.keywords)}")
+    finally:
+        await store.close()
 
 
 async def _search_db(query: str, db_path: str, limit: int) -> None:
