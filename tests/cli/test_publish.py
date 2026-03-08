@@ -5,7 +5,6 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch
 
-import yaml
 from typer.testing import CliRunner
 
 from cli.main import app
@@ -33,7 +32,7 @@ def test_publish_git_runs_commands(tmp_path):
 
     with patch("subprocess.run") as mock_run:
         mock_run.return_value = subprocess.CompletedProcess(args=[], returncode=0, stdout=b"")
-        result = runner.invoke(app, ["publish", str(tmp_path), "--git"])
+        runner.invoke(app, ["publish", str(tmp_path), "--git"])
     assert mock_run.called
 
 

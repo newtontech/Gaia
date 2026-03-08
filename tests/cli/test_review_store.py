@@ -1,9 +1,7 @@
 """Tests for review sidecar I/O and review merger."""
 
-import copy
 from pathlib import Path
 
-import yaml
 import pytest
 
 from cli.review_store import (
@@ -13,7 +11,6 @@ from cli.review_store import (
     write_review,
 )
 from libs.dsl.loader import load_package
-from libs.dsl.models import StepApply
 from libs.dsl.resolver import resolve_refs
 
 
@@ -58,7 +55,7 @@ def test_write_and_read_review(tmp_path):
 def test_find_latest_review(tmp_path):
     r1 = _sample_review()
     r1["timestamp"] = "2026-03-01T10:00:00Z"
-    p1 = write_review(r1, tmp_path, filename="review_2026-03-01.yaml")
+    write_review(r1, tmp_path, filename="review_2026-03-01.yaml")
     r2 = _sample_review()
     r2["timestamp"] = "2026-03-08T14:30:00Z"
     p2 = write_review(r2, tmp_path, filename="review_2026-03-08.yaml")

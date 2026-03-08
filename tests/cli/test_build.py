@@ -1,6 +1,5 @@
 """Tests for gaia build command."""
 
-from pathlib import Path
 
 import yaml
 from typer.testing import CliRunner
