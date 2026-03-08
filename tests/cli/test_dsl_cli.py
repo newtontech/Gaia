@@ -19,12 +19,13 @@ async def test_run_cmd(capsys):
     await run_cmd(str(FIXTURE_DIR))
     captured = capsys.readouterr()
     assert "galileo_falling_bodies" in captured.out
-    assert "Variables: 7" in captured.out
-    assert "Factors: 5" in captured.out
+    assert "Variables: 14" in captured.out
+    assert "Factors: 11" in captured.out
     assert "Beliefs after BP:" in captured.out
     # Check at least one specific belief line with prior -> belief format
     assert "heavier_falls_faster: prior=0.7" in captured.out
     assert "vacuum_prediction: prior=0.5" in captured.out
+    assert "tied_balls_contradiction: prior=0.6" in captured.out
 
 
 async def test_execute_cmd(capsys):
@@ -38,9 +39,10 @@ async def test_inspect_cmd(capsys):
     await inspect_cmd(str(FIXTURE_DIR))
     captured = capsys.readouterr()
     assert "Factor Graph:" in captured.out
-    assert "Variables: 7" in captured.out
-    assert "Factors: 5" in captured.out
-    assert "refutation_chain" in captured.out
+    assert "Variables: 14" in captured.out
+    assert "Factors: 11" in captured.out
+    assert "contradiction_chain.step_2" in captured.out
+    assert "retraction_chain.step_2" in captured.out
 
 
 async def test_validate_cmd(capsys):
