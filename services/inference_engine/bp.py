@@ -18,16 +18,28 @@ from numpy.typing import NDArray
 if TYPE_CHECKING:
     from services.inference_engine.factor_graph import FactorGraph
 
-__all__ = ["BeliefPropagation"]
+__all__ = ["BeliefPropagation", "InconsistentGraphError"]
 
 Msg = NDArray[np.float64]  # shape (2,): [p(x=0), p(x=1)]
 
 
+class InconsistentGraphError(Exception):
+    """Raised when BP encounters a zero partition (no valid state)."""
+
+
 def _normalize(msg: Msg) -> Msg:
-    """Normalize a 2-vector to sum to 1, guarding against all-zero."""
+    """Normalize a 2-vector to sum to 1.
+
+    Raises :class:`InconsistentGraphError` if both components are zero,
+    which means the graph has no valid probability distribution.
+    """
     s = msg[0] + msg[1]
     if s < 1e-30:
-        return np.array([0.5, 0.5])
+        raise InconsistentGraphError(
+            "Zero partition: message sums to 0. "
+            "The factor graph is internally inconsistent — "
+            "no valid state exists for some variable."
+        )
     return msg / s
 
 

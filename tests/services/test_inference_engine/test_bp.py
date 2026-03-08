@@ -4,7 +4,12 @@ from __future__ import annotations
 
 import pytest
 
-from services.inference_engine.bp import BeliefPropagation, _evaluate_potential
+from services.inference_engine.bp import (
+    BeliefPropagation,
+    InconsistentGraphError,
+    _evaluate_potential,
+    _normalize,
+)
 from services.inference_engine.factor_graph import FactorGraph
 
 
@@ -699,7 +704,7 @@ def test_probability_one_edge():
 
 
 def test_all_priors_zero():
-    """All nodes with prior=0 should produce valid (near-zero) beliefs."""
+    """All nodes with prior=0 are Cromwell-clamped; should produce valid beliefs."""
     fg = FactorGraph()
     fg.add_variable(1, 0.0)
     fg.add_variable(2, 0.0)
@@ -710,6 +715,14 @@ def test_all_priors_zero():
 
     for vid, b in beliefs.items():
         assert 0.0 <= b <= 1.0, f"Node {vid} belief {b} out of range"
+
+
+def test_zero_partition_raises():
+    """_normalize raises InconsistentGraphError on [0, 0] input."""
+    import numpy as np
+
+    with pytest.raises(InconsistentGraphError, match="Zero partition"):
+        _normalize(np.array([0.0, 0.0]))
 
 
 def test_damping_zero_preserves_priors():
