@@ -38,6 +38,8 @@ def test_resolve_cross_module():
     follow_up = next(m for m in resolved.loaded_modules if m.name == "follow_up")
     vp_ref = next(d for d in follow_up.declarations if d.name == "vacuum_prediction")
     assert vp_ref._resolved is not None
+    assert vp_ref._resolved.name == "vacuum_prediction"
+    assert vp_ref._resolved.type == "claim"
 
 
 def test_resolve_undefined_ref_raises():
@@ -56,6 +58,50 @@ def test_build_declaration_index():
     pkg = load_package(FIXTURE_DIR)
     resolved = resolve_refs(pkg)
     # Check that we can look up any exported declaration
-    assert resolved._index["aristotle.heavier_falls_faster"] is not None
-    assert resolved._index["setting.vacuum_env"] is not None
-    assert resolved._index["reasoning.vacuum_prediction"] is not None
+    hff = resolved._index["aristotle.heavier_falls_faster"]
+    assert hff.type == "claim"
+    assert hff.prior == 0.7
+
+    venv = resolved._index["setting.vacuum_env"]
+    assert venv.type == "setting"
+
+    vp = resolved._index["reasoning.vacuum_prediction"]
+    assert vp.type == "claim"
+    assert vp.prior == 0.5
+
+
+# ── Inline tests (no galileo fixture) ─────────────────────────
+
+from libs.dsl.models import Module, Package, Ref
+
+
+def test_resolve_empty_package():
+    """A package with no modules resolves without error."""
+    pkg = Package(name="empty", modules=[])
+    pkg.loaded_modules = []
+    resolved = resolve_refs(pkg)
+    assert resolved._index == {}
+
+
+def test_resolve_ref_to_ref_raises():
+    """A Ref targeting another Ref's path should raise ResolveError.
+
+    Because Refs are skipped during index building, the target won't be found.
+    """
+    mod_a = Module(
+        type="reasoning_module",
+        name="a",
+        declarations=[Ref(name="x", target="b.y")],
+        export=["x"],
+    )
+    mod_b = Module(
+        type="reasoning_module",
+        name="b",
+        declarations=[Ref(name="y", target="a.x")],
+        export=["y"],
+    )
+    pkg = Package(name="circular_refs", modules=["a", "b"])
+    pkg.loaded_modules = [mod_a, mod_b]
+
+    with pytest.raises(ResolveError, match="target not found"):
+        resolve_refs(pkg)

@@ -3,25 +3,15 @@
 from pathlib import Path
 
 from libs.dsl.runtime import DSLRuntime
-from libs.dsl.executor import ActionExecutor
+
+from .conftest import PassthroughExecutor
 
 FIXTURE_DIR = Path(__file__).parents[2] / "fixtures" / "dsl_packages" / "galileo_falling_bodies"
 
 
-class MockLLM(ActionExecutor):
-    def execute_infer(self, content: str, args: dict[str, str]) -> str:
-        result = content
-        for k, v in args.items():
-            result = result.replace(f"{{{k}}}", v)
-        return result
-
-    def execute_lambda(self, content: str, input_text: str) -> str:
-        return content
-
-
 def test_galileo_full_pipeline():
     """Full pipeline: load -> execute -> infer -> inspect."""
-    runtime = DSLRuntime(executor=MockLLM())
+    runtime = DSLRuntime(executor=PassthroughExecutor())
     result = runtime.run(FIXTURE_DIR)
 
     # Package loaded correctly
@@ -29,30 +19,27 @@ def test_galileo_full_pipeline():
     assert len(result.package.loaded_modules) == 5
 
     # Factor graph built
-    assert len(result.factor_graph.variables) >= 7
-    assert len(result.factor_graph.factors) >= 5
+    assert len(result.factor_graph.variables) == 7
+    assert len(result.factor_graph.factors) == 5
 
-    # Beliefs computed
-    assert len(result.beliefs) >= 7
+    # Beliefs computed for all 7 variables
+    assert len(result.beliefs) == 7
 
-    # Key belief checks:
-    # heavier_falls_faster starts at prior=0.7
-    # After being used as input to refutation and confound chains,
-    # its belief should remain close to its prior or change based on BP
-    assert 0.0 <= result.beliefs["heavier_falls_faster"] <= 1.0
-    assert 0.0 <= result.beliefs["vacuum_prediction"] <= 1.0
+    # BP should actually change beliefs from priors
+    assert result.beliefs["heavier_falls_faster"] != 0.7, "BP should update belief from prior"
+    assert result.beliefs["vacuum_prediction"] != 0.5, "BP should update belief from prior"
 
-    # Print summary
+    # Summary
     summary = result.inspect()
     assert summary["package"] == "galileo_falling_bodies"
     assert summary["modules"] == 5
-    assert summary["variables"] >= 7
-    assert summary["factors"] >= 5
+    assert summary["variables"] == 7
+    assert summary["factors"] == 5
 
 
 def test_galileo_empty_claims_filled():
     """Execute phase should fill in empty claims."""
-    runtime = DSLRuntime(executor=MockLLM())
+    runtime = DSLRuntime(executor=PassthroughExecutor())
     result = runtime.run(FIXTURE_DIR)
 
     reasoning = next(m for m in result.package.loaded_modules if m.name == "reasoning")
@@ -67,15 +54,15 @@ def test_galileo_empty_claims_filled():
 
 def test_galileo_branching_structure():
     """Two chains branch from heavier_falls_faster, merge at synthesis."""
-    runtime = DSLRuntime(executor=MockLLM())
+    runtime = DSLRuntime(executor=PassthroughExecutor())
     result = runtime.run(FIXTURE_DIR)
 
     fg = result.factor_graph
     # heavier_falls_faster should appear as tail in at least 2 factors
     # (refutation_chain and confound_chain)
     hff_factors = [f for f in fg.factors if "heavier_falls_faster" in f["tail"]]
-    assert len(hff_factors) >= 2, "heavier_falls_faster should feed into 2+ chains"
+    assert len(hff_factors) == 2, "heavier_falls_faster should feed into exactly 2 chains"
 
     # vacuum_prediction should appear as head in synthesis_chain
     vp_factors = [f for f in fg.factors if "vacuum_prediction" in f["head"]]
-    assert len(vp_factors) >= 1, "vacuum_prediction should be output of synthesis"
+    assert len(vp_factors) == 1, "vacuum_prediction should be output of exactly 1 synthesis"

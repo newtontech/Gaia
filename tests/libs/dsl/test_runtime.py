@@ -3,20 +3,10 @@
 from pathlib import Path
 
 from libs.dsl.runtime import DSLRuntime, RuntimeResult
-from libs.dsl.executor import ActionExecutor
+
+from .conftest import MockExecutor
 
 FIXTURE_DIR = Path(__file__).parents[2] / "fixtures" / "dsl_packages" / "galileo_falling_bodies"
-
-
-class MockExecutor(ActionExecutor):
-    def execute_infer(self, content: str, args: dict[str, str]) -> str:
-        result = content
-        for k, v in args.items():
-            result = result.replace(f"{{{k}}}", v)
-        return f"[推理结果] {result}"
-
-    def execute_lambda(self, content: str, input_text: str) -> str:
-        return f"[Lambda结果] {content}"
 
 
 def test_runtime_full_pipeline():
@@ -25,7 +15,7 @@ def test_runtime_full_pipeline():
 
     assert isinstance(result, RuntimeResult)
     assert result.package.name == "galileo_falling_bodies"
-    assert len(result.beliefs) > 0
+    assert len(result.beliefs) == 7
     assert result.factor_graph is not None
 
 
@@ -35,8 +25,10 @@ def test_runtime_beliefs_computed():
 
     # heavier_falls_faster has prior=0.7, after BP it should change
     assert "heavier_falls_faster" in result.beliefs
+    assert result.beliefs["heavier_falls_faster"] != 0.7
     # vacuum_prediction has prior=0.5
     assert "vacuum_prediction" in result.beliefs
+    assert result.beliefs["vacuum_prediction"] != 0.5
 
 
 def test_runtime_load_only():
@@ -54,7 +46,8 @@ def test_runtime_inspect():
     result = runtime.run(FIXTURE_DIR)
     summary = result.inspect()
 
-    # Should contain variable and factor counts
-    assert "variables" in summary
-    assert "factors" in summary
-    assert "beliefs" in summary
+    assert summary["package"] == "galileo_falling_bodies"
+    assert summary["modules"] == 5
+    assert summary["variables"] == 7
+    assert summary["factors"] == 5
+    assert len(summary["beliefs"]) == 7

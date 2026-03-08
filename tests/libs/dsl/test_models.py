@@ -32,6 +32,10 @@ def test_infer_action_with_params():
     )
     assert a.type == "infer_action"
     assert len(a.params) == 1
+    assert a.params[0].name == "hyp"
+    assert a.params[0].type == "claim"
+    assert a.return_type == "claim"
+    assert "{hyp}" in a.content
 
 
 def test_chain_expr_steps():
@@ -50,6 +54,12 @@ def test_chain_expr_steps():
     )
     assert chain.type == "chain_expr"
     assert len(chain.steps) == 3
+    assert isinstance(chain.steps[0], StepRef)
+    assert chain.steps[0].ref == "premise"
+    assert isinstance(chain.steps[1], StepApply)
+    assert chain.steps[1].apply == "reductio"
+    assert chain.steps[1].args[0].dependency == "direct"
+    assert isinstance(chain.steps[2], StepRef)
 
 
 def test_ref_declaration():
@@ -68,7 +78,10 @@ def test_module_with_declarations():
         export=["c1"],
     )
     assert m.type == "reasoning_module"
+    assert m.name == "reasoning"
     assert len(m.declarations) == 1
+    assert m.declarations[0].name == "c1"
+    assert m.export == ["c1"]
 
 
 def test_package():
@@ -80,6 +93,8 @@ def test_package():
     )
     assert p.name == "test_pkg"
     assert p.version == "1.0.0"
+    assert p.modules_list == ["mod_a", "mod_b"]
+    assert p.export == ["conclusion"]
 
 
 def test_prior_defaults_to_none():

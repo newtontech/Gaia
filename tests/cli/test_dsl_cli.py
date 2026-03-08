@@ -17,4 +17,20 @@ def test_run_cmd(capsys):
     run_cmd(str(FIXTURE_DIR))
     captured = capsys.readouterr()
     assert "galileo_falling_bodies" in captured.out
-    assert "beliefs" in captured.out.lower() or "belief" in captured.out.lower()
+    assert "Variables: 7" in captured.out
+    assert "Factors: 5" in captured.out
+    assert "Beliefs after BP:" in captured.out
+    # Check at least one specific belief line with prior -> belief format
+    assert "heavier_falls_faster: prior=0.7" in captured.out
+    assert "vacuum_prediction: prior=0.5" in captured.out
+
+
+# ── Inline / error path tests ─────────────────────────────────
+
+import pytest
+
+
+def test_load_cmd_invalid_path():
+    """load_cmd with a nonexistent path raises FileNotFoundError."""
+    with pytest.raises(FileNotFoundError):
+        load_cmd("/nonexistent/dsl/package/path")
