@@ -217,11 +217,142 @@ def infer(
 def publish(
     path: str = typer.Argument(".", help="Path to knowledge package directory"),
     git: bool = typer.Option(False, "--git", help="Publish via git add+commit+push"),
+    local: bool = typer.Option(False, "--local", help="Import to local databases (LanceDB + Kuzu)"),
     server: bool = typer.Option(False, "--server", help="Publish to Gaia server API"),
+    db_path: str = typer.Option(
+        None, "--db-path", help="LanceDB path (default: GAIA_LANCEDB_PATH or ./data/lancedb/gaia)",
+    ),
 ) -> None:
-    """Publish to git or server."""
-    typer.echo(f"gaia publish {path} — not yet implemented")
-    raise typer.Exit(1)
+    """Publish to git, local databases, or server."""
+    import asyncio
+    import os
+    import subprocess
+
+    if not git and not local and not server:
+        typer.echo("Error: specify --git, --local, or --server", err=True)
+        raise typer.Exit(1)
+
+    pkg_path = Path(path)
+
+    if git:
+        try:
+            subprocess.run(["git", "add", "."], cwd=pkg_path, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "-m", "gaia: publish package"],
+                cwd=pkg_path, check=True, capture_output=True,
+            )
+            subprocess.run(["git", "push"], cwd=pkg_path, check=True, capture_output=True)
+            typer.echo(f"Published {pkg_path} via git")
+        except subprocess.CalledProcessError as e:
+            typer.echo(f"Git error: {e}", err=True)
+            raise typer.Exit(1)
+
+    if local:
+        resolved_db_path = db_path or os.environ.get(
+            "GAIA_LANCEDB_PATH", "./data/lancedb/gaia"
+        )
+        asyncio.run(_publish_local(pkg_path, resolved_db_path))
+
+    if server:
+        typer.echo("Server publishing not yet implemented")
+        raise typer.Exit(1)
+
+
+async def _publish_local(pkg_path: Path, db_path: str) -> None:
+    """Run full pipeline and triple-write to LanceDB + Kuzu."""
+    from cli.dsl_to_storage import convert_package_to_storage
+    from cli.review_store import find_latest_review, merge_review, read_review
+    from libs.dsl.compiler import compile_factor_graph
+    from libs.dsl.loader import load_package
+    from libs.dsl.resolver import resolve_refs
+    from libs.inference.bp import BeliefPropagation
+    from libs.inference.factor_graph import FactorGraph
+    from libs.storage.config import StorageConfig
+    from libs.storage.manager import StorageManager
+
+    build_dir = pkg_path / ".gaia" / "build"
+    reviews_dir = pkg_path / ".gaia" / "reviews"
+
+    # 1. Check build exists
+    if not build_dir.exists():
+        typer.echo(
+            f"Error: no build artifacts found.\nRun 'gaia build {pkg_path}' first.",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    # 2. Read review file
+    try:
+        latest = find_latest_review(reviews_dir)
+        review = read_review(latest)
+    except FileNotFoundError:
+        typer.echo(
+            f"Error: no review file found.\n"
+            f"Run 'gaia review {pkg_path}' first.",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    # 3. Load package, resolve refs, merge review
+    pkg = load_package(pkg_path)
+    pkg = resolve_refs(pkg)
+    pkg = merge_review(pkg, review)
+
+    # 4. Compile factor graph and run BP
+    dsl_fg = compile_factor_graph(pkg)
+
+    bp_fg = FactorGraph()
+    name_to_id: dict[str, int] = {}
+    for i, (name, prior) in enumerate(dsl_fg.variables.items()):
+        node_id = i + 1
+        name_to_id[name] = node_id
+        bp_fg.add_variable(node_id, prior)
+
+    for j, factor in enumerate(dsl_fg.factors):
+        tail_ids = [name_to_id[n] for n in factor["tail"] if n in name_to_id]
+        head_ids = [name_to_id[n] for n in factor["head"] if n in name_to_id]
+        bp_fg.add_factor(
+            edge_id=j + 1,
+            tail=tail_ids,
+            head=head_ids,
+            probability=factor["probability"],
+            edge_type=factor.get("edge_type", "deduction"),
+        )
+
+    bp = BeliefPropagation()
+    beliefs = bp.run(bp_fg)
+
+    # 5. Map beliefs back to names
+    id_to_name = {v: k for k, v in name_to_id.items()}
+    named_beliefs = {id_to_name[nid]: belief for nid, belief in beliefs.items()}
+
+    # 6. Convert to storage models
+    storage_result = convert_package_to_storage(pkg, dsl_fg, named_beliefs)
+
+    # 7. Initialize StorageManager with Kuzu backend
+    config = StorageConfig(
+        lancedb_path=db_path,
+        graph_backend="kuzu",
+        deployment_mode="local",
+    )
+    storage = StorageManager(config)
+
+    try:
+        # 8. Triple-write: LanceDB nodes
+        saved_ids = await storage.lance.save_nodes(storage_result.nodes)
+
+        # 9. Kuzu edges
+        edge_ids: list[int] = []
+        if storage.graph and storage_result.edges:
+            edge_ids = await storage.graph.create_hyperedges_bulk(storage_result.edges)
+
+        typer.echo(
+            f"Published {pkg.name} to local databases:\n"
+            f"  Nodes: {len(saved_ids)} written to LanceDB ({db_path})\n"
+            f"  Edges: {len(edge_ids)} written to Kuzu ({db_path}/kuzu)"
+        )
+    finally:
+        await storage.close()
 
 
 @app.command("init")
