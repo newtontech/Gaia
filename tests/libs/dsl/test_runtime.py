@@ -61,9 +61,7 @@ async def test_runtime_beliefs_written_back_to_declarations():
 
     # Also check a Setting gets its belief written back
     setting_mod = next(m for m in result.package.loaded_modules if m.name == "setting")
-    thought_env = next(
-        d for d in setting_mod.declarations if d.name == "thought_experiment_env"
-    )
+    thought_env = next(d for d in setting_mod.declarations if d.name == "thought_experiment_env")
     assert thought_env.belief is not None
     assert thought_env.belief == result.beliefs["thought_experiment_env"]
 

@@ -302,7 +302,9 @@ async def test_execute_topo_sorts_chains():
     # chain_1 should have executed first (writes b), then chain_2 (reads b)
     # So claim_c should have content (chain_2 ran after chain_1 filled b)
     assert claim_b.content != "", "chain_1 should have filled b"
-    assert claim_c.content != "", "chain_2 should have filled c (topo sort ensures chain_1 runs first)"
+    assert claim_c.content != "", (
+        "chain_2 should have filled c (topo sort ensures chain_1 runs first)"
+    )
 
 
 async def test_infer_action_still_uses_execute_infer():
@@ -318,9 +320,7 @@ async def test_infer_action_still_uses_execute_infer():
         name="reason_chain",
         steps=[
             StepRef(step=1, ref="premise"),
-            StepApply(
-                step=2, apply="reason_about", args=[Arg(ref="premise", dependency="direct")]
-            ),
+            StepApply(step=2, apply="reason_about", args=[Arg(ref="premise", dependency="direct")]),
             StepRef(step=3, ref="conclusion"),
         ],
     )

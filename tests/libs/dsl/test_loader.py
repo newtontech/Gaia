@@ -65,7 +65,9 @@ def test_claim_with_prior():
 def test_infer_action_with_params():
     pkg = load_package(FIXTURE_DIR)
     reasoning = next(m for m in pkg.loaded_modules if m.name == "reasoning")
-    synthesize = next(d for d in reasoning.declarations if d.name == "synthesize_equal_fall_prediction")
+    synthesize = next(
+        d for d in reasoning.declarations if d.name == "synthesize_equal_fall_prediction"
+    )
     assert isinstance(synthesize, InferAction)
     assert len(synthesize.params) == 4
     assert [p.name for p in synthesize.params] == ["verdict", "confound", "support", "env"]
@@ -197,12 +199,7 @@ def test_load_minimal_package(tmp_path):
     pkg_yaml.write_text("name: minimal\nmodules:\n  - m\n")
 
     mod_yaml = tmp_path / "m.yaml"
-    mod_yaml.write_text(
-        "type: reasoning_module\n"
-        "name: m\n"
-        "declarations: []\n"
-        "export: []\n"
-    )
+    mod_yaml.write_text("type: reasoning_module\nname: m\ndeclarations: []\nexport: []\n")
 
     pkg = load_package(tmp_path)
     assert pkg.name == "minimal"
@@ -219,7 +216,7 @@ def test_load_package_with_dependencies(tmp_path):
         "name: dep_test\n"
         "modules: []\n"
         "dependencies:\n"
-        '  - package: physics_base\n'
+        "  - package: physics_base\n"
         '    version: ">=1.0.0"\n'
         "  - package: math_utils\n"
     )

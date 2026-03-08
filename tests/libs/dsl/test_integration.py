@@ -27,8 +27,12 @@ async def test_galileo_full_pipeline():
 
     # BP should actually change beliefs from priors on key theory nodes
     assert result.beliefs["heavier_falls_faster"] != 0.7, "BP should update belief from prior"
-    assert result.beliefs["tied_balls_contradiction"] != 0.6, "Contradiction node should be inferred"
-    assert result.beliefs["vacuum_prediction"] != 0.5, "Final prediction should be updated from prior"
+    assert result.beliefs["tied_balls_contradiction"] != 0.6, (
+        "Contradiction node should be inferred"
+    )
+    assert result.beliefs["vacuum_prediction"] != 0.5, (
+        "Final prediction should be updated from prior"
+    )
 
     # The graph should explicitly contain contradiction and retraction semantics.
     edge_types = {f["edge_type"] for f in result.factor_graph.factors}
@@ -61,8 +65,12 @@ async def test_galileo_empty_claims_filled():
         ]:
             assert decl.content != "", f"{decl.name} should have content after execution"
 
-    tied_contradiction = next(d for d in reasoning.declarations if d.name == "tied_balls_contradiction")
-    air_resistance = next(d for d in reasoning.declarations if d.name == "air_resistance_is_confound")
+    tied_contradiction = next(
+        d for d in reasoning.declarations if d.name == "tied_balls_contradiction"
+    )
+    air_resistance = next(
+        d for d in reasoning.declarations if d.name == "air_resistance_is_confound"
+    )
     vacuum_prediction = next(d for d in reasoning.declarations if d.name == "vacuum_prediction")
     assert "不能同时为真" in tied_contradiction.content
     assert "介质阻力" in air_resistance.content
