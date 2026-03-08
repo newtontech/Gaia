@@ -1,5 +1,7 @@
 # Gaia CLI Command Lifecycle
 
+> **Status: RFC (Request for Comments).** This document proposes a target CLI command model. The current implementation uses `load/run/execute/inspect/validate`. This proposal should be discussed and validated before being adopted as normative.
+
 ## Purpose
 
 This document defines the intended semantic boundary of the four core Gaia CLI commands:
@@ -395,7 +397,7 @@ Local build, review, and verify are preparation steps. The shared system still n
 
 - [boundaries.md](boundaries.md) defines the CLI architectural layering
 - [../DSL/gaia-dsl-framework.md](../DSL/gaia-dsl-framework.md) defines Gaia DSL's lifecycle and layer model
-- [../shared/knowledge-package-file-formats.md](../shared/knowledge-package-file-formats.md) defines package and review sidecar exchange formats
+- Package and review sidecar exchange formats (planned, not yet documented)
 
 ## Summary
 

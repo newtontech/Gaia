@@ -488,6 +488,91 @@ When extending Gaia DSL, ask these questions first:
 
 If those questions are answered explicitly, the detailed DSL grammar becomes much easier to design coherently.
 
+## Theoretical Foundation: Gaia as Probabilistic Proof Assistant
+
+### The Closest Paradigm
+
+Gaia DSL is not a traditional programming language. It does not define instructions to execute. Instead, it defines **knowledge models** — propositions, reasoning structures, and uncertainty annotations — and computes beliefs about those propositions.
+
+The closest existing paradigm is the **proof assistant** (Lean, Coq), extended with probabilistic semantics:
+
+| Concept | Lean | Gaia |
+|---------|------|------|
+| Core object | Proposition | Claim |
+| Assumed truth | Axiom | Claim with high prior |
+| Derived truth | Theorem | Claim whose belief is computed via BP |
+| Derivation structure | Proof term | ChainExpr |
+| Construction strategy | **Tactic** | **InferAction / Lambda** |
+| Verification | **Kernel type-check** | **BP + Review** |
+| Verified artifact | .olean export | Published package |
+
+The critical difference: Lean is binary (proof valid or invalid), Gaia is probabilistic (belief is a continuous value in [0, 1]).
+
+Gaia is a **probabilistic proof assistant** — a formal system for computing how much to believe propositions given evidence and reasoning structure.
+
+### InferAction is a Tactic, Not a Function Call
+
+This distinction is architecturally fundamental.
+
+**Function call mental model** (wrong for Gaia):
+- The LLM is the authority. Its output is the answer.
+- The reasoning quality depends entirely on LLM text quality.
+- Formal structure (chains, priors) is just a "calling framework."
+
+**Tactic mental model** (correct for Gaia):
+- The LLM helps **construct** reasoning content, but does not determine its credibility.
+- The formal system (BP) independently computes beliefs based on structure, priors, and edge probabilities.
+- The LLM can generate brilliant reasoning or complete nonsense — BP computes the same belief either way, because BP reads structure, not text.
+
+In Lean, the kernel does not trust tactics. Tactics may use arbitrary heuristics to construct candidate proof terms, but the kernel independently verifies those terms. A buggy tactic cannot corrupt a verified proof.
+
+In Gaia, BP does not trust InferAction. InferAction may use an LLM to fill in reasoning content, but BP independently computes beliefs from the formal structure. A hallucinating LLM cannot corrupt the probabilistic judgment — as long as the formal structure is sound.
+
+### Gaia Has Two Kernels
+
+However, the analogy reveals an important gap.
+
+In Lean, the kernel checks both the **structure** and the **content** of a proof term. A proof that has the right shape but wrong logic is rejected.
+
+In Gaia, BP only checks **structure** — graph topology, priors, edge probabilities. It does not read the text content of claims. An LLM could fill a claim with nonsense, and BP would compute the same belief as if the content were brilliant.
+
+This means BP alone is only **half a kernel**:
+
+| Component | What it checks | Lean analogy |
+|-----------|---------------|--------------|
+| **BP** | Graph structure, probability consistency | Structural type-check |
+| **Review** | Reasoning text quality, logical validity | Semantic type-check |
+| **BP + Review** | **Complete verification** | **Full kernel** |
+
+This has a concrete architectural consequence: `review` is not an optional product feature. It is the **content-checking half of Gaia's kernel**. Without review, Gaia can verify that a reasoning structure is probabilistically consistent, but cannot verify that the reasoning itself is sound.
+
+### Implications for Command Semantics
+
+The Lean analogy clarifies why `run` is the wrong top-level verb for Gaia:
+
+- Nobody says "run a proof." They say "**check** a proof" or "**build** a project."
+- `lake build` in Lean means: parse, elaborate, type-check, export. It is constructing and verifying a formal artifact, not "executing a program."
+- Similarly, `gaia build` should mean: load, resolve, ground (tactic/LLM), compile factor graph, run BP. It is constructing and verifying a knowledge model.
+
+The pipeline, reframed through Lean's elaboration model:
+
+| Stage | Lean equivalent | What happens |
+|-------|----------------|-------------|
+| Load + Resolve | Parse + Elaborate | Source → AST, name resolution, implicit expansion |
+| Execute (LLM) | Tactic execution | Use strategies to construct reasoning content (untrusted) |
+| Compile factor graph | Lower to kernel IR | Translate reasoning structure into verifiable form |
+| BP | Kernel type-check (structural) | Compute beliefs from formal structure |
+| Review | Kernel type-check (semantic) | Assess content quality and logical validity |
+| Publish | Export .olean | Share the verified artifact |
+
+### Implications for Prior and Probability Annotations
+
+One further consequence: the `prior` and `probability` values currently written by hand in YAML are analogous to **type annotations** in Lean. In Lean, the elaborator can often infer types automatically; the user provides annotations only when needed.
+
+In Gaia, `review` could eventually serve a similar role — estimating or adjusting edge probabilities based on content quality assessment, rather than requiring the author to manually assign all probabilities. The author provides structural annotations (which claims connect through which reasoning), and the review kernel refines the probability annotations based on content evaluation.
+
+This is a future direction, but the architecture should not preclude it.
+
 ## Summary
 
 Gaia DSL should be treated as a layered language system with three lifecycle stages:
