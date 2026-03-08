@@ -2,7 +2,20 @@
 
 from __future__ import annotations
 
+import logging
+
 from libs.models import HyperEdge, Node
+
+logger = logging.getLogger(__name__)
+
+# Cromwell's rule (Jaynes): never assign P=0 or P=1 to any probability.
+# All priors and edge probabilities are clamped to [EPS, 1-EPS].
+CROMWELL_EPS = 1e-3
+
+
+def _cromwell_clamp(value: float) -> float:
+    """Clamp a probability to (ε, 1-ε) per Cromwell's rule."""
+    return max(CROMWELL_EPS, min(1.0 - CROMWELL_EPS, value))
 
 
 class FactorGraph:
@@ -12,6 +25,12 @@ class FactorGraph:
     Each Node in the hypergraph becomes a variable with its prior belief, and
     each HyperEdge becomes a factor connecting its tail and head variables with
     an associated probability.
+
+    **Cromwell's rule** is enforced at construction: priors and edge
+    probabilities are clamped to ``[ε, 1-ε]`` (ε = 1e-3). This prevents
+    degenerate all-zero potentials in BP and ensures no proposition is
+    treated as absolutely certain or impossible. The clamped values are
+    what you see in ``variables`` and ``factors``.
     """
 
     def __init__(self) -> None:
@@ -19,8 +38,14 @@ class FactorGraph:
         self.factors: list[dict] = []  # [{edge_id, tail, head, probability}]
 
     def add_variable(self, node_id: int, prior: float) -> None:
-        """Add a variable node with its prior belief."""
-        self.variables[node_id] = prior
+        """Add a variable node with its prior belief.
+
+        Cromwell's rule: *prior* is clamped to ``[ε, 1-ε]``.
+        """
+        clamped = _cromwell_clamp(prior)
+        if clamped != prior:
+            logger.debug("Cromwell clamp: variable %d prior %.4g -> %.4g", node_id, prior, clamped)
+        self.variables[node_id] = clamped
 
     def add_factor(
         self,
@@ -30,13 +55,24 @@ class FactorGraph:
         probability: float,
         edge_type: str = "deduction",
     ) -> None:
-        """Add a factor (hyperedge) connecting variables."""
+        """Add a factor (hyperedge) connecting variables.
+
+        Cromwell's rule: *probability* is clamped to ``[ε, 1-ε]``.
+        """
+        clamped = _cromwell_clamp(probability)
+        if clamped != probability:
+            logger.debug(
+                "Cromwell clamp: factor %d probability %.4g -> %.4g",
+                edge_id,
+                probability,
+                clamped,
+            )
         self.factors.append(
             {
                 "edge_id": edge_id,
                 "tail": tail,
                 "head": head,
-                "probability": probability,
+                "probability": clamped,
                 "edge_type": edge_type,
             }
         )
@@ -57,11 +93,14 @@ class FactorGraph:
             graph.add_factor(edge.id, edge.tail, edge.head, prob, edge_type=edge.type)
         return graph
 
-    def get_neighbors(self, node_id: int) -> list[int]:
-        """Get factor indices that involve this node."""
-        return [
-            i for i, f in enumerate(self.factors) if node_id in f["tail"] or node_id in f["head"]
-        ]
+    def get_var_factors(self) -> dict[int, list[int]]:
+        """Build reverse index: variable id -> list of factor indices involving it."""
+        var_factors: dict[int, list[int]] = {vid: [] for vid in self.variables}
+        for fi, f in enumerate(self.factors):
+            for vid in f["tail"] + f["head"]:
+                if vid in var_factors:
+                    var_factors[vid].append(fi)
+        return var_factors
 
     def get_variable_ids(self) -> list[int]:
         """Get all variable (node) IDs."""
