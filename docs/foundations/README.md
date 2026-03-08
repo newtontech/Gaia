@@ -22,6 +22,7 @@ The execution plan for that reset lives here:
 - [Product Scope](product-scope.md)
 - [Domain Model](domain-model.md)
 - [Gaia DSL Framework](DSL/gaia-dsl-framework.md)
+- [Theoretical Foundation](DSL/theoretical-foundation.md)
 - [Shared Knowledge Package V1 Static](shared/knowledge-package-static.md)
 - [Shared Knowledge Package V1 File Formats](shared/knowledge-package-file-formats.md)
 - [V3 Probabilistic Semantics](shared/probabilistic-semantics.md)
