@@ -168,8 +168,8 @@ def test_retraction_edge():
     assert beliefs[2] < 0.7, f"Retraction should reduce head belief, got {beliefs[2]}"
 
 
-def test_contradiction_confirms_conclusion():
-    """Contradiction head should still be confirmed (contradiction exists)."""
+def test_contradiction_head_stays_at_prior():
+    """Contradiction head is non-participating: belief should stay at prior."""
     fg = FactorGraph()
     fg.add_variable(1, 0.9)  # premise A
     fg.add_variable(2, 0.85)  # premise B
@@ -177,10 +177,11 @@ def test_contradiction_confirms_conclusion():
     fg.add_factor(edge_id=100, tail=[1, 2], head=[3], probability=0.8, edge_type="contradiction")
     bp = BeliefPropagation(damping=1.0, max_iterations=50)
     beliefs = bp.run(fg)
-    # Head should still rise above 0.5: the contradiction IS confirmed
-    # (Jaynes potential: when tails true, head=1 gets (1-p)=0.2, head=0 gets ~0,
-    #  so head=1 is still favored over head=0 in the all-tails-true config)
-    assert beliefs[3] > 0.5, f"Contradiction should confirm conclusion, got {beliefs[3]}"
+    # Head is non-participating: potential is independent of head value,
+    # so f2v messages are uniform and head stays at prior.
+    assert beliefs[3] == pytest.approx(0.5, abs=0.01), (
+        f"Contradiction head should stay at prior 0.5, got {beliefs[3]}"
+    )
 
 
 def test_contradiction_inhibits_premises():
@@ -466,29 +467,25 @@ class TestEvaluatePotential:
         )
         assert result == pytest.approx(0.1)
 
-    def test_contradiction_with_head_true(self):
-        """Contradiction with head=1: penalty * prob (head confirmed by p)."""
-        result = _evaluate_potential(
+    def test_contradiction_with_head_ignores_head_value(self):
+        """Contradiction potential is independent of head value (head non-participating)."""
+        pot_h1 = _evaluate_potential(
             "contradiction",
             tail_ids=[1],
             head_ids=[2],
             assignment={1: 1, 2: 1},
             prob=0.8,
         )
-        # penalty = 1-0.8 = 0.2, head=1 factor = 0.8 → 0.2 * 0.8 = 0.16
-        assert result == pytest.approx(0.16)
-
-    def test_contradiction_with_head_false(self):
-        """Contradiction with head=0: penalty * (1-prob) (head denied)."""
-        result = _evaluate_potential(
+        pot_h0 = _evaluate_potential(
             "contradiction",
             tail_ids=[1],
             head_ids=[2],
             assignment={1: 1, 2: 0},
             prob=0.8,
         )
-        # penalty = 0.2, head=0 factor = 0.2 → 0.2 * 0.2 = 0.04
-        assert result == pytest.approx(0.04)
+        # Both should equal penalty = 1-0.8 = 0.2, regardless of head value
+        assert pot_h1 == pytest.approx(0.2)
+        assert pot_h0 == pytest.approx(0.2)
 
     def test_induction_same_as_deduction(self):
         """Induction uses the same potential as deduction."""

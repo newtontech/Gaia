@@ -72,18 +72,14 @@ def _evaluate_potential(
 
     Assumes *prob* is already Cromwell-clamped by :class:`FactorGraph`.
 
-    .. note:: **Contradiction head non-monotonicity**
+    .. note:: **Contradiction heads are non-participating**
 
-       For contradiction factors with heads, the head belief peaks near
-       p ≈ 0.75 and decreases for larger p. This is inherent to the
-       multiplicative coupling ``(1-p) * head_factor``: as p → 1, the
-       premise penalty (1-p) drives the entire potential toward zero,
-       drowning the head signal in the uniform background. Premise
-       inhibition remains monotonically increasing. For practical
-       contradiction strengths (p ∈ [0.5, 0.9]) the head IS confirmed
-       (belief > prior). If strictly monotone head behavior is needed,
-       a two-factor decomposition (separate premise-mutex and
-       head-detector factors) is the path forward.
+       Head variables in a contradiction factor exist for structural and
+       review purposes only — they do not participate in BP inference.
+       The potential is independent of head values, so the factor-to-head
+       message is uniform and head beliefs stay at their priors.
+       This avoids the non-monotonicity that arises when premise
+       inhibition and head confirmation share the same potential.
     """
     all_tails_true = all(assignment[t] == 1 for t in tail_ids)
 
@@ -93,19 +89,9 @@ def _evaluate_potential(
     if edge_type == "contradiction":
         # Jaynes: all-tails-true is implausible. Penalize the entire configuration.
         # Base penalty: (1-p). Strong contradiction (high p) → stronger penalty.
-        penalty = 1.0 - prob
-        if not head_ids:
-            # Pure mutual exclusion constraint (no head variable)
-            return penalty
-        # Head variables: P(C=1 | premises contradict with strength p) = p.
-        # Premise penalty (1-p) and head confirmation (p) are independent:
-        # marginalizing over head: (1-p)*p + (1-p)*(1-p) = (1-p), so tail
-        # inhibition is unchanged.
-        pot = penalty
-        for h in head_ids:
-            h_val = assignment[h]
-            pot *= prob if h_val == 1 else (1.0 - prob)
-        return pot
+        # Head variables are ignored — potential depends only on tails.
+        # This makes f2v messages to heads uniform, so heads stay at prior.
+        return 1.0 - prob
 
     # All tails true — compute gated potential for heads
     pot = 1.0
