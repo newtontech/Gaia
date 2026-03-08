@@ -541,21 +541,17 @@ class TestEvaluatePotential:
             assert result == 1.0, f"{edge_type}: should be 1.0 when tail is false"
 
     def test_prob_zero_deduction(self):
-        """probability=0: Cromwell clamps to ε, so head=1 ≈ ε, head=0 ≈ 1-ε."""
-        h1 = _evaluate_potential("deduction", [1], [2], {1: 1, 2: 1}, 0.0)
-        h0 = _evaluate_potential("deduction", [1], [2], {1: 1, 2: 0}, 0.0)
-        assert h1 == pytest.approx(1e-3, abs=1e-6)  # clamped to ε
-        assert h0 == pytest.approx(1.0 - 1e-3, abs=1e-6)
+        """probability=0: head=1 gets 0, head=0 gets 1 (raw potential, no clamping)."""
+        assert _evaluate_potential("deduction", [1], [2], {1: 1, 2: 1}, 0.0) == pytest.approx(0.0)
+        assert _evaluate_potential("deduction", [1], [2], {1: 1, 2: 0}, 0.0) == pytest.approx(1.0)
 
     def test_prob_one_deduction(self):
-        """probability=1: Cromwell clamps to 1-ε, so head=1 ≈ 1-ε, head=0 ≈ ε."""
-        h1 = _evaluate_potential("deduction", [1], [2], {1: 1, 2: 1}, 1.0)
-        h0 = _evaluate_potential("deduction", [1], [2], {1: 1, 2: 0}, 1.0)
-        assert h1 == pytest.approx(1.0 - 1e-3, abs=1e-6)  # clamped to 1-ε
-        assert h0 == pytest.approx(1e-3, abs=1e-6)
+        """probability=1: deterministic — head=1 gets 1, head=0 gets 0."""
+        assert _evaluate_potential("deduction", [1], [2], {1: 1, 2: 1}, 1.0) == pytest.approx(1.0)
+        assert _evaluate_potential("deduction", [1], [2], {1: 1, 2: 0}, 1.0) == pytest.approx(0.0)
 
     def test_prob_zero_contradiction(self):
-        """probability=0 contradiction: Cromwell clamps to ε, penalty ≈ 1-ε."""
+        """probability=0 contradiction: penalty = 1 (no inhibition)."""
         result = _evaluate_potential(
             "contradiction",
             [1, 2],
@@ -563,10 +559,10 @@ class TestEvaluatePotential:
             {1: 1, 2: 1},
             0.0,
         )
-        assert result == pytest.approx(1.0 - 1e-3, abs=1e-6)
+        assert result == pytest.approx(1.0)
 
     def test_prob_one_contradiction(self):
-        """probability=1 contradiction: Cromwell clamps to 1-ε, penalty ≈ ε."""
+        """probability=1 contradiction: penalty = 0 (maximum inhibition)."""
         result = _evaluate_potential(
             "contradiction",
             [1, 2],
@@ -574,7 +570,7 @@ class TestEvaluatePotential:
             {1: 1, 2: 1},
             1.0,
         )
-        assert result == pytest.approx(1e-3, abs=1e-6)
+        assert result == pytest.approx(0.0)
 
 
 # ---------------------------------------------------------------------------

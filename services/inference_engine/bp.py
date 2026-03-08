@@ -31,17 +31,12 @@ def _normalize(msg: Msg) -> Msg:
     return msg / s
 
 
-_CROMWELL_EPS = 1e-3  # Cromwell's rule: never assign exactly 0 or 1
-
-
 def _prior_msg(prior: float) -> Msg:
     """Convert scalar prior p(x=1) to 2-vector [p(x=0), p(x=1)].
 
-    Applies Cromwell's rule: clamps prior to [ε, 1-ε] so that no
-    proposition is treated as absolutely certain or impossible.
+    Assumes *prior* is already Cromwell-clamped by :class:`FactorGraph`.
     """
-    p = max(_CROMWELL_EPS, min(1.0 - _CROMWELL_EPS, prior))
-    return np.array([1.0 - p, p])
+    return np.array([1.0 - prior, prior])
 
 
 def _evaluate_potential(
@@ -63,9 +58,7 @@ def _evaluate_potential(
 
     Otherwise (not all tails true): unconstrained (potential = 1).
 
-    Cromwell's rule is applied to ``prob``: values are clamped to
-    [ε, 1-ε] to prevent degenerate all-zero potentials (same principle
-    as prior clamping in :func:`_prior_msg`).
+    Assumes *prob* is already Cromwell-clamped by :class:`FactorGraph`.
 
     .. note:: **Contradiction head non-monotonicity**
 
@@ -80,9 +73,6 @@ def _evaluate_potential(
        a two-factor decomposition (separate premise-mutex and
        head-detector factors) is the path forward.
     """
-    # Cromwell: clamp prob away from 0 and 1 for numerical robustness
-    prob = max(_CROMWELL_EPS, min(1.0 - _CROMWELL_EPS, prob))
-
     all_tails_true = all(assignment[t] == 1 for t in tail_ids)
 
     if not all_tails_true:

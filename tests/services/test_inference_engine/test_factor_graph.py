@@ -1,3 +1,5 @@
+import pytest
+
 from libs.models import Node, HyperEdge
 from services.inference_engine.factor_graph import FactorGraph
 
@@ -44,7 +46,8 @@ def test_from_subgraph_default_probability():
     nodes = [Node(id=1, type="t", content="c", prior=1.0)]
     edges = [HyperEdge(id=100, type="induction", tail=[1], head=[2], probability=None)]
     fg = FactorGraph.from_subgraph(nodes, edges)
-    assert fg.factors[0]["probability"] == 1.0
+    # probability=None defaults to 1.0, which is Cromwell-clamped to 1-ε
+    assert fg.factors[0]["probability"] == pytest.approx(1.0 - 1e-3)
 
 
 def test_get_var_factors():
@@ -113,3 +116,45 @@ def test_add_factor_default_edge_type():
     fg = FactorGraph()
     fg.add_factor(edge_id=1, tail=[1], head=[2], probability=0.8)
     assert fg.factors[0]["edge_type"] == "deduction"
+
+
+# ---------------------------------------------------------------------------
+# Cromwell clamping tests
+# ---------------------------------------------------------------------------
+
+
+def test_cromwell_clamp_prior_zero():
+    """prior=0.0 is clamped to ε at construction time."""
+    fg = FactorGraph()
+    fg.add_variable(1, 0.0)
+    assert fg.variables[1] == pytest.approx(1e-3)
+
+
+def test_cromwell_clamp_prior_one():
+    """prior=1.0 is clamped to 1-ε at construction time."""
+    fg = FactorGraph()
+    fg.add_variable(1, 1.0)
+    assert fg.variables[1] == pytest.approx(1.0 - 1e-3)
+
+
+def test_cromwell_clamp_probability_zero():
+    """probability=0.0 is clamped to ε at construction time."""
+    fg = FactorGraph()
+    fg.add_factor(edge_id=1, tail=[1], head=[2], probability=0.0)
+    assert fg.factors[0]["probability"] == pytest.approx(1e-3)
+
+
+def test_cromwell_clamp_probability_one():
+    """probability=1.0 is clamped to 1-ε at construction time."""
+    fg = FactorGraph()
+    fg.add_factor(edge_id=1, tail=[1], head=[2], probability=1.0)
+    assert fg.factors[0]["probability"] == pytest.approx(1.0 - 1e-3)
+
+
+def test_cromwell_no_clamp_normal_values():
+    """Normal values (0 < p < 1) are NOT clamped."""
+    fg = FactorGraph()
+    fg.add_variable(1, 0.5)
+    fg.add_factor(edge_id=1, tail=[1], head=[2], probability=0.8)
+    assert fg.variables[1] == 0.5
+    assert fg.factors[0]["probability"] == 0.8
