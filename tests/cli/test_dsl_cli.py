@@ -1,20 +1,22 @@
 # tests/cli/test_dsl_cli.py
 from pathlib import Path
 
-from cli.commands.dsl import load_cmd, run_cmd
+import pytest
+
+from cli.commands.dsl import execute_cmd, inspect_cmd, load_cmd, run_cmd, validate_cmd
 
 FIXTURE_DIR = Path(__file__).parents[1] / "fixtures" / "dsl_packages" / "galileo_falling_bodies"
 
 
-def test_load_cmd(capsys):
-    load_cmd(str(FIXTURE_DIR))
+async def test_load_cmd(capsys):
+    await load_cmd(str(FIXTURE_DIR))
     captured = capsys.readouterr()
     assert "galileo_falling_bodies" in captured.out
     assert "5 modules" in captured.out
 
 
-def test_run_cmd(capsys):
-    run_cmd(str(FIXTURE_DIR))
+async def test_run_cmd(capsys):
+    await run_cmd(str(FIXTURE_DIR))
     captured = capsys.readouterr()
     assert "galileo_falling_bodies" in captured.out
     assert "Variables: 7" in captured.out
@@ -25,12 +27,39 @@ def test_run_cmd(capsys):
     assert "vacuum_prediction: prior=0.5" in captured.out
 
 
+async def test_execute_cmd(capsys):
+    await execute_cmd(str(FIXTURE_DIR))
+    captured = capsys.readouterr()
+    assert "galileo_falling_bodies" in captured.out
+    assert "Executed with 5 modules" in captured.out
+
+
+async def test_inspect_cmd(capsys):
+    await inspect_cmd(str(FIXTURE_DIR))
+    captured = capsys.readouterr()
+    assert "Factor Graph:" in captured.out
+    assert "Variables: 7" in captured.out
+    assert "Factors: 5" in captured.out
+    assert "refutation_chain" in captured.out
+
+
+async def test_validate_cmd(capsys):
+    await validate_cmd(str(FIXTURE_DIR))
+    captured = capsys.readouterr()
+    assert "Package is valid" in captured.out
+    assert "All references resolved" in captured.out
+
+
+async def test_validate_cmd_invalid_path(capsys):
+    await validate_cmd("/nonexistent/path")
+    captured = capsys.readouterr()
+    assert "Validation failed" in captured.out
+
+
 # ── Inline / error path tests ─────────────────────────────────
 
-import pytest
 
-
-def test_load_cmd_invalid_path():
+async def test_load_cmd_invalid_path():
     """load_cmd with a nonexistent path raises FileNotFoundError."""
     with pytest.raises(FileNotFoundError):
-        load_cmd("/nonexistent/dsl/package/path")
+        await load_cmd("/nonexistent/dsl/package/path")

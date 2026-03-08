@@ -192,3 +192,22 @@ def test_load_minimal_package(tmp_path):
     assert pkg.loaded_modules[0].name == "m"
     assert pkg.loaded_modules[0].declarations == []
     assert pkg.loaded_modules[0].export == []
+
+
+def test_load_package_with_dependencies(tmp_path):
+    """Dependencies in package.yaml are parsed."""
+    pkg_yaml = tmp_path / "package.yaml"
+    pkg_yaml.write_text(
+        "name: dep_test\n"
+        "modules: []\n"
+        "dependencies:\n"
+        '  - package: physics_base\n'
+        '    version: ">=1.0.0"\n'
+        "  - package: math_utils\n"
+    )
+    pkg = load_package(tmp_path)
+    assert len(pkg.dependencies) == 2
+    assert pkg.dependencies[0].package == "physics_base"
+    assert pkg.dependencies[0].version == ">=1.0.0"
+    assert pkg.dependencies[1].package == "math_utils"
+    assert pkg.dependencies[1].version is None

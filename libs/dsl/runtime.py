@@ -11,7 +11,7 @@ from services.inference_engine.factor_graph import FactorGraph
 from .compiler import DSLFactorGraph, compile_factor_graph
 from .executor import ActionExecutor, execute_package
 from .loader import load_package
-from .models import Package
+from .models import Declaration, Package, Ref
 from .resolver import resolve_refs
 
 
@@ -40,21 +40,21 @@ class DSLRuntime:
     def __init__(self, executor: ActionExecutor | None = None):
         self._executor = executor
 
-    def load(self, path: Path | str) -> RuntimeResult:
+    async def load(self, path: Path | str) -> RuntimeResult:
         """Load and validate a package (no execution or inference)."""
         pkg = load_package(Path(path))
         pkg = resolve_refs(pkg)
         return RuntimeResult(package=pkg)
 
-    def run(self, path: Path | str) -> RuntimeResult:
-        """Full pipeline: Load -> Execute -> Infer."""
-        result = self.load(path)
-
-        # Execute (if executor provided)
+    async def execute(self, result: RuntimeResult) -> RuntimeResult:
+        """Execute all chains in a loaded package (no inference)."""
         if self._executor:
-            execute_package(result.package, self._executor)
+            await execute_package(result.package, self._executor)
+        return result
 
-        # Infer (build factor graph + run BP)
+    async def infer(self, result: RuntimeResult) -> RuntimeResult:
+        """Build factor graph and run BP on a loaded package."""
+        # Compile DSL factor graph
         dsl_fg = compile_factor_graph(result.package)
         result.factor_graph = dsl_fg
 
@@ -74,6 +74,7 @@ class DSLRuntime:
                 tail=tail_ids,
                 head=head_ids,
                 probability=factor["probability"],
+                edge_type=factor.get("edge_type", "deduction"),
             )
 
         # Run BP
@@ -84,4 +85,25 @@ class DSLRuntime:
         id_to_name = {v: k for k, v in name_to_id.items()}
         result.beliefs = {id_to_name[nid]: belief for nid, belief in beliefs.items()}
 
+        # Write posteriors back to declaration objects
+        all_decls_by_name: dict[str, Declaration] = {}
+        for module in result.package.loaded_modules:
+            for decl in module.declarations:
+                if isinstance(decl, Ref) and decl._resolved is not None:
+                    all_decls_by_name[decl.name] = decl._resolved
+                else:
+                    all_decls_by_name[decl.name] = decl
+
+        for name, belief_val in result.beliefs.items():
+            target = all_decls_by_name.get(name)
+            if target is not None and hasattr(target, "belief"):
+                target.belief = belief_val
+
+        return result
+
+    async def run(self, path: Path | str) -> RuntimeResult:
+        """Full pipeline: Load -> Execute -> Infer."""
+        result = await self.load(path)
+        await self.execute(result)
+        await self.infer(result)
         return result

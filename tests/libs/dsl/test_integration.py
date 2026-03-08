@@ -9,10 +9,10 @@ from .conftest import PassthroughExecutor
 FIXTURE_DIR = Path(__file__).parents[2] / "fixtures" / "dsl_packages" / "galileo_falling_bodies"
 
 
-def test_galileo_full_pipeline():
+async def test_galileo_full_pipeline():
     """Full pipeline: load -> execute -> infer -> inspect."""
     runtime = DSLRuntime(executor=PassthroughExecutor())
-    result = runtime.run(FIXTURE_DIR)
+    result = await runtime.run(FIXTURE_DIR)
 
     # Package loaded correctly
     assert result.package.name == "galileo_falling_bodies"
@@ -37,10 +37,10 @@ def test_galileo_full_pipeline():
     assert summary["factors"] == 5
 
 
-def test_galileo_empty_claims_filled():
+async def test_galileo_empty_claims_filled():
     """Execute phase should fill in empty claims."""
     runtime = DSLRuntime(executor=PassthroughExecutor())
-    result = runtime.run(FIXTURE_DIR)
+    result = await runtime.run(FIXTURE_DIR)
 
     reasoning = next(m for m in result.package.loaded_modules if m.name == "reasoning")
     for decl in reasoning.declarations:
@@ -52,10 +52,10 @@ def test_galileo_empty_claims_filled():
             assert decl.content != "", f"{decl.name} should have content after execution"
 
 
-def test_galileo_branching_structure():
+async def test_galileo_branching_structure():
     """Two chains branch from heavier_falls_faster, merge at synthesis."""
     runtime = DSLRuntime(executor=PassthroughExecutor())
-    result = runtime.run(FIXTURE_DIR)
+    result = await runtime.run(FIXTURE_DIR)
 
     fg = result.factor_graph
     # heavier_falls_faster should appear as tail in at least 2 factors

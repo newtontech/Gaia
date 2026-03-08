@@ -65,6 +65,7 @@ class Declaration(BaseModel):
 class Claim(Declaration):
     type: str = "claim"
     content: str = ""
+    belief: float | None = None  # posterior after BP
 
 
 class Question(Declaration):
@@ -75,26 +76,36 @@ class Question(Declaration):
 class Setting(Declaration):
     type: str = "setting"
     content: str = ""
+    belief: float | None = None  # posterior after BP
 
 
-class InferAction(Declaration):
+class Action(Declaration):
+    """Base for executable actions (InferAction, ToolCallAction)."""
+
+    params: list[Param] = Field(default_factory=list)
+    return_type: str | None = None
+    content: str = ""
+
+
+class InferAction(Action):
     type: str = "infer_action"
-    params: list[Param] = Field(default_factory=list)
-    return_type: str | None = None
-    content: str = ""
 
 
-class ToolCallAction(Declaration):
+class ToolCallAction(Action):
     type: str = "toolcall_action"
-    params: list[Param] = Field(default_factory=list)
-    return_type: str | None = None
-    content: str = ""
     tool: str | None = None
 
 
-class ChainExpr(Declaration):
+class Expr(Declaration):
+    """Base for compound expressions (ChainExpr, future BranchExpr/DAGExpr)."""
+
+    pass
+
+
+class ChainExpr(Expr):
     type: str = "chain_expr"
     steps: list[Step] = Field(default_factory=list)
+    edge_type: str | None = None  # "deduction" | "retraction" | "contradiction"
 
 
 class Ref(Declaration):
@@ -126,10 +137,16 @@ class Module(BaseModel):
 # ── Package ───────────────────────────────────────────────
 
 
+class Dependency(BaseModel):
+    package: str
+    version: str | None = None
+
+
 class Package(BaseModel):
     name: str
     version: str | None = None
     manifest: Manifest | None = None
+    dependencies: list[Dependency] = Field(default_factory=list)
     modules_list: list[str] = Field(default_factory=list, alias="modules")
     export: list[str] = Field(default_factory=list)
     # Populated after loading module files:

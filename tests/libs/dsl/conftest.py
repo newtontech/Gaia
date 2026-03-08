@@ -9,26 +9,27 @@ class MockExecutor(ActionExecutor):
     def __init__(self):
         self.calls: list[dict] = []
 
-    def execute_infer(self, content: str, args: dict[str, str]) -> str:
-        self.calls.append({"type": "infer", "content": content, "args": args})
-        result = content
-        for k, v in args.items():
-            result = result.replace(f"{{{k}}}", v)
-        return f"[推理结果] {result}"
+    async def execute_infer(self, prompt: str) -> str:
+        self.calls.append({"type": "infer", "prompt": prompt})
+        return f"[推理结果] {prompt}"
 
-    def execute_lambda(self, content: str, input_text: str) -> str:
+    async def execute_lambda(self, content: str, input_text: str) -> str:
         self.calls.append({"type": "lambda", "content": content, "input": input_text})
         return f"[Lambda结果] {content}"
+
+    async def execute_tool(self, tool: str, prompt: str) -> str:
+        self.calls.append({"type": "tool", "tool": tool, "prompt": prompt})
+        return f"[Tool结果] {tool}: {prompt}"
 
 
 class PassthroughExecutor(ActionExecutor):
     """Executor that returns content as-is (no prefix). For integration tests."""
 
-    def execute_infer(self, content: str, args: dict[str, str]) -> str:
-        result = content
-        for k, v in args.items():
-            result = result.replace(f"{{{k}}}", v)
-        return result
+    async def execute_infer(self, prompt: str) -> str:
+        return prompt
 
-    def execute_lambda(self, content: str, input_text: str) -> str:
+    async def execute_lambda(self, content: str, input_text: str) -> str:
         return content
+
+    async def execute_tool(self, tool: str, prompt: str) -> str:
+        return prompt

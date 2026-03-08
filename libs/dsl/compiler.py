@@ -52,9 +52,14 @@ def compile_factor_graph(pkg: Package) -> DSLFactorGraph:
             else:
                 all_decls[decl.name] = decl
 
-    # Add variable nodes (Claims and Settings with priors)
+    # Build set of exported names across all modules
+    exported: set[str] = set()
+    for module in pkg.loaded_modules:
+        exported.update(module.export)
+
+    # Add variable nodes (only exported Claims and Settings)
     for name, decl in all_decls.items():
-        if decl.type in BP_VARIABLE_TYPES:
+        if decl.type in BP_VARIABLE_TYPES and name in exported:
             prior = decl.prior if decl.prior is not None else 1.0
             fg.variables[name] = prior
 
@@ -113,5 +118,6 @@ def _compile_chain(
                         "tail": tail,
                         "head": head,
                         "probability": probability,
+                        "edge_type": chain.edge_type or "deduction",
                     }
                 )

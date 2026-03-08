@@ -74,6 +74,7 @@ def _parse_declaration(data: dict) -> Declaration:
             steps=steps,
             prior=data.get("prior"),
             metadata=data.get("metadata"),
+            edge_type=data.get("edge_type"),
         )
 
     return cls.model_validate(data)

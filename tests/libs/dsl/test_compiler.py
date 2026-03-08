@@ -1,9 +1,17 @@
 # tests/libs/dsl/test_compiler.py
 from pathlib import Path
 
-from libs.dsl.loader import load_package
-from libs.dsl.resolver import resolve_refs
 from libs.dsl.compiler import compile_factor_graph
+from libs.dsl.loader import load_package
+from libs.dsl.models import (
+    Claim,
+    ChainExpr,
+    Module,
+    Package,
+    StepRef,
+    StepLambda,
+)
+from libs.dsl.resolver import resolve_refs
 
 FIXTURE_DIR = Path(__file__).parents[2] / "fixtures" / "dsl_packages" / "galileo_falling_bodies"
 
@@ -69,8 +77,8 @@ def test_indirect_dependency_excluded_from_edges():
     assert "thought_experiment_env" not in factor.get("tail", [])
 
 
-def test_exported_only_in_factor_graph():
-    """Only exported declarations participate in BP."""
+def test_question_excluded_from_factor_graph():
+    """Question type does not participate in BP even if exported."""
     pkg = load_package(FIXTURE_DIR)
     pkg = resolve_refs(pkg)
     fg = compile_factor_graph(pkg)
@@ -81,15 +89,6 @@ def test_exported_only_in_factor_graph():
 
 
 # ── Inline tests (no galileo fixture) ─────────────────────────
-
-from libs.dsl.models import (
-    Claim,
-    ChainExpr,
-    Module,
-    Package,
-    StepRef,
-    StepLambda,
-)
 
 
 def test_compile_empty_package():
@@ -136,3 +135,76 @@ def test_compile_single_chain_inline():
     assert factor["tail"] == ["a"]
     assert factor["head"] == ["b"]
     assert factor["probability"] == 0.8
+
+
+def test_edge_type_passed_to_factor():
+    """ChainExpr.edge_type should propagate to factor dict."""
+    claim_a = Claim(name="a", content="x", prior=0.8)
+    claim_b = Claim(name="b", content="", prior=0.5)
+    chain = ChainExpr(
+        name="retract_chain",
+        edge_type="retraction",
+        steps=[
+            StepRef(step=1, ref="a"),
+            StepLambda(step=2, **{"lambda": "retract"}, prior=0.7),
+            StepRef(step=3, ref="b"),
+        ],
+    )
+    mod = Module(
+        type="reasoning_module",
+        name="m",
+        declarations=[claim_a, claim_b, chain],
+        export=["a", "b"],
+    )
+    pkg = Package(name="test_edge_type", modules=["m"])
+    pkg.loaded_modules = [mod]
+
+    fg = compile_factor_graph(pkg)
+    assert len(fg.factors) == 1
+    assert fg.factors[0]["edge_type"] == "retraction"
+
+
+def test_edge_type_defaults_to_deduction():
+    """Chains without edge_type should default to 'deduction'."""
+    claim_a = Claim(name="a", content="x", prior=0.8)
+    claim_b = Claim(name="b", content="", prior=0.5)
+    chain = ChainExpr(
+        name="default_chain",
+        steps=[
+            StepRef(step=1, ref="a"),
+            StepLambda(step=2, **{"lambda": "reason"}, prior=0.9),
+            StepRef(step=3, ref="b"),
+        ],
+    )
+    mod = Module(
+        type="reasoning_module",
+        name="m",
+        declarations=[claim_a, claim_b, chain],
+        export=["a", "b"],
+    )
+    pkg = Package(name="test_default_edge", modules=["m"])
+    pkg.loaded_modules = [mod]
+
+    fg = compile_factor_graph(pkg)
+    assert len(fg.factors) == 1
+    assert fg.factors[0]["edge_type"] == "deduction"
+
+
+def test_non_exported_claim_excluded():
+    """Non-exported claims must NOT appear in the factor graph variables."""
+    exported_claim = Claim(name="public", content="Exported claim", prior=0.9)
+    private_claim = Claim(name="private", content="Not exported", prior=0.5)
+    mod = Module(
+        type="reasoning_module",
+        name="m",
+        declarations=[exported_claim, private_claim],
+        export=["public"],  # only 'public' is exported
+    )
+    pkg = Package(name="export_test", modules=["m"])
+    pkg.loaded_modules = [mod]
+
+    fg = compile_factor_graph(pkg)
+
+    assert "public" in fg.variables
+    assert fg.variables["public"] == 0.9
+    assert "private" not in fg.variables

@@ -1,10 +1,11 @@
 from libs.dsl.models import (
     Claim,
-    Question,
+    Question,  # noqa: F401 — import-smoke-test
     Setting,  # noqa: F401 — import-smoke-test
     InferAction,
     ToolCallAction,  # noqa: F401 — import-smoke-test
     ChainExpr,
+    Dependency,
     Ref,
     Module,
     Package,
@@ -110,3 +111,14 @@ def test_step_discriminator():
     assert s1.ref == "x"
     assert s2.apply == "f"
     assert s3.lambda_ == "some reasoning"
+
+
+def test_package_with_dependencies():
+    pkg = Package(
+        name="test",
+        dependencies=[Dependency(package="physics_base", version=">=1.0.0")],
+        modules=["m1"],
+    )
+    assert len(pkg.dependencies) == 1
+    assert pkg.dependencies[0].package == "physics_base"
+    assert pkg.dependencies[0].version == ">=1.0.0"

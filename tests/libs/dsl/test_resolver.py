@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 
 from libs.dsl.loader import load_package
+from libs.dsl.models import Claim, Module, Package, Ref
 from libs.dsl.resolver import resolve_refs, ResolveError
-from libs.dsl.models import Claim
 
 FIXTURE_DIR = Path(__file__).parents[2] / "fixtures" / "dsl_packages" / "galileo_falling_bodies"
 
@@ -71,8 +71,6 @@ def test_build_declaration_index():
 
 
 # ── Inline tests (no galileo fixture) ─────────────────────────
-
-from libs.dsl.models import Module, Package, Ref
 
 
 def test_resolve_empty_package():
