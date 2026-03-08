@@ -278,8 +278,63 @@ def show(
     path: str = typer.Option(".", "--path", "-p", help="Package directory"),
 ) -> None:
     """Show declaration details + connected chains."""
-    typer.echo(f"gaia show {name} — not yet implemented")
-    raise typer.Exit(1)
+    from libs.dsl.loader import load_package
+    from libs.dsl.models import ChainExpr, Ref, StepApply, StepRef
+
+    pkg_path = Path(path)
+    try:
+        pkg = load_package(pkg_path)
+        from libs.dsl.resolver import resolve_refs
+
+        pkg = resolve_refs(pkg)
+    except FileNotFoundError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1)
+
+    # Find declaration
+    target = None
+    for mod in pkg.loaded_modules:
+        for decl in mod.declarations:
+            actual = decl._resolved if isinstance(decl, Ref) and decl._resolved else decl
+            if actual.name == name:
+                target = actual
+                break
+
+    if target is None:
+        typer.echo(f"Error: declaration '{name}' not found", err=True)
+        raise typer.Exit(1)
+
+    # Display declaration
+    prior_str = f" | prior: {target.prior}" if target.prior is not None else ""
+    typer.echo(f"{target.name} ({target.type}){prior_str}")
+    if hasattr(target, "content") and target.content:
+        content = target.content.strip()
+        if len(content) > 120:
+            content = content[:120] + "..."
+        typer.echo(f'  content: "{content}"')
+    typer.echo()
+
+    # Find connected chains
+    typer.echo("  Referenced in chains:")
+    found_any = False
+    for mod in pkg.loaded_modules:
+        for decl in mod.declarations:
+            if not isinstance(decl, ChainExpr):
+                continue
+            for step in decl.steps:
+                refs_in_step = []
+                if isinstance(step, StepRef) and step.ref == name:
+                    refs_in_step.append(name)
+                elif isinstance(step, StepApply):
+                    refs_in_step = [a.ref for a in step.args if a.ref == name]
+                if refs_in_step:
+                    edge = decl.edge_type or "deduction"
+                    typer.echo(f"    {decl.name} ({edge})")
+                    found_any = True
+                    break
+
+    if not found_any:
+        typer.echo("    (none)")
 
 
 @app.command()
