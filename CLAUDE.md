@@ -11,8 +11,8 @@ Gaia is a Large Knowledge Model (LKM) — a billion-scale reasoning hypergraph f
 ## Common Commands
 
 ```bash
-# Install dependencies
-pip install -e ".[dev]"
+# Install dependencies (always use uv, never pip)
+uv sync
 
 # Run all tests (auto-skips Neo4j tests if unavailable)
 pytest
