@@ -111,6 +111,12 @@ class ToolCallAction(Action):
     tool: str | None = None
 
 
+class RetractAction(Action):
+    type: str = "retract_action"
+    target: str = ""
+    reason: str = ""  # ref to a Contradiction Relation
+
+
 class Expr(Declaration):
     """Base for compound expressions (ChainExpr, future BranchExpr/DAGExpr)."""
 
@@ -139,6 +145,7 @@ DECLARATION_TYPE_MAP: dict[str, type[Declaration]] = {
     "equivalence": Equivalence,
     "infer_action": InferAction,
     "toolcall_action": ToolCallAction,
+    "retract_action": RetractAction,
     "chain_expr": ChainExpr,
     "ref": Ref,
 }
