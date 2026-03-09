@@ -83,6 +83,7 @@ class Relation(Declaration):
     """Base for logical relations between knowledge objects."""
 
     between: list[str] = Field(default_factory=list)
+    content: str = ""
     belief: float | None = None
 
 
