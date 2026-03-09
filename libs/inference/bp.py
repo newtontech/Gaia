@@ -99,6 +99,9 @@ def _evaluate_potential(
         return (1.0 - prob) if all_claims_true else 1.0
 
     if edge_type == "relation_equivalence":
+        # Binary specialization of f_equiv(a,b,e) = e·exp(-λ(a-b)²) + (1-e)·1
+        # For binary variables: (a-b)² ∈ {0,1}, so exp(-λ·0)=1, exp(-λ·1)=1-prob.
+        # Requires exactly 2 premise variables.
         e_val = assignment[conclusion_ids[0]] if conclusion_ids else 1
         if e_val == 0:
             return 1.0

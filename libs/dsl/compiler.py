@@ -160,6 +160,9 @@ def _compile_relation(
             "name": f"{rel.name}.constraint",
             "premises": related_vars,
             "conclusions": [rel.name],
+            # Near-deterministic constraint: when the Relation is believed,
+            # the logical constraint (mutex or equiv) is enforced strongly.
+            # Gating comes from the Relation variable's belief, not from this probability.
             "probability": 0.99,
             "edge_type": edge_type,
         }
