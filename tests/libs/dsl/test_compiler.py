@@ -97,7 +97,9 @@ def test_contradiction_relation_creates_constraint_factor():
         "tied_pair_slower_than_heavy",
         "tied_pair_faster_than_heavy",
     }
-    assert constraint["conclusions"] == ["tied_balls_contradiction"]
+    # Relation variable excluded from constraint to avoid feedback loop
+    assert constraint["conclusions"] == []
+    assert constraint["probability"] == 0.6  # Uses Relation's prior as strength
 
 
 def test_contradiction_chain_is_now_deduction():

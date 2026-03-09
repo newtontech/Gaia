@@ -155,15 +155,17 @@ def _compile_relation(
         return
 
     edge_type = f"relation_{rel.type}"
+    # Relation variable is NOT included in the constraint factor (no gate variable).
+    # This avoids a feedback loop where the constraint's f2v message to E favors E=0
+    # (unconstrained state is always "cheaper"), pulling Relation belief down.
+    # Constraint strength comes from the Relation's prior via the probability parameter.
+    # The edge_type carries the semantic information for BP potential computation.
     fg.factors.append(
         {
             "name": f"{rel.name}.constraint",
             "premises": related_vars,
-            "conclusions": [rel.name],
-            # Near-deterministic constraint: when the Relation is believed,
-            # the logical constraint (mutex or equiv) is enforced strongly.
-            # Gating comes from the Relation variable's belief, not from this probability.
-            "probability": 0.99,
+            "conclusions": [],
+            "probability": rel.prior if rel.prior is not None else 0.5,
             "edge_type": edge_type,
         }
     )

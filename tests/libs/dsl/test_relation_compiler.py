@@ -84,8 +84,8 @@ def test_contradiction_generates_constraint_factor():
     factor = fg.factors[0]
     assert factor["edge_type"] == "relation_contradiction"
     assert set(factor["premises"]) == {"a", "b"}
-    assert factor["conclusions"] == ["a_contradicts_b"]
-    assert factor["probability"] == 0.99
+    assert factor["conclusions"] == []  # Relation excluded to avoid feedback loop
+    assert factor["probability"] == 0.95  # Uses Relation's prior as strength
     assert factor["name"] == "a_contradicts_b.constraint"
 
 
@@ -112,7 +112,7 @@ def test_equivalence_generates_constraint_factor():
     factor = fg.factors[0]
     assert factor["edge_type"] == "relation_equivalence"
     assert set(factor["premises"]) == {"x", "y"}
-    assert factor["conclusions"] == ["x_equiv_y"]
+    assert factor["conclusions"] == []  # Relation excluded to avoid feedback loop
 
 
 def test_relation_with_chain_produces_both_factors():
