@@ -8,6 +8,7 @@ from libs.dsl.models import (
     Equivalence,
     Module,
     Package,
+    Ref,
     StepLambda,
     StepRef,
 )
@@ -207,3 +208,96 @@ def test_edge_type_emits_deprecation_warning():
         assert len(deprecation_warnings) >= 1
         assert "deprecated" in str(deprecation_warnings[0].message).lower()
         assert "old_chain" in str(deprecation_warnings[0].message)
+
+
+def test_ref_alias_relation_gets_constraint():
+    """A Relation re-exported via Ref alias should still produce a constraint factor."""
+    claim_a = Claim(name="a", content="A", prior=0.8)
+    claim_b = Claim(name="b", content="B", prior=0.7)
+    contra = Contradiction(
+        name="c0",
+        between=["a", "b"],
+        prior=0.95,
+    )
+    ref_alias = Ref(name="c", ref="c0")
+    ref_alias._resolved = contra
+
+    mod = Module(
+        type="reasoning_module",
+        name="m",
+        declarations=[claim_a, claim_b, contra, ref_alias],
+        export=["a", "b", "c"],  # Only alias exported, not c0
+    )
+    pkg = Package(name="test", modules=["m"])
+    pkg.loaded_modules = [mod]
+
+    fg = compile_factor_graph(pkg)
+
+    # Variable should be under alias name
+    assert "c" in fg.variables
+    assert "c0" not in fg.variables
+    # Constraint factor should exist (was previously missing)
+    assert len(fg.factors) == 1
+    factor = fg.factors[0]
+    assert factor["edge_type"] == "relation_contradiction"
+    assert set(factor["premises"]) == {"a", "b"}
+    assert factor["name"] == "c.constraint"
+
+
+def test_equivalence_nary_decomposes_to_pairwise():
+    """Equivalence over 3+ members should decompose into pairwise constraints."""
+    claim_a = Claim(name="a", content="A", prior=0.9)
+    claim_b = Claim(name="b", content="B", prior=0.1)
+    claim_c = Claim(name="c", content="C", prior=0.9)
+    equiv = Equivalence(
+        name="abc_equiv",
+        between=["a", "b", "c"],
+        prior=0.85,
+    )
+    mod = Module(
+        type="reasoning_module",
+        name="m",
+        declarations=[claim_a, claim_b, claim_c, equiv],
+        export=["a", "b", "c", "abc_equiv"],
+    )
+    pkg = Package(name="test", modules=["m"])
+    pkg.loaded_modules = [mod]
+
+    fg = compile_factor_graph(pkg)
+
+    # Should produce C(3,2) = 3 pairwise constraint factors
+    constraint_factors = [f for f in fg.factors if "abc_equiv" in f["name"]]
+    assert len(constraint_factors) == 3
+    # Each should be binary (2 premises)
+    for f in constraint_factors:
+        assert len(f["premises"]) == 2
+        assert f["edge_type"] == "relation_equivalence"
+        assert f["conclusions"] == []
+    # All pairs covered
+    pairs = {tuple(sorted(f["premises"])) for f in constraint_factors}
+    assert pairs == {("a", "b"), ("a", "c"), ("b", "c")}
+
+
+def test_equivalence_binary_no_decomposition():
+    """Equivalence over exactly 2 members should produce a single constraint."""
+    claim_x = Claim(name="x", content="X", prior=0.6)
+    claim_y = Claim(name="y", content="Y", prior=0.9)
+    equiv = Equivalence(
+        name="xy_equiv",
+        between=["x", "y"],
+        prior=0.85,
+    )
+    mod = Module(
+        type="reasoning_module",
+        name="m",
+        declarations=[claim_x, claim_y, equiv],
+        export=["x", "y", "xy_equiv"],
+    )
+    pkg = Package(name="test", modules=["m"])
+    pkg.loaded_modules = [mod]
+
+    fg = compile_factor_graph(pkg)
+
+    constraint_factors = [f for f in fg.factors if "xy_equiv" in f["name"]]
+    assert len(constraint_factors) == 1
+    assert constraint_factors[0]["name"] == "xy_equiv.constraint"

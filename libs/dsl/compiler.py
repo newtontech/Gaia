@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import warnings
 from dataclasses import dataclass, field
+from itertools import combinations
 
 from .models import (
     ChainExpr,
     Declaration,
+    Equivalence,
     Package,
     Ref,
     Relation,
@@ -74,11 +76,12 @@ def compile_factor_graph(pkg: Package) -> DSLFactorGraph:
                 continue
             _compile_chain(decl, all_decls, fg)
 
-    # Add constraint factors from Relation declarations
-    for module in pkg.loaded_modules:
-        for decl in module.declarations:
-            if isinstance(decl, Relation):
-                _compile_relation(decl, all_decls, fg)
+    # Add constraint factors from Relation declarations.
+    # Iterate all_decls (not module.declarations) so that Ref aliases are handled:
+    # a Relation re-exported via Ref appears under the alias name in all_decls.
+    for name, decl in all_decls.items():
+        if isinstance(decl, Relation):
+            _compile_relation(name, decl, all_decls, fg)
 
     return fg
 
@@ -141,13 +144,22 @@ def _compile_chain(
 
 
 def _compile_relation(
+    var_name: str,
     rel: Relation,
     all_decls: dict[str, Declaration],
     fg: DSLFactorGraph,
 ) -> None:
-    """Compile a Relation into a constraint factor connecting related claims."""
+    """Compile a Relation into constraint factor(s) connecting related claims.
+
+    Uses *var_name* (which may be a Ref alias) instead of ``rel.name``
+    so that re-exported Relations are matched correctly against ``fg.variables``.
+
+    Equivalence relations with 3+ members are decomposed into pairwise
+    constraint factors (one per pair), since the BP potential is binary.
+    Contradiction uses an n-ary all-true penalty and needs no decomposition.
+    """
     # Only create constraint if the Relation itself is a variable node (exported)
-    if rel.name not in fg.variables:
+    if var_name not in fg.variables:
         return
 
     related_vars = [name for name in rel.between if name in fg.variables]
@@ -155,17 +167,34 @@ def _compile_relation(
         return
 
     edge_type = f"relation_{rel.type}"
+    prob = rel.prior if rel.prior is not None else 0.5
+
     # Relation variable is NOT included in the constraint factor (no gate variable).
     # This avoids a feedback loop where the constraint's f2v message to E favors E=0
     # (unconstrained state is always "cheaper"), pulling Relation belief down.
     # Constraint strength comes from the Relation's prior via the probability parameter.
     # The edge_type carries the semantic information for BP potential computation.
-    fg.factors.append(
-        {
-            "name": f"{rel.name}.constraint",
-            "premises": related_vars,
-            "conclusions": [],
-            "probability": rel.prior if rel.prior is not None else 0.5,
-            "edge_type": edge_type,
-        }
-    )
+
+    if isinstance(rel, Equivalence) and len(related_vars) > 2:
+        # Decompose n-ary equivalence into pairwise constraints.
+        # equiv(a,b,c) → factors for (a,b), (a,c), (b,c).
+        for i, (v1, v2) in enumerate(combinations(related_vars, 2)):
+            fg.factors.append(
+                {
+                    "name": f"{var_name}.constraint.{i}",
+                    "premises": [v1, v2],
+                    "conclusions": [],
+                    "probability": prob,
+                    "edge_type": edge_type,
+                }
+            )
+    else:
+        fg.factors.append(
+            {
+                "name": f"{var_name}.constraint",
+                "premises": related_vars,
+                "conclusions": [],
+                "probability": prob,
+                "edge_type": edge_type,
+            }
+        )
