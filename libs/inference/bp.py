@@ -4,7 +4,8 @@ Implements proper loopy BP on binary variables with:
 - 2-vector messages [p(x=0), p(x=1)] per message, always normalized
 - Explicit message storage for both var→factor and factor→var directions
 - Synchronous schedule: all new messages computed from old, then swapped + damped
-- Factor potentials encoding edge-type semantics (deduction, retraction, contradiction)
+- Factor potentials encoding edge-type semantics (deduction, retraction, contradiction,
+  relation_contradiction, relation_equivalence)
 """
 
 from __future__ import annotations
@@ -60,7 +61,14 @@ def _evaluate_potential(
 ) -> float:
     """Evaluate factor potential for a full variable assignment.
 
-    Gated structure: if ALL premises are 1, behavior depends on edge type:
+    **Relation types** (custom gating via conclusion variable E):
+
+    - **relation_contradiction**: When E=1 (believe the contradiction),
+      penalize A=1 ∧ B=1. When E=0, no constraint.
+    - **relation_equivalence**: When E=1 (believe the equivalence),
+      reward A==B and penalize A≠B. When E=0, no constraint.
+
+    **Standard types** (gated on "all premises true"):
 
     - **deduction/induction**: conclusion=1 with prob p (standard conditional)
     - **retraction**: conclusion=1 with prob 1-p (inverted)
@@ -82,6 +90,26 @@ def _evaluate_potential(
        premise inhibition and conclusion confirmation share the same
        potential.
     """
+    # --- Relation types: custom gating (not "all premises true") ---
+    if edge_type == "relation_contradiction":
+        e_val = assignment[conclusion_ids[0]] if conclusion_ids else 1
+        if e_val == 0:
+            return 1.0
+        all_claims_true = all(assignment[p] == 1 for p in premise_ids)
+        return (1.0 - prob) if all_claims_true else 1.0
+
+    if edge_type == "relation_equivalence":
+        e_val = assignment[conclusion_ids[0]] if conclusion_ids else 1
+        if e_val == 0:
+            return 1.0
+        a_val = assignment[premise_ids[0]]
+        b_val = assignment[premise_ids[1]]
+        if a_val == b_val:
+            return prob  # Agreement rewarded
+        else:
+            return 1.0 - prob  # Disagreement penalized
+
+    # --- Standard edge types below ---
     all_premises_true = all(assignment[t] == 1 for t in premise_ids)
 
     if not all_premises_true:

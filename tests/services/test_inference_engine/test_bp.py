@@ -761,6 +761,141 @@ def test_damping_zero_preserves_priors():
     assert beliefs[3] == pytest.approx(0.7, abs=1e-10)
 
 
+# ---------------------------------------------------------------------------
+# Relation type tests: relation_contradiction and relation_equivalence
+# ---------------------------------------------------------------------------
+
+
+class TestRelationContradiction:
+    """Tests for the relation_contradiction factor (3-variable: A, B, E)."""
+
+    def test_mutex_penalizes_both_true(self):
+        """When E is believed, A=1 and B=1 should be penalized."""
+        fg = FactorGraph()
+        fg.add_variable(1, 0.8)  # Claim A
+        fg.add_variable(2, 0.7)  # Claim B
+        fg.add_variable(3, 0.95)  # Contradiction relation E
+        fg.add_factor(
+            edge_id=1,
+            premises=[1, 2],
+            conclusions=[3],
+            probability=0.99,
+            edge_type="relation_contradiction",
+        )
+        bp = BeliefPropagation()
+        beliefs = bp.run(fg)
+        # Both claims should drop (can't both be true)
+        assert beliefs[1] < 0.8
+        assert beliefs[2] < 0.7
+        # Contradiction belief should remain high
+        assert beliefs[3] > 0.8
+
+    def test_mutex_no_effect_when_relation_low(self):
+        """When E belief is low, A and B should be minimally affected."""
+        fg = FactorGraph()
+        fg.add_variable(1, 0.8)  # Claim A
+        fg.add_variable(2, 0.7)  # Claim B
+        fg.add_variable(3, 0.1)  # Low belief in contradiction
+        fg.add_factor(
+            edge_id=1,
+            premises=[1, 2],
+            conclusions=[3],
+            probability=0.99,
+            edge_type="relation_contradiction",
+        )
+        bp = BeliefPropagation()
+        beliefs = bp.run(fg)
+        # Claims should be minimally affected
+        assert abs(beliefs[1] - 0.8) < 0.15
+        assert abs(beliefs[2] - 0.7) < 0.15
+
+    def test_mutex_stronger_penalty_with_higher_prob(self):
+        """Higher probability = stronger contradiction constraint."""
+        fg_strong = FactorGraph()
+        fg_strong.add_variable(1, 0.8)
+        fg_strong.add_variable(2, 0.7)
+        fg_strong.add_variable(3, 0.95)
+        fg_strong.add_factor(1, [1, 2], [3], 0.99, edge_type="relation_contradiction")
+
+        fg_weak = FactorGraph()
+        fg_weak.add_variable(1, 0.8)
+        fg_weak.add_variable(2, 0.7)
+        fg_weak.add_variable(3, 0.95)
+        fg_weak.add_factor(1, [1, 2], [3], 0.5, edge_type="relation_contradiction")
+
+        bp = BeliefPropagation()
+        beliefs_strong = bp.run(fg_strong)
+        beliefs_weak = bp.run(fg_weak)
+
+        # Stronger prob should cause more drop
+        assert beliefs_strong[1] < beliefs_weak[1]
+
+
+class TestRelationEquivalence:
+    """Tests for the relation_equivalence factor (3-variable: A, B, E)."""
+
+    def test_equiv_pulls_beliefs_together(self):
+        """When E is believed, A and B beliefs should converge."""
+        fg = FactorGraph()
+        fg.add_variable(1, 0.6)  # Claim A (lower evidence)
+        fg.add_variable(2, 0.9)  # Claim B (higher evidence)
+        fg.add_variable(3, 0.95)  # Equivalence relation E
+        fg.add_factor(
+            edge_id=1,
+            premises=[1, 2],
+            conclusions=[3],
+            probability=0.99,
+            edge_type="relation_equivalence",
+        )
+        bp = BeliefPropagation()
+        beliefs = bp.run(fg)
+        # Beliefs should be closer together than priors
+        prior_gap = abs(0.9 - 0.6)
+        posterior_gap = abs(beliefs[2] - beliefs[1])
+        assert posterior_gap < prior_gap
+        # A should be pulled up by B's evidence
+        assert beliefs[1] > 0.6
+
+    def test_equiv_no_effect_when_relation_low(self):
+        """When E belief is low, A and B should stay near priors."""
+        fg = FactorGraph()
+        fg.add_variable(1, 0.6)
+        fg.add_variable(2, 0.9)
+        fg.add_variable(3, 0.1)  # Low belief in equivalence
+        fg.add_factor(
+            edge_id=1,
+            premises=[1, 2],
+            conclusions=[3],
+            probability=0.99,
+            edge_type="relation_equivalence",
+        )
+        bp = BeliefPropagation()
+        beliefs = bp.run(fg)
+        assert abs(beliefs[1] - 0.6) < 0.15
+        assert abs(beliefs[2] - 0.9) < 0.15
+
+    def test_equiv_symmetric(self):
+        """Equivalence should have same effect regardless of premise order."""
+        fg1 = FactorGraph()
+        fg1.add_variable(1, 0.6)
+        fg1.add_variable(2, 0.9)
+        fg1.add_variable(3, 0.95)
+        fg1.add_factor(1, [1, 2], [3], 0.99, edge_type="relation_equivalence")
+
+        fg2 = FactorGraph()
+        fg2.add_variable(1, 0.6)
+        fg2.add_variable(2, 0.9)
+        fg2.add_variable(3, 0.95)
+        fg2.add_factor(1, [2, 1], [3], 0.99, edge_type="relation_equivalence")
+
+        bp = BeliefPropagation()
+        b1 = bp.run(fg1)
+        b2 = bp.run(fg2)
+
+        assert abs(b1[1] - b2[1]) < 0.01
+        assert abs(b1[2] - b2[2]) < 0.01
+
+
 @pytest.mark.parametrize(
     "edge_type, prior_head, prob, expect_above_prior",
     [
