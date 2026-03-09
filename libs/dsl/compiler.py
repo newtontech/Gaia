@@ -9,6 +9,7 @@ from .models import (
     Declaration,
     Package,
     Ref,
+    Relation,
     StepApply,
     StepLambda,
     StepRef,
@@ -16,7 +17,7 @@ from .models import (
 
 
 # Types that participate in BP as variable nodes
-BP_VARIABLE_TYPES = {"claim", "setting"}
+BP_VARIABLE_TYPES = {"claim", "setting", "contradiction", "equivalence"}
 
 
 @dataclass
@@ -72,6 +73,12 @@ def compile_factor_graph(pkg: Package) -> DSLFactorGraph:
                 continue
             _compile_chain(decl, all_decls, fg)
 
+    # Add constraint factors from Relation declarations
+    for module in pkg.loaded_modules:
+        for decl in module.declarations:
+            if isinstance(decl, Relation):
+                _compile_relation(decl, all_decls, fg)
+
     return fg
 
 
@@ -123,3 +130,29 @@ def _compile_chain(
                         "edge_type": chain.edge_type or "deduction",
                     }
                 )
+
+
+def _compile_relation(
+    rel: Relation,
+    all_decls: dict[str, Declaration],
+    fg: DSLFactorGraph,
+) -> None:
+    """Compile a Relation into a constraint factor connecting related claims."""
+    # Only create constraint if the Relation itself is a variable node (exported)
+    if rel.name not in fg.variables:
+        return
+
+    related_vars = [name for name in rel.between if name in fg.variables]
+    if len(related_vars) < 2:
+        return
+
+    edge_type = f"relation_{rel.type}"
+    fg.factors.append(
+        {
+            "name": f"{rel.name}.constraint",
+            "premises": related_vars,
+            "conclusions": [rel.name] if rel.name in fg.variables else [],
+            "probability": 0.99,
+            "edge_type": edge_type,
+        }
+    )
