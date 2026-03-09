@@ -79,6 +79,21 @@ class Setting(Declaration):
     belief: float | None = None  # posterior after BP
 
 
+class Relation(Declaration):
+    """Base for logical relations between knowledge objects."""
+
+    between: list[str] = Field(default_factory=list)
+    belief: float | None = None
+
+
+class Contradiction(Relation):
+    type: str = "contradiction"
+
+
+class Equivalence(Relation):
+    type: str = "equivalence"
+
+
 class Action(Declaration):
     """Base for executable actions (InferAction, ToolCallAction)."""
 
@@ -120,6 +135,8 @@ DECLARATION_TYPE_MAP: dict[str, type[Declaration]] = {
     "claim": Claim,
     "question": Question,
     "setting": Setting,
+    "contradiction": Contradiction,
+    "equivalence": Equivalence,
     "infer_action": InferAction,
     "toolcall_action": ToolCallAction,
     "chain_expr": ChainExpr,
