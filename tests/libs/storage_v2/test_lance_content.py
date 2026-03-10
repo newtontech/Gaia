@@ -44,6 +44,18 @@ class TestWritePackage:
         mod = await content_store.get_module("nonexistent")
         assert mod is None
 
+    async def test_write_package_idempotent(self, content_store, packages, modules):
+        """Writing the same package twice should not create duplicates."""
+        await content_store.write_package(packages[0], modules)
+        await content_store.write_package(packages[0], modules)
+        # Should still return single package, not error or duplicate
+        pkg = await content_store.get_package("galileo_falling_bodies")
+        assert pkg is not None
+        all_closures_table = content_store._db.open_table("packages")
+        assert all_closures_table.count_rows() == 1
+        all_modules_table = content_store._db.open_table("modules")
+        assert all_modules_table.count_rows() == 2  # 2 unique modules, not 4
+
 
 class TestWriteClosures:
     async def test_write_and_get_closure(self, content_store, closures):
@@ -165,6 +177,32 @@ class TestResources:
     async def test_get_resources_empty(self, content_store):
         result = await content_store.get_resources_for("closure", "nonexistent")
         assert result == []
+
+    async def test_size_bytes_zero_roundtrip(self, content_store, attachments):
+        """size_bytes=0 should survive roundtrip, not become None."""
+        from libs.storage_v2.models import Resource, ResourceAttachment
+
+        res = Resource(
+            resource_id="empty_file",
+            type="other",
+            format="bin",
+            storage_backend="local",
+            storage_path="/dev/null",
+            size_bytes=0,
+            metadata={},
+            created_at="2026-01-01T00:00:00Z",
+            source_package_id="test",
+        )
+        att = ResourceAttachment(
+            resource_id="empty_file",
+            target_type="closure",
+            target_id="test_target",
+            role="supplement",
+        )
+        await content_store.write_resources([res], [att])
+        result = await content_store.get_resources_for("closure", "test_target")
+        assert len(result) == 1
+        assert result[0].size_bytes == 0
 
 
 class TestBM25Search:

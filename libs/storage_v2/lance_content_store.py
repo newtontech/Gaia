@@ -301,7 +301,7 @@ def _resource_to_row(r: Resource) -> dict[str, Any]:
         "description": r.description or "",
         "storage_backend": r.storage_backend,
         "storage_path": r.storage_path,
-        "size_bytes": r.size_bytes or 0,
+        "size_bytes": r.size_bytes if r.size_bytes is not None else -1,
         "checksum": r.checksum or "",
         "metadata": json.dumps(r.metadata),
         "created_at": r.created_at.isoformat(),
@@ -319,7 +319,7 @@ def _row_to_resource(row: dict[str, Any]) -> Resource:
         description=row["description"] or None,
         storage_backend=row["storage_backend"],
         storage_path=row["storage_path"],
-        size_bytes=size_raw if size_raw != 0 else None,
+        size_bytes=size_raw if size_raw >= 0 else None,
         checksum=row["checksum"] or None,
         metadata=json.loads(row["metadata"]),
         created_at=datetime.fromisoformat(row["created_at"]),
@@ -367,10 +367,22 @@ class LanceContentStore(ContentStore):
 
     async def write_package(self, package: Package, modules: list[Module]) -> None:
         pkg_table = self._db.open_table("packages")
-        pkg_table.add([_package_to_row(package)])
+        existing = (
+            pkg_table.search().where(f"package_id = '{_q(package.package_id)}'").limit(1).to_list()
+        )
+        if not existing:
+            pkg_table.add([_package_to_row(package)])
         if modules:
             mod_table = self._db.open_table("modules")
-            mod_table.add([_module_to_row(m) for m in modules])
+            new_modules = []
+            for m in modules:
+                exists = (
+                    mod_table.search().where(f"module_id = '{_q(m.module_id)}'").limit(1).to_list()
+                )
+                if not exists:
+                    new_modules.append(_module_to_row(m))
+            if new_modules:
+                mod_table.add(new_modules)
 
     async def write_closures(self, closures: list[Closure]) -> None:
         if not closures:
