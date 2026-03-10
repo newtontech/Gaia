@@ -61,7 +61,103 @@ class KuzuGraphStore(GraphStore):
     # ── Write (stubs) ──
 
     async def write_topology(self, closures: list[Closure], chains: list[Chain]) -> None:
-        raise NotImplementedError
+        """Upsert closures and chains, then wire PREMISE/CONCLUSION relationships.
+
+        Steps:
+          1. MERGE each Closure node (keyed by closure_id).
+          2. MERGE each Chain node (keyed by chain_id).
+          3. For every ChainStep, ensure referenced closure nodes exist (MERGE),
+             then create PREMISE and CONCLUSION relationships if absent.
+        """
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, partial(self._write_topology_sync, closures, chains))
+
+    def _write_topology_sync(self, closures: list[Closure], chains: list[Chain]) -> None:
+        """Synchronous implementation of write_topology."""
+        # 1. MERGE closure nodes
+        for c in closures:
+            self._conn.execute(
+                "MERGE (n:Closure {closure_id: $id}) "
+                "SET n.version = $ver, n.type = $type, n.prior = $prior, n.belief = $prior",
+                {"id": c.closure_id, "ver": c.version, "type": c.type, "prior": c.prior},
+            )
+
+        # 2. MERGE chain nodes
+        for ch in chains:
+            self._conn.execute(
+                "MERGE (n:Chain {chain_id: $id}) SET n.type = $type, n.probability = $prob",
+                {"id": ch.chain_id, "type": ch.type, "prob": 0.0},
+            )
+
+        # 3. Create relationships from chain steps
+        for ch in chains:
+            for step in ch.steps:
+                # Ensure premise closure nodes exist, then create PREMISE rels
+                for prem in step.premises:
+                    self._merge_closure_stub(prem.closure_id, prem.version)
+                    self._ensure_rel(
+                        "PREMISE",
+                        "Closure",
+                        "closure_id",
+                        prem.closure_id,
+                        "Chain",
+                        "chain_id",
+                        ch.chain_id,
+                        step.step_index,
+                    )
+
+                # Ensure conclusion closure node exists, then create CONCLUSION rel
+                conc = step.conclusion
+                self._merge_closure_stub(conc.closure_id, conc.version)
+                self._ensure_rel(
+                    "CONCLUSION",
+                    "Chain",
+                    "chain_id",
+                    ch.chain_id,
+                    "Closure",
+                    "closure_id",
+                    conc.closure_id,
+                    step.step_index,
+                )
+
+    def _merge_closure_stub(self, closure_id: str, version: int) -> None:
+        """MERGE a Closure node with minimal defaults (no-op if it already exists)."""
+        self._conn.execute(
+            "MERGE (n:Closure {closure_id: $id}) "
+            "ON CREATE SET n.version = $ver, n.type = 'claim', n.prior = 0.5, n.belief = 0.5",
+            {"id": closure_id, "ver": version},
+        )
+
+    def _ensure_rel(
+        self,
+        rel_type: str,
+        from_label: str,
+        from_key: str,
+        from_val: str,
+        to_label: str,
+        to_key: str,
+        to_val: str,
+        step_index: int,
+    ) -> None:
+        """Create a relationship if it does not already exist.
+
+        Kuzu does not support MERGE for relationships, so we check existence first.
+        """
+        check_q = (
+            f"MATCH (a:{from_label} {{{from_key}: $fv}})"
+            f"-[r:{rel_type}]->"
+            f"(b:{to_label} {{{to_key}: $tv}}) "
+            f"WHERE r.step_index = $si RETURN COUNT(r)"
+        )
+        result = self._conn.execute(check_q, {"fv": from_val, "tv": to_val, "si": step_index})
+        row = result.get_next()
+        if row[0] == 0:
+            create_q = (
+                f"MATCH (a:{from_label} {{{from_key}: $fv}}), "
+                f"(b:{to_label} {{{to_key}: $tv}}) "
+                f"CREATE (a)-[:{rel_type} {{step_index: $si}}]->(b)"
+            )
+            self._conn.execute(create_q, {"fv": from_val, "tv": to_val, "si": step_index})
 
     async def write_resource_links(self, attachments: list[ResourceAttachment]) -> None:
         raise NotImplementedError
