@@ -1,12 +1,16 @@
-"""Tests for KuzuGraphStore schema initialisation, topology writes, and queries."""
+"""Tests for KuzuGraphStore — version-aware graph topology."""
+
+from datetime import datetime
 
 import pytest
 
-from libs.storage_v2.kuzu_graph_store import KuzuGraphStore
+from libs.storage_v2.kuzu_graph_store import KuzuGraphStore, _vid
 from libs.storage_v2.models import (
     BeliefSnapshot,
     Chain,
+    ChainStep,
     Closure,
+    ClosureRef,
     ResourceAttachment,
     ScoredClosure,
     Subgraph,
@@ -23,251 +27,381 @@ async def graph_store(tmp_path):
 
 
 def _table_names(store: KuzuGraphStore) -> set[str]:
-    """Return the set of table names in the database."""
     result = store._execute("CALL show_tables() RETURN *")
     names: set[str] = set()
     while result.has_next():
-        row = result.get_next()
-        names.add(row[1])
+        names.add(result.get_next()[1])
     return names
 
 
-class TestInitializeSchema:
-    """Verify that initialize_schema creates the expected tables."""
-
-    async def test_initialize_creates_tables(self, graph_store: KuzuGraphStore):
-        tables = _table_names(graph_store)
-        assert "Closure" in tables
-        assert "Chain" in tables
-        assert "PREMISE" in tables
-        assert "CONCLUSION" in tables
-
-    async def test_initialize_idempotent(self, graph_store: KuzuGraphStore):
-        """Calling initialize_schema a second time should not raise."""
-        await graph_store.initialize_schema()
-        tables = _table_names(graph_store)
-        assert "Closure" in tables
-        assert "Chain" in tables
-
-
 def _count_nodes(store: KuzuGraphStore, label: str) -> int:
-    """Return the number of nodes of a given label."""
     result = store._execute(f"MATCH (n:{label}) RETURN COUNT(n)")
     return result.get_next()[0]
 
 
 def _count_rels(store: KuzuGraphStore, rel_type: str) -> int:
-    """Return the number of relationships of a given type."""
     result = store._execute(f"MATCH ()-[r:{rel_type}]->() RETURN COUNT(r)")
     return result.get_next()[0]
 
 
-def _get_node_ids(store: KuzuGraphStore, label: str, key: str) -> set[str]:
-    """Return all primary key values for a node label."""
-    result = store._execute(f"MATCH (n:{label}) RETURN n.{key}")
-    ids: set[str] = set()
-    while result.has_next():
-        ids.add(result.get_next()[0])
-    return ids
+# ── Schema ──
+
+
+class TestInitializeSchema:
+    async def test_initialize_creates_tables(self, graph_store):
+        tables = _table_names(graph_store)
+        for expected in ("Closure", "Chain", "PREMISE", "CONCLUSION", "Resource"):
+            assert expected in tables
+
+    async def test_initialize_idempotent(self, graph_store):
+        await graph_store.initialize_schema()
+        tables = _table_names(graph_store)
+        assert "Closure" in tables
+
+
+# ── write_topology ──
 
 
 class TestWriteTopology:
-    """Verify that write_topology creates nodes and relationships."""
-
-    async def test_write_creates_closure_nodes(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
+    async def test_write_creates_closure_nodes(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        # All unique closure_ids from the fixtures must be present
-        stored_ids = _get_node_ids(graph_store, "Closure", "closure_id")
-        expected_ids = {c.closure_id for c in closures}
-        assert expected_ids.issubset(stored_ids)
+        # Each (closure_id, version) gets its own node
+        count = _count_nodes(graph_store, "Closure")
+        # closures from fixtures + any extra refs from chain steps
+        expected_vids = {_vid(c.closure_id, c.version) for c in closures}
+        result = graph_store._execute("MATCH (n:Closure) RETURN n.closure_vid")
+        stored_vids: set[str] = set()
+        while result.has_next():
+            stored_vids.add(result.get_next()[0])
+        assert expected_vids.issubset(stored_vids)
+        assert count >= len(expected_vids)
 
-    async def test_write_creates_chain_nodes(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
+    async def test_write_creates_chain_nodes(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        stored_ids = _get_node_ids(graph_store, "Chain", "chain_id")
-        expected_ids = {ch.chain_id for ch in chains}
-        assert expected_ids == stored_ids
+        result = graph_store._execute("MATCH (n:Chain) RETURN n.chain_id")
+        stored = set()
+        while result.has_next():
+            stored.add(result.get_next()[0])
+        assert stored == {ch.chain_id for ch in chains}
 
-    async def test_write_creates_premise_relationships(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
+    async def test_write_creates_premise_relationships(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        # Count expected PREMISE rels from fixture data
         expected = sum(len(step.premises) for ch in chains for step in ch.steps)
         assert _count_rels(graph_store, "PREMISE") == expected
 
-    async def test_write_creates_conclusion_relationships(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
+    async def test_write_creates_conclusion_relationships(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        # One CONCLUSION rel per step
         expected = sum(len(ch.steps) for ch in chains)
         assert _count_rels(graph_store, "CONCLUSION") == expected
 
-    async def test_write_topology_idempotent(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Writing twice should not create duplicate nodes or relationships."""
+    async def test_write_topology_idempotent(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        closure_count_1 = _count_nodes(graph_store, "Closure")
-        chain_count_1 = _count_nodes(graph_store, "Chain")
-        premise_count_1 = _count_rels(graph_store, "PREMISE")
-        conclusion_count_1 = _count_rels(graph_store, "CONCLUSION")
+        c1 = _count_nodes(graph_store, "Closure")
+        ch1 = _count_nodes(graph_store, "Chain")
+        p1 = _count_rels(graph_store, "PREMISE")
+        co1 = _count_rels(graph_store, "CONCLUSION")
 
         await graph_store.write_topology(closures, chains)
-        assert _count_nodes(graph_store, "Closure") == closure_count_1
-        assert _count_nodes(graph_store, "Chain") == chain_count_1
-        assert _count_rels(graph_store, "PREMISE") == premise_count_1
-        assert _count_rels(graph_store, "CONCLUSION") == conclusion_count_1
+        assert _count_nodes(graph_store, "Closure") == c1
+        assert _count_nodes(graph_store, "Chain") == ch1
+        assert _count_rels(graph_store, "PREMISE") == p1
+        assert _count_rels(graph_store, "CONCLUSION") == co1
+
+    async def test_multi_version_closure_creates_separate_nodes(self, graph_store):
+        """PR #100 comment 1: different versions must be separate graph nodes."""
+        c_v1 = Closure(
+            closure_id="x",
+            version=1,
+            type="claim",
+            content="v1",
+            prior=0.5,
+            source_package_id="p",
+            source_module_id="m",
+            created_at=datetime(2026, 1, 1),
+        )
+        c_v2 = c_v1.model_copy(update={"version": 2, "content": "v2", "prior": 0.7})
+        chain = Chain(
+            chain_id="ch1",
+            module_id="m",
+            package_id="p",
+            type="deduction",
+            steps=[
+                ChainStep(
+                    step_index=0,
+                    premises=[ClosureRef(closure_id="x", version=1)],
+                    reasoning="r",
+                    conclusion=ClosureRef(closure_id="x", version=2),
+                )
+            ],
+        )
+        await graph_store.write_topology([c_v1, c_v2], [chain])
+
+        # Two distinct Closure nodes
+        assert _count_nodes(graph_store, "Closure") == 2
+
+        # Each has correct properties
+        res = graph_store._conn.execute(
+            "MATCH (c:Closure {closure_vid: $vid}) RETURN c.prior",
+            {"vid": _vid("x", 1)},
+        )
+        assert res.get_next()[0] == pytest.approx(0.5)
+
+        res = graph_store._conn.execute(
+            "MATCH (c:Closure {closure_vid: $vid}) RETURN c.prior",
+            {"vid": _vid("x", 2)},
+        )
+        assert res.get_next()[0] == pytest.approx(0.7)
+
+
+# ── write_resource_links ──
 
 
 class TestWriteResourceLinks:
-    """Verify that write_resource_links creates Resource nodes and ATTACHED_TO rels."""
-
     async def test_write_resource_links_to_closure(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-        attachments: list[ResourceAttachment],
+        self, graph_store, closures, chains, attachments
     ):
-        """Resource links to closures should create ATTACHED_TO relationships."""
         await graph_store.write_topology(closures, chains)
         await graph_store.write_resource_links(attachments)
-
         result = graph_store._execute(
             "MATCH (r:Resource)-[a:ATTACHED_TO]->(c:Closure) RETURN COUNT(a)"
         )
-        count = result.get_next()[0]
-        # Count expected: attachments targeting closures
         expected = sum(1 for a in attachments if a.target_type == "closure")
-        assert count == expected
+        assert result.get_next()[0] == expected
 
-    async def test_write_resource_links_to_chain(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-        attachments: list[ResourceAttachment],
-    ):
-        """Resource links to chains (including chain_step) should target Chain nodes."""
+    async def test_write_resource_links_to_chain(self, graph_store, closures, chains, attachments):
         await graph_store.write_topology(closures, chains)
         await graph_store.write_resource_links(attachments)
-
         result = graph_store._execute(
             "MATCH (r:Resource)-[a:ATTACHED_TO]->(ch:Chain) RETURN COUNT(a)"
         )
-        count = result.get_next()[0]
-        # chain and chain_step both target Chain nodes
         expected = sum(1 for a in attachments if a.target_type in ("chain", "chain_step"))
-        assert count == expected
+        assert result.get_next()[0] == expected
 
     async def test_write_resource_links_idempotent(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-        attachments: list[ResourceAttachment],
+        self, graph_store, closures, chains, attachments
     ):
-        """Writing resource links twice should not double the count."""
         await graph_store.write_topology(closures, chains)
         await graph_store.write_resource_links(attachments)
         count_1 = _count_rels(graph_store, "ATTACHED_TO")
-
         await graph_store.write_resource_links(attachments)
         assert _count_rels(graph_store, "ATTACHED_TO") == count_1
 
+    async def test_chain_step_attachments_preserve_step_index(self, graph_store):
+        """PR #100 comment 4: chain_step attachments must preserve step identity."""
+        chain = Chain(
+            chain_id="ch",
+            module_id="m",
+            package_id="p",
+            type="deduction",
+            steps=[
+                ChainStep(
+                    step_index=0,
+                    premises=[ClosureRef(closure_id="a", version=1)],
+                    reasoning="r0",
+                    conclusion=ClosureRef(closure_id="b", version=1),
+                ),
+                ChainStep(
+                    step_index=1,
+                    premises=[ClosureRef(closure_id="b", version=1)],
+                    reasoning="r1",
+                    conclusion=ClosureRef(closure_id="c", version=1),
+                ),
+            ],
+        )
+        closures_local = [
+            Closure(
+                closure_id=cid,
+                version=1,
+                type="claim",
+                content="",
+                prior=0.5,
+                source_package_id="p",
+                source_module_id="m",
+                created_at=datetime(2026, 1, 1),
+            )
+            for cid in ("a", "b", "c")
+        ]
+        await graph_store.write_topology(closures_local, [chain])
+
+        # Two attachments to same chain, same resource, same role, different steps
+        att0 = ResourceAttachment(
+            resource_id="res1",
+            target_type="chain_step",
+            target_id="ch:0",
+            role="evidence",
+        )
+        att1 = ResourceAttachment(
+            resource_id="res1",
+            target_type="chain_step",
+            target_id="ch:1",
+            role="evidence",
+        )
+        await graph_store.write_resource_links([att0, att1])
+
+        # Both should exist (not collapsed)
+        result = graph_store._conn.execute(
+            "MATCH (r:Resource)-[a:ATTACHED_TO]->(ch:Chain {chain_id: 'ch'}) "
+            "RETURN a.step_index ORDER BY a.step_index"
+        )
+        steps = []
+        while result.has_next():
+            steps.append(result.get_next()[0])
+        assert steps == [0, 1]
+
+
+# ── update_beliefs ──
+
 
 class TestUpdateBeliefs:
-    """Verify that update_beliefs sets belief values on Closure nodes."""
-
-    async def test_update_beliefs_sets_value(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-        beliefs: list[BeliefSnapshot],
-    ):
+    async def test_update_beliefs_sets_value(self, graph_store, closures, chains, beliefs):
         await graph_store.write_topology(closures, chains)
         await graph_store.update_beliefs(beliefs)
 
-        # Last write wins for each closure_id
+        # Last write per (closure_id, version) wins
         expected: dict[str, float] = {}
         for snap in beliefs:
-            expected[snap.closure_id] = snap.belief
+            expected[_vid(snap.closure_id, snap.version)] = snap.belief
 
-        for cid, expected_belief in expected.items():
+        for vid, expected_belief in expected.items():
             result = graph_store._conn.execute(
-                "MATCH (cl:Closure {closure_id: $cid}) RETURN cl.belief",
-                {"cid": cid},
+                "MATCH (cl:Closure {closure_vid: $vid}) RETURN cl.belief",
+                {"vid": vid},
             )
             if result.has_next():
                 assert result.get_next()[0] == pytest.approx(expected_belief)
 
-    async def test_update_beliefs_nonexistent_closure(
-        self,
-        graph_store: KuzuGraphStore,
-    ):
-        """Updating beliefs for a non-existent closure should not raise."""
+    async def test_update_beliefs_nonexistent_closure(self, graph_store):
         snap = BeliefSnapshot(
-            closure_id="nonexistent.closure",
+            closure_id="nonexistent",
             version=1,
             belief=0.5,
             bp_run_id="bp_test",
             computed_at="2026-01-01T00:00:00Z",
         )
-        await graph_store.update_beliefs([snap])
+        await graph_store.update_beliefs([snap])  # should not raise
+
+    async def test_update_beliefs_version_aware(self, graph_store):
+        """PR #100 comment 2: beliefs for different versions are independent."""
+        c_v1 = Closure(
+            closure_id="x",
+            version=1,
+            type="claim",
+            content="",
+            prior=0.5,
+            source_package_id="p",
+            source_module_id="m",
+            created_at=datetime(2026, 1, 1),
+        )
+        c_v2 = c_v1.model_copy(update={"version": 2})
+        await graph_store.write_topology([c_v1, c_v2], [])
+
+        snap_v1 = BeliefSnapshot(
+            closure_id="x",
+            version=1,
+            belief=0.3,
+            bp_run_id="r1",
+            computed_at=datetime(2026, 1, 1),
+        )
+        snap_v2 = BeliefSnapshot(
+            closure_id="x",
+            version=2,
+            belief=0.9,
+            bp_run_id="r1",
+            computed_at=datetime(2026, 1, 1),
+        )
+        await graph_store.update_beliefs([snap_v1, snap_v2])
+
+        # v1 and v2 should have independent belief values
+        r1 = graph_store._conn.execute(
+            "MATCH (c:Closure {closure_vid: $vid}) RETURN c.belief",
+            {"vid": _vid("x", 1)},
+        )
+        assert r1.get_next()[0] == pytest.approx(0.3)
+
+        r2 = graph_store._conn.execute(
+            "MATCH (c:Closure {closure_vid: $vid}) RETURN c.belief",
+            {"vid": _vid("x", 2)},
+        )
+        assert r2.get_next()[0] == pytest.approx(0.9)
+
+
+# ── update_probability ──
 
 
 class TestUpdateProbability:
-    """Verify that update_probability sets probability on Chain nodes."""
-
-    async def test_update_probability_sets_value(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
+    async def test_update_probability_sets_value(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
         chain = chains[0]
         await graph_store.update_probability(chain.chain_id, 0, 0.95)
 
-        result = graph_store._execute(
-            f"MATCH (ch:Chain {{chain_id: '{chain.chain_id}'}}) RETURN ch.probability"
+        result = graph_store._conn.execute(
+            "MATCH (ch:Chain {chain_id: $chid})-[r:CONCLUSION]->(:Closure) "
+            "WHERE r.step_index = 0 RETURN r.probability",
+            {"chid": chain.chain_id},
         )
         assert result.get_next()[0] == pytest.approx(0.95)
 
+    async def test_update_probability_per_step(self, graph_store):
+        """PR #100 comment 3: probability must be per (chain_id, step_index)."""
+        closures_local = [
+            Closure(
+                closure_id=cid,
+                version=1,
+                type="claim",
+                content="",
+                prior=0.5,
+                source_package_id="p",
+                source_module_id="m",
+                created_at=datetime(2026, 1, 1),
+            )
+            for cid in ("a", "b", "c")
+        ]
+        chain = Chain(
+            chain_id="ch",
+            module_id="m",
+            package_id="p",
+            type="deduction",
+            steps=[
+                ChainStep(
+                    step_index=0,
+                    premises=[ClosureRef(closure_id="a", version=1)],
+                    reasoning="r0",
+                    conclusion=ClosureRef(closure_id="b", version=1),
+                ),
+                ChainStep(
+                    step_index=1,
+                    premises=[ClosureRef(closure_id="b", version=1)],
+                    reasoning="r1",
+                    conclusion=ClosureRef(closure_id="c", version=1),
+                ),
+            ],
+        )
+        await graph_store.write_topology(closures_local, [chain])
+
+        # Set different probabilities for each step
+        await graph_store.update_probability("ch", 0, 0.2)
+        await graph_store.update_probability("ch", 1, 0.9)
+
+        # Both should be independently stored
+        r0 = graph_store._conn.execute(
+            "MATCH (ch:Chain {chain_id: 'ch'})-[r:CONCLUSION]->(:Closure) "
+            "WHERE r.step_index = 0 RETURN r.probability",
+        )
+        assert r0.get_next()[0] == pytest.approx(0.2)
+
+        r1 = graph_store._conn.execute(
+            "MATCH (ch:Chain {chain_id: 'ch'})-[r:CONCLUSION]->(:Closure) "
+            "WHERE r.step_index = 1 RETURN r.probability",
+        )
+        assert r1.get_next()[0] == pytest.approx(0.9)
+
+
+# ── get_neighbors ──
+
 
 class TestGetNeighbors:
-    """Verify BFS neighbor traversal through chains."""
-
-    async def test_get_neighbors_default(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """A premise closure should discover chains and closures in both directions."""
+    async def test_get_neighbors_default(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        # heavier_falls_faster is a premise in verdict_chain
         result = await graph_store.get_neighbors(
             "galileo_falling_bodies.reasoning.heavier_falls_faster"
         )
@@ -275,110 +409,72 @@ class TestGetNeighbors:
         assert len(result.chain_ids) > 0
         assert len(result.closure_ids) > 0
 
-    async def test_get_neighbors_downstream(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Downstream from a premise should find chains it feeds into."""
+    async def test_get_neighbors_downstream(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
         result = await graph_store.get_neighbors(
             "galileo_falling_bodies.reasoning.heavier_falls_faster",
             direction="downstream",
         )
-        assert len(result.chain_ids) > 0
-        # Should find verdict_chain (heavier_falls_faster is a premise)
         assert "galileo_falling_bodies.reasoning.verdict_chain" in result.chain_ids
 
-    async def test_get_neighbors_upstream(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Upstream from a conclusion should find chains that produce it."""
+    async def test_get_neighbors_upstream(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        # combined_slower is a conclusion of verdict_chain step 0
         result = await graph_store.get_neighbors(
             "galileo_falling_bodies.reasoning.combined_slower",
             direction="upstream",
         )
-        assert len(result.chain_ids) > 0
         assert "galileo_falling_bodies.reasoning.verdict_chain" in result.chain_ids
 
-    async def test_get_neighbors_nonexistent(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Non-existent closure should return empty Subgraph."""
+    async def test_get_neighbors_nonexistent(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        result = await graph_store.get_neighbors("nonexistent.closure.id")
+        result = await graph_store.get_neighbors("nonexistent.id")
         assert result == Subgraph()
 
-    async def test_get_neighbors_max_hops(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Two hops should discover at least as many nodes as one hop."""
+    async def test_get_neighbors_max_hops(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
         cid = "galileo_falling_bodies.reasoning.heavier_falls_faster"
-        result_1 = await graph_store.get_neighbors(cid, max_hops=1)
-        result_2 = await graph_store.get_neighbors(cid, max_hops=2)
-        assert len(result_2.closure_ids) >= len(result_1.closure_ids)
-        assert len(result_2.chain_ids) >= len(result_1.chain_ids)
+        r1 = await graph_store.get_neighbors(cid, max_hops=1)
+        r2 = await graph_store.get_neighbors(cid, max_hops=2)
+        assert len(r2.closure_ids) >= len(r1.closure_ids)
+        assert len(r2.chain_ids) >= len(r1.chain_ids)
 
-    async def test_get_neighbors_chain_type_filter(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Filtering by chain type should only return matching types."""
+    async def test_get_neighbors_chain_type_filter(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        # combined_slower is premise of contradiction_chain and conclusion of verdict_chain
         result = await graph_store.get_neighbors(
             "galileo_falling_bodies.reasoning.combined_slower",
             chain_types=["contradiction"],
         )
-        # Should only find the contradiction chain
         for ch_id in result.chain_ids:
-            res = graph_store._execute(f"MATCH (ch:Chain {{chain_id: '{ch_id}'}}) RETURN ch.type")
+            res = graph_store._conn.execute(
+                "MATCH (ch:Chain {chain_id: $chid}) RETURN ch.type",
+                {"chid": ch_id},
+            )
             assert res.get_next()[0] == "contradiction"
+
+    async def test_get_neighbors_nonexistent_chain_type(self, graph_store, closures, chains):
+        """Filter with non-matching type returns empty."""
+        await graph_store.write_topology(closures, chains)
+        result = await graph_store.get_neighbors(
+            "galileo_falling_bodies.reasoning.heavier_falls_faster",
+            chain_types=["nonexistent_type"],
+        )
+        assert result.chain_ids == set()
+
+
+# ── get_subgraph ──
 
 
 class TestGetSubgraph:
-    """Verify BFS subgraph extraction."""
-
-    async def test_get_subgraph_returns_connected(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Subgraph from a connected closure should include the seed and neighbors."""
+    async def test_get_subgraph_returns_connected(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
         result = await graph_store.get_subgraph(
             "galileo_falling_bodies.reasoning.heavier_falls_faster"
         )
-        assert isinstance(result, Subgraph)
-        # Seed must be included
         assert "galileo_falling_bodies.reasoning.heavier_falls_faster" in result.closure_ids
-        # Should find other connected closures
         assert len(result.closure_ids) > 1
         assert len(result.chain_ids) > 0
 
-    async def test_get_subgraph_respects_max_closures(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """max_closures=2 should limit the number of closure IDs returned."""
+    async def test_get_subgraph_respects_max_closures(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
         result = await graph_store.get_subgraph(
             "galileo_falling_bodies.reasoning.heavier_falls_faster",
@@ -386,28 +482,17 @@ class TestGetSubgraph:
         )
         assert len(result.closure_ids) <= 2
 
-    async def test_get_subgraph_nonexistent(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Non-existent closure should return empty Subgraph."""
+    async def test_get_subgraph_nonexistent(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        result = await graph_store.get_subgraph("nonexistent.closure.id")
+        result = await graph_store.get_subgraph("nonexistent.id")
         assert result == Subgraph()
 
 
-class TestSearchTopology:
-    """Verify topology-based search with distance scoring."""
+# ── search_topology ──
 
-    async def test_search_topology_returns_scored(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Results should be ScoredClosure instances sorted by score descending."""
+
+class TestSearchTopology:
+    async def test_search_topology_returns_scored(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
         results = await graph_store.search_topology(
             ["galileo_falling_bodies.reasoning.heavier_falls_faster"],
@@ -416,63 +501,84 @@ class TestSearchTopology:
         assert len(results) > 0
         for r in results:
             assert isinstance(r, ScoredClosure)
-        # Check descending order
         scores = [r.score for r in results]
         assert scores == sorted(scores, reverse=True)
 
-    async def test_search_topology_excludes_seeds(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Seed closures should not appear in results."""
+    async def test_search_topology_excludes_seeds(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
         seed = "galileo_falling_bodies.reasoning.heavier_falls_faster"
         results = await graph_store.search_topology([seed], hops=1)
-        result_ids = {r.closure.closure_id for r in results}
-        assert seed not in result_ids
+        assert seed not in {r.closure.closure_id for r in results}
 
-    async def test_search_topology_empty_seeds(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-    ):
-        """Empty seed list should return empty results."""
+    async def test_search_topology_empty_seeds(self, graph_store, closures, chains):
         await graph_store.write_topology(closures, chains)
-        results = await graph_store.search_topology([], hops=1)
-        assert results == []
+        assert await graph_store.search_topology([], hops=1) == []
+
+    async def test_search_topology_returns_latest_version(self, graph_store):
+        """search_topology should return the latest version of discovered closures."""
+        c_v1 = Closure(
+            closure_id="a",
+            version=1,
+            type="claim",
+            content="",
+            prior=0.5,
+            source_package_id="p",
+            source_module_id="m",
+            created_at=datetime(2026, 1, 1),
+        )
+        c_v2 = c_v1.model_copy(update={"version": 2, "prior": 0.8})
+        seed = Closure(
+            closure_id="seed",
+            version=1,
+            type="claim",
+            content="",
+            prior=0.5,
+            source_package_id="p",
+            source_module_id="m",
+            created_at=datetime(2026, 1, 1),
+        )
+        chain = Chain(
+            chain_id="ch",
+            module_id="m",
+            package_id="p",
+            type="deduction",
+            steps=[
+                ChainStep(
+                    step_index=0,
+                    premises=[ClosureRef(closure_id="seed", version=1)],
+                    reasoning="r",
+                    conclusion=ClosureRef(closure_id="a", version=2),
+                ),
+            ],
+        )
+        await graph_store.write_topology([c_v1, c_v2, seed], [chain])
+        results = await graph_store.search_topology(["seed"], hops=1)
+        a_results = [r for r in results if r.closure.closure_id == "a"]
+        assert len(a_results) == 1
+        assert a_results[0].closure.version == 2
+
+
+# ── close ──
 
 
 class TestClose:
-    """Verify that close() is safe to call."""
-
     async def test_close_does_not_error(self, tmp_path):
-        """Calling close() on a fresh store should not raise."""
         store = KuzuGraphStore(tmp_path / "close_test")
         await store.initialize_schema()
         await store.close()
 
     async def test_close_idempotent(self, tmp_path):
-        """Calling close() twice should not raise."""
         store = KuzuGraphStore(tmp_path / "close_idem_test")
         await store.initialize_schema()
         await store.close()
         await store.close()
 
 
-class TestFullRoundtrip:
-    """End-to-end test exercising all graph store operations in sequence."""
+# ── Full roundtrip ──
 
-    async def test_full_roundtrip(
-        self,
-        graph_store: KuzuGraphStore,
-        closures: list[Closure],
-        chains: list[Chain],
-        attachments: list[ResourceAttachment],
-        beliefs: list[BeliefSnapshot],
-    ):
+
+class TestFullRoundtrip:
+    async def test_full_roundtrip(self, graph_store, closures, chains, attachments, beliefs):
         # 1. Write topology
         await graph_store.write_topology(closures, chains)
 
@@ -482,11 +588,12 @@ class TestFullRoundtrip:
         # 3. Update beliefs
         await graph_store.update_beliefs(beliefs)
 
-        # 4. Update probability
-        await graph_store.update_probability(chains[0].chain_id, 0, 0.9)
+        # 4. Update probability per step
+        chain = chains[0]
+        await graph_store.update_probability(chain.chain_id, 0, 0.9)
 
-        # 5. Query neighbors from a premise closure
-        premise_id = chains[0].steps[0].premises[0].closure_id
+        # 5. Query neighbors
+        premise_id = chain.steps[0].premises[0].closure_id
         neighbors = await graph_store.get_neighbors(premise_id)
         assert len(neighbors.chain_ids) > 0
 
@@ -498,22 +605,20 @@ class TestFullRoundtrip:
         results = await graph_store.search_topology([premise_id], hops=2)
         assert len(results) >= 0
 
-        # 8. Verify belief was updated on the graph node
-        # The last write for a given closure_id wins; build expected map
-        expected_beliefs: dict[str, float] = {}
-        for snap in beliefs:
-            expected_beliefs[snap.closure_id] = snap.belief
-        first_cid = beliefs[0].closure_id
+        # 8. Verify belief was updated (version-aware)
+        last_belief = beliefs[-1]
+        vid = _vid(last_belief.closure_id, last_belief.version)
         result = graph_store._conn.execute(
-            "MATCH (c:Closure {closure_id: $cid}) RETURN c.belief",
-            {"cid": first_cid},
+            "MATCH (c:Closure {closure_vid: $vid}) RETURN c.belief",
+            {"vid": vid},
         )
         if result.has_next():
-            assert result.get_next()[0] == pytest.approx(expected_beliefs[first_cid])
+            assert result.get_next()[0] == pytest.approx(last_belief.belief)
 
-        # 9. Verify probability was updated on the graph node
+        # 9. Verify probability was updated per step
         result = graph_store._conn.execute(
-            "MATCH (ch:Chain {chain_id: $chid}) RETURN ch.probability",
-            {"chid": chains[0].chain_id},
+            "MATCH (ch:Chain {chain_id: $chid})-[r:CONCLUSION]->(:Closure) "
+            "WHERE r.step_index = 0 RETURN r.probability",
+            {"chid": chain.chain_id},
         )
         assert result.get_next()[0] == pytest.approx(0.9)

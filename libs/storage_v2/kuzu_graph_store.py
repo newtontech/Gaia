@@ -1,4 +1,27 @@
-"""KuzuGraphStore — embedded graph backend using Kùzu."""
+"""KuzuGraphStore — embedded graph backend using Kùzu.
+
+Graph model (from docs/foundations/server/storage-schema.md §3.2):
+
+Nodes:
+    (:Closure {closure_vid, closure_id, version, type, prior, belief})
+    (:Chain   {chain_id, type})
+
+Relationships:
+    (:Closure)-[:PREMISE   {step_index}]->(:Chain)
+    (:Chain)  -[:CONCLUSION{step_index, probability}]->(:Closure)
+    (:Resource)-[:ATTACHED_TO {role, step_index}]->(:Closure|:Chain)
+
+Closure nodes are keyed by ``closure_vid`` = ``closure_id@version``, giving
+each (closure_id, version) pair its own graph node.  BFS queries that accept
+only ``closure_id`` match all versions via the ``closure_id`` property.
+
+Probability is stored per (chain_id, step_index) on CONCLUSION relationships,
+not as a single scalar on the Chain node, preserving step-level granularity.
+
+Kùzu's Python API is synchronous; we wrap calls in async methods.
+"""
+
+from __future__ import annotations
 
 import asyncio
 from datetime import datetime
@@ -18,19 +41,19 @@ from libs.storage_v2.models import (
 )
 
 _SCHEMA_STATEMENTS = [
+    # closure_vid = "closure_id@version" — composite string PK
     (
         "CREATE NODE TABLE IF NOT EXISTS Closure("
-        "closure_id STRING, version INT64, type STRING, "
-        "prior DOUBLE, belief DOUBLE, "
-        "PRIMARY KEY(closure_id))"
+        "closure_vid STRING, closure_id STRING, version INT64, "
+        "type STRING, prior DOUBLE, belief DOUBLE, "
+        "PRIMARY KEY(closure_vid))"
     ),
-    (
-        "CREATE NODE TABLE IF NOT EXISTS Chain("
-        "chain_id STRING, type STRING, probability DOUBLE, "
-        "PRIMARY KEY(chain_id))"
-    ),
+    ("CREATE NODE TABLE IF NOT EXISTS Chain(chain_id STRING, type STRING, PRIMARY KEY(chain_id))"),
     "CREATE REL TABLE IF NOT EXISTS PREMISE(FROM Closure TO Chain, step_index INT64)",
-    "CREATE REL TABLE IF NOT EXISTS CONCLUSION(FROM Chain TO Closure, step_index INT64)",
+    (
+        "CREATE REL TABLE IF NOT EXISTS CONCLUSION("
+        "FROM Chain TO Closure, step_index INT64, probability DOUBLE)"
+    ),
     (
         "CREATE NODE TABLE IF NOT EXISTS Resource("
         "resource_id STRING, type STRING, format STRING, "
@@ -38,21 +61,27 @@ _SCHEMA_STATEMENTS = [
     ),
     (
         "CREATE REL TABLE GROUP IF NOT EXISTS ATTACHED_TO("
-        "FROM Resource TO Closure, FROM Resource TO Chain, role STRING)"
+        "FROM Resource TO Closure, FROM Resource TO Chain, "
+        "role STRING, step_index INT64)"
     ),
 ]
+
+
+def _vid(closure_id: str, version: int) -> str:
+    """Build the composite primary key for a Closure node."""
+    return f"{closure_id}@{version}"
 
 
 class KuzuGraphStore(GraphStore):
     """Graph topology backend backed by an embedded Kùzu database.
 
     Kùzu's Python API is synchronous, so all public methods offload work to
-    a thread via ``asyncio.to_thread``.
+    a thread via ``asyncio.run_in_executor``.
     """
 
     def __init__(self, db_path: Path | str) -> None:
         self._db = kuzu.Database(str(db_path))
-        self._conn = kuzu.Connection(self._db)
+        self._conn: kuzu.Connection | None = kuzu.Connection(self._db)
 
     # ── helpers ──
 
@@ -68,55 +97,54 @@ class KuzuGraphStore(GraphStore):
         for stmt in _SCHEMA_STATEMENTS:
             await loop.run_in_executor(None, partial(self._execute, stmt))
 
-    # ── Write (stubs) ──
+    # ── Write ──
 
     async def write_topology(self, closures: list[Closure], chains: list[Chain]) -> None:
-        """Upsert closures and chains, then wire PREMISE/CONCLUSION relationships.
-
-        Steps:
-          1. MERGE each Closure node (keyed by closure_id).
-          2. MERGE each Chain node (keyed by chain_id).
-          3. For every ChainStep, ensure referenced closure nodes exist (MERGE),
-             then create PREMISE and CONCLUSION relationships if absent.
-        """
+        """Upsert closures and chains, then wire PREMISE/CONCLUSION rels."""
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, partial(self._write_topology_sync, closures, chains))
 
     def _write_topology_sync(self, closures: list[Closure], chains: list[Chain]) -> None:
-        """Synchronous implementation of write_topology."""
-        # 1. MERGE closure nodes
-        for c in closures:
-            self._conn.execute(
-                "MERGE (n:Closure {closure_id: $id}) "
-                "SET n.version = $ver, n.type = $type, n.prior = $prior, n.belief = $prior",
-                {"id": c.closure_id, "ver": c.version, "type": c.type, "prior": c.prior},
+        c = self._conn
+        # 1. MERGE closure nodes (keyed by closure_vid)
+        for cl in closures:
+            vid = _vid(cl.closure_id, cl.version)
+            c.execute(
+                "MERGE (n:Closure {closure_vid: $vid}) "
+                "SET n.closure_id = $cid, n.version = $ver, "
+                "n.type = $type, n.prior = $prior, n.belief = $prior",
+                {
+                    "vid": vid,
+                    "cid": cl.closure_id,
+                    "ver": cl.version,
+                    "type": cl.type,
+                    "prior": cl.prior,
+                },
             )
 
         # 2. MERGE chain nodes
         for ch in chains:
-            self._conn.execute(
-                "MERGE (n:Chain {chain_id: $id}) SET n.type = $type, n.probability = $prob",
-                {"id": ch.chain_id, "type": ch.type, "prob": 0.0},
+            c.execute(
+                "MERGE (n:Chain {chain_id: $id}) SET n.type = $type",
+                {"id": ch.chain_id, "type": ch.type},
             )
 
-        # 3. Create relationships from chain steps
+        # 3. Create PREMISE / CONCLUSION relationships from chain steps
         for ch in chains:
             for step in ch.steps:
-                # Ensure premise closure nodes exist, then create PREMISE rels
                 for prem in step.premises:
                     self._merge_closure_stub(prem.closure_id, prem.version)
                     self._ensure_rel(
                         "PREMISE",
                         "Closure",
-                        "closure_id",
-                        prem.closure_id,
+                        "closure_vid",
+                        _vid(prem.closure_id, prem.version),
                         "Chain",
                         "chain_id",
                         ch.chain_id,
                         step.step_index,
                     )
 
-                # Ensure conclusion closure node exists, then create CONCLUSION rel
                 conc = step.conclusion
                 self._merge_closure_stub(conc.closure_id, conc.version)
                 self._ensure_rel(
@@ -125,17 +153,19 @@ class KuzuGraphStore(GraphStore):
                     "chain_id",
                     ch.chain_id,
                     "Closure",
-                    "closure_id",
-                    conc.closure_id,
+                    "closure_vid",
+                    _vid(conc.closure_id, conc.version),
                     step.step_index,
                 )
 
     def _merge_closure_stub(self, closure_id: str, version: int) -> None:
-        """MERGE a Closure node with minimal defaults (no-op if it already exists)."""
+        """MERGE a Closure node with minimal defaults (no-op if already exists)."""
+        vid = _vid(closure_id, version)
         self._conn.execute(
-            "MERGE (n:Closure {closure_id: $id}) "
-            "ON CREATE SET n.version = $ver, n.type = 'claim', n.prior = 0.5, n.belief = 0.5",
-            {"id": closure_id, "ver": version},
+            "MERGE (n:Closure {closure_vid: $vid}) "
+            "ON CREATE SET n.closure_id = $cid, n.version = $ver, "
+            "n.type = 'claim', n.prior = 0.5, n.belief = 0.5",
+            {"vid": vid, "cid": closure_id, "ver": version},
         )
 
     def _ensure_rel(
@@ -149,10 +179,7 @@ class KuzuGraphStore(GraphStore):
         to_val: str,
         step_index: int,
     ) -> None:
-        """Create a relationship if it does not already exist.
-
-        Kuzu does not support MERGE for relationships, so we check existence first.
-        """
+        """Create a relationship if it does not already exist."""
         check_q = (
             f"MATCH (a:{from_label} {{{from_key}: $fv}})"
             f"-[r:{rel_type}]->"
@@ -160,12 +187,12 @@ class KuzuGraphStore(GraphStore):
             f"WHERE r.step_index = $si RETURN COUNT(r)"
         )
         result = self._conn.execute(check_q, {"fv": from_val, "tv": to_val, "si": step_index})
-        row = result.get_next()
-        if row[0] == 0:
+        if result.get_next()[0] == 0:
+            extra = ", probability: 0.0" if rel_type == "CONCLUSION" else ""
             create_q = (
                 f"MATCH (a:{from_label} {{{from_key}: $fv}}), "
                 f"(b:{to_label} {{{to_key}: $tv}}) "
-                f"CREATE (a)-[:{rel_type} {{step_index: $si}}]->(b)"
+                f"CREATE (a)-[:{rel_type} {{step_index: $si{extra}}}]->(b)"
             )
             self._conn.execute(create_q, {"fv": from_val, "tv": to_val, "si": step_index})
 
@@ -173,90 +200,90 @@ class KuzuGraphStore(GraphStore):
         """Write Resource nodes and ATTACHED_TO relationships.
 
         Only ``closure``, ``chain``, and ``chain_step`` target types map to
-        graph nodes.  For ``chain_step``, the chain_id is extracted from the
-        target_id (format ``chain_id:step_index``) and the link points to the
-        parent Chain node.  ``module`` and ``package`` targets are skipped.
+        graph nodes.  For ``chain_step``, ``step_index`` is preserved on the
+        relationship.  ``module`` and ``package`` targets are skipped.
         """
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, partial(self._write_resource_links_sync, attachments))
 
     def _write_resource_links_sync(self, attachments: list[ResourceAttachment]) -> None:
-        """Synchronous implementation of write_resource_links."""
+        c = self._conn
         for att in attachments:
             if att.target_type in ("module", "package"):
                 continue
 
-            # Determine destination label and id
             if att.target_type == "closure":
                 dest_label = "Closure"
-                dest_key = "closure_id"
-                dest_id = att.target_id
+                dest_key = "closure_vid"
+                # closure target_id is just closure_id; use latest version (v1 default)
+                dest_id = _vid(att.target_id, 1)
+                step_idx = -1
             elif att.target_type == "chain":
                 dest_label = "Chain"
                 dest_key = "chain_id"
                 dest_id = att.target_id
+                step_idx = -1
             elif att.target_type == "chain_step":
-                # Extract chain_id from "chain_id:step_index"
+                # target_id format: "chain_id:step_index"
+                parts = att.target_id.rsplit(":", 1)
                 dest_label = "Chain"
                 dest_key = "chain_id"
-                dest_id = att.target_id.rsplit(":", 1)[0]
+                dest_id = parts[0]
+                step_idx = int(parts[1])
             else:
                 continue
 
             # MERGE the Resource node
-            self._conn.execute(
-                "MERGE (r:Resource {resource_id: $rid})",
-                {"rid": att.resource_id},
-            )
+            c.execute("MERGE (r:Resource {resource_id: $rid})", {"rid": att.resource_id})
 
-            # Check-then-create the ATTACHED_TO relationship
+            # Check-then-create with step_index in dedup
             check_q = (
                 f"MATCH (r:Resource {{resource_id: $rid}})"
                 f"-[a:ATTACHED_TO]->"
                 f"(t:{dest_label} {{{dest_key}: $tid}}) "
-                f"WHERE a.role = $role RETURN COUNT(a)"
+                f"WHERE a.role = $role AND a.step_index = $si RETURN COUNT(a)"
             )
-            result = self._conn.execute(
+            result = c.execute(
                 check_q,
-                {"rid": att.resource_id, "tid": dest_id, "role": att.role},
+                {"rid": att.resource_id, "tid": dest_id, "role": att.role, "si": step_idx},
             )
             if result.get_next()[0] == 0:
                 create_q = (
                     f"MATCH (r:Resource {{resource_id: $rid}}), "
                     f"(t:{dest_label} {{{dest_key}: $tid}}) "
-                    f"CREATE (r)-[:ATTACHED_TO {{role: $role}}]->(t)"
+                    f"CREATE (r)-[:ATTACHED_TO {{role: $role, step_index: $si}}]->(t)"
                 )
-                self._conn.execute(
+                c.execute(
                     create_q,
-                    {"rid": att.resource_id, "tid": dest_id, "role": att.role},
+                    {"rid": att.resource_id, "tid": dest_id, "role": att.role, "si": step_idx},
                 )
 
     async def update_beliefs(self, snapshots: list[BeliefSnapshot]) -> None:
-        """Set belief values on Closure nodes.
-
-        Non-existent closures are silently ignored.
-        """
+        """Set belief values on Closure nodes, keyed by (closure_id, version)."""
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, partial(self._update_beliefs_sync, snapshots))
 
     def _update_beliefs_sync(self, snapshots: list[BeliefSnapshot]) -> None:
-        """Synchronous implementation of update_beliefs."""
         for snap in snapshots:
+            vid = _vid(snap.closure_id, snap.version)
             self._conn.execute(
-                "MATCH (cl:Closure {closure_id: $cid}) SET cl.belief = $belief",
-                {"cid": snap.closure_id, "belief": snap.belief},
+                "MATCH (cl:Closure {closure_vid: $vid}) SET cl.belief = $belief",
+                {"vid": vid, "belief": snap.belief},
             )
 
     async def update_probability(self, chain_id: str, step_index: int, value: float) -> None:
-        """Set probability on a Chain node."""
+        """Set probability on a CONCLUSION relationship for (chain_id, step_index)."""
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
-            partial(
-                self._conn.execute,
-                "MATCH (ch:Chain {chain_id: $chid}) SET ch.probability = $val",
-                {"chid": chain_id, "val": value},
-            ),
+            partial(self._update_probability_sync, chain_id, step_index, value),
+        )
+
+    def _update_probability_sync(self, chain_id: str, step_index: int, value: float) -> None:
+        self._conn.execute(
+            "MATCH (ch:Chain {chain_id: $chid})-[r:CONCLUSION]->(:Closure) "
+            "WHERE r.step_index = $si SET r.probability = $val",
+            {"chid": chain_id, "si": step_index, "val": value},
         )
 
     # ── Query ──
@@ -270,24 +297,13 @@ class KuzuGraphStore(GraphStore):
     ) -> Subgraph:
         """BFS expansion from a closure through chains, returning discovered IDs.
 
-        One "knowledge hop" = Closure → Chain → Closure (two graph hops).
-        ``direction`` controls which relationships to follow:
-          - ``"downstream"``: closure is a premise (PREMISE edge out), then
-            follow CONCLUSION edges to find resulting closures.
-          - ``"upstream"``: closure is a conclusion (CONCLUSION edge in), then
-            follow PREMISE edges back to find premise closures.
-          - ``"both"``: both directions.
+        Matches all versions of the given ``closure_id``.  One "knowledge hop"
+        = Closure → Chain → Closure (two graph hops).
         """
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             None,
-            partial(
-                self._get_neighbors_sync,
-                closure_id,
-                direction,
-                chain_types,
-                max_hops,
-            ),
+            partial(self._get_neighbors_sync, closure_id, direction, chain_types, max_hops),
         )
 
     def _get_neighbors_sync(
@@ -297,11 +313,11 @@ class KuzuGraphStore(GraphStore):
         chain_types: list[str] | None,
         max_hops: int,
     ) -> Subgraph:
-        """Synchronous BFS implementation for get_neighbors."""
-        # Verify seed exists
-        result = self._conn.execute(
-            "MATCH (c:Closure {closure_id: $id}) RETURN c.closure_id",
-            {"id": closure_id},
+        c = self._conn
+        # Verify seed exists (any version)
+        result = c.execute(
+            "MATCH (cl:Closure) WHERE cl.closure_id = $cid RETURN cl.closure_id LIMIT 1",
+            {"cid": closure_id},
         )
         if not result.has_next():
             return Subgraph()
@@ -317,44 +333,39 @@ class KuzuGraphStore(GraphStore):
 
             new_chains: set[str] = set()
 
-            # Step A: from frontier closures, find connected chains
             for cid in frontier:
                 if direction in ("downstream", "both"):
-                    # Closure -[:PREMISE]-> Chain
-                    res = self._conn.execute(
-                        "MATCH (c:Closure {closure_id: $cid})-[:PREMISE]->(ch:Chain) "
+                    res = c.execute(
+                        "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain) "
+                        "WHERE cl.closure_id = $cid "
                         "RETURN ch.chain_id, ch.type",
                         {"cid": cid},
                     )
                     while res.has_next():
                         row = res.get_next()
-                        ch_id, ch_type = row[0], row[1]
-                        if chain_types is None or ch_type in chain_types:
-                            new_chains.add(ch_id)
+                        if chain_types is None or row[1] in chain_types:
+                            new_chains.add(row[0])
 
                 if direction in ("upstream", "both"):
-                    # Chain -[:CONCLUSION]-> Closure  (closure is the conclusion)
-                    res = self._conn.execute(
-                        "MATCH (ch:Chain)-[:CONCLUSION]->(c:Closure {closure_id: $cid}) "
+                    res = c.execute(
+                        "MATCH (ch:Chain)-[:CONCLUSION]->(cl:Closure) "
+                        "WHERE cl.closure_id = $cid "
                         "RETURN ch.chain_id, ch.type",
                         {"cid": cid},
                     )
                     while res.has_next():
                         row = res.get_next()
-                        ch_id, ch_type = row[0], row[1]
-                        if chain_types is None or ch_type in chain_types:
-                            new_chains.add(ch_id)
+                        if chain_types is None or row[1] in chain_types:
+                            new_chains.add(row[0])
 
             all_chain_ids.update(new_chains)
 
-            # Step B: from discovered chains, find closures on the other side
             next_frontier: set[str] = set()
             for ch_id in new_chains:
                 if direction in ("downstream", "both"):
-                    # Chain -[:CONCLUSION]-> Closure
-                    res = self._conn.execute(
-                        "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(c:Closure) "
-                        "RETURN c.closure_id",
+                    res = c.execute(
+                        "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(cl:Closure) "
+                        "RETURN DISTINCT cl.closure_id",
                         {"chid": ch_id},
                     )
                     while res.has_next():
@@ -363,10 +374,9 @@ class KuzuGraphStore(GraphStore):
                             next_frontier.add(found)
 
                 if direction in ("upstream", "both"):
-                    # Closure -[:PREMISE]-> Chain
-                    res = self._conn.execute(
-                        "MATCH (c:Closure)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
-                        "RETURN c.closure_id",
+                    res = c.execute(
+                        "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
+                        "RETURN DISTINCT cl.closure_id",
                         {"chid": ch_id},
                     )
                     while res.has_next():
@@ -381,11 +391,7 @@ class KuzuGraphStore(GraphStore):
         return Subgraph(closure_ids=all_closure_ids, chain_ids=all_chain_ids)
 
     async def get_subgraph(self, closure_id: str, max_closures: int = 500) -> Subgraph:
-        """BFS from root closure in both directions, up to max_closures.
-
-        The seed closure is included in the result. Expands until no more
-        nodes are reachable or the closure count reaches ``max_closures``.
-        """
+        """BFS from root closure in both directions, up to max_closures."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             None,
@@ -393,11 +399,10 @@ class KuzuGraphStore(GraphStore):
         )
 
     def _get_subgraph_sync(self, closure_id: str, max_closures: int) -> Subgraph:
-        """Synchronous BFS implementation for get_subgraph."""
-        # Verify seed exists
-        result = self._conn.execute(
-            "MATCH (c:Closure {closure_id: $id}) RETURN c.closure_id",
-            {"id": closure_id},
+        c = self._conn
+        result = c.execute(
+            "MATCH (cl:Closure) WHERE cl.closure_id = $cid RETURN cl.closure_id LIMIT 1",
+            {"cid": closure_id},
         )
         if not result.has_next():
             return Subgraph()
@@ -408,21 +413,18 @@ class KuzuGraphStore(GraphStore):
 
         while frontier and len(all_closure_ids) < max_closures:
             new_chains: set[str] = set()
-
             for cid in frontier:
-                # Downstream: Closure -[:PREMISE]-> Chain
-                res = self._conn.execute(
-                    "MATCH (c:Closure {closure_id: $cid})-[:PREMISE]->(ch:Chain) "
-                    "RETURN ch.chain_id",
+                res = c.execute(
+                    "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain) "
+                    "WHERE cl.closure_id = $cid RETURN ch.chain_id",
                     {"cid": cid},
                 )
                 while res.has_next():
                     new_chains.add(res.get_next()[0])
 
-                # Upstream: Chain -[:CONCLUSION]-> Closure
-                res = self._conn.execute(
-                    "MATCH (ch:Chain)-[:CONCLUSION]->(c:Closure {closure_id: $cid}) "
-                    "RETURN ch.chain_id",
+                res = c.execute(
+                    "MATCH (ch:Chain)-[:CONCLUSION]->(cl:Closure) "
+                    "WHERE cl.closure_id = $cid RETURN ch.chain_id",
                     {"cid": cid},
                 )
                 while res.has_next():
@@ -432,10 +434,9 @@ class KuzuGraphStore(GraphStore):
 
             next_frontier: set[str] = set()
             for ch_id in new_chains:
-                # Conclusions
-                res = self._conn.execute(
-                    "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(c:Closure) "
-                    "RETURN c.closure_id",
+                res = c.execute(
+                    "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(cl:Closure) "
+                    "RETURN DISTINCT cl.closure_id",
                     {"chid": ch_id},
                 )
                 while res.has_next():
@@ -443,10 +444,9 @@ class KuzuGraphStore(GraphStore):
                     if found not in all_closure_ids:
                         next_frontier.add(found)
 
-                # Premises
-                res = self._conn.execute(
-                    "MATCH (c:Closure)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
-                    "RETURN c.closure_id",
+                res = c.execute(
+                    "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
+                    "RETURN DISTINCT cl.closure_id",
                     {"chid": ch_id},
                 )
                 while res.has_next():
@@ -454,7 +454,6 @@ class KuzuGraphStore(GraphStore):
                     if found not in all_closure_ids:
                         next_frontier.add(found)
 
-            # Respect max_closures limit
             remaining = max_closures - len(all_closure_ids)
             if len(next_frontier) > remaining:
                 next_frontier = set(list(next_frontier)[:remaining])
@@ -471,15 +470,17 @@ class KuzuGraphStore(GraphStore):
         Returns minimal Closure objects (content not stored in graph).
         """
         loop = asyncio.get_running_loop()
-        return await loop.run_in_executor(None, partial(self._search_topology_sync, seed_ids, hops))
+        return await loop.run_in_executor(
+            None,
+            partial(self._search_topology_sync, seed_ids, hops),
+        )
 
     def _search_topology_sync(self, seed_ids: list[str], hops: int) -> list[ScoredClosure]:
-        """Synchronous BFS implementation for search_topology."""
         if not seed_ids:
             return []
 
+        c = self._conn
         seed_set = set(seed_ids)
-        # Map closure_id -> best (lowest) hop distance
         discovered: dict[str, int] = {}
         frontier: set[str] = set(seed_ids)
         visited: set[str] = set(seed_ids)
@@ -490,18 +491,17 @@ class KuzuGraphStore(GraphStore):
 
             new_chains: set[str] = set()
             for cid in frontier:
-                # Both directions
-                res = self._conn.execute(
-                    "MATCH (c:Closure {closure_id: $cid})-[:PREMISE]->(ch:Chain) "
-                    "RETURN ch.chain_id",
+                res = c.execute(
+                    "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain) "
+                    "WHERE cl.closure_id = $cid RETURN ch.chain_id",
                     {"cid": cid},
                 )
                 while res.has_next():
                     new_chains.add(res.get_next()[0])
 
-                res = self._conn.execute(
-                    "MATCH (ch:Chain)-[:CONCLUSION]->(c:Closure {closure_id: $cid}) "
-                    "RETURN ch.chain_id",
+                res = c.execute(
+                    "MATCH (ch:Chain)-[:CONCLUSION]->(cl:Closure) "
+                    "WHERE cl.closure_id = $cid RETURN ch.chain_id",
                     {"cid": cid},
                 )
                 while res.has_next():
@@ -509,9 +509,9 @@ class KuzuGraphStore(GraphStore):
 
             next_frontier: set[str] = set()
             for ch_id in new_chains:
-                res = self._conn.execute(
-                    "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(c:Closure) "
-                    "RETURN c.closure_id",
+                res = c.execute(
+                    "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(cl:Closure) "
+                    "RETURN DISTINCT cl.closure_id",
                     {"chid": ch_id},
                 )
                 while res.has_next():
@@ -521,9 +521,9 @@ class KuzuGraphStore(GraphStore):
                         if found not in discovered:
                             discovered[found] = hop
 
-                res = self._conn.execute(
-                    "MATCH (c:Closure)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
-                    "RETURN c.closure_id",
+                res = c.execute(
+                    "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
+                    "RETURN DISTINCT cl.closure_id",
                     {"chid": ch_id},
                 )
                 while res.has_next():
@@ -542,30 +542,29 @@ class KuzuGraphStore(GraphStore):
             if cid in seed_set:
                 continue
 
-            # Fetch node properties from graph
-            res = self._conn.execute(
-                "MATCH (c:Closure {closure_id: $cid}) RETURN c.version, c.type, c.prior",
+            # Fetch the latest-version node properties
+            res = c.execute(
+                "MATCH (cl:Closure) WHERE cl.closure_id = $cid "
+                "RETURN cl.version, cl.type, cl.prior "
+                "ORDER BY cl.version DESC LIMIT 1",
                 {"cid": cid},
             )
             if not res.has_next():
                 continue
             row = res.get_next()
-            version, ctype, prior = row[0], row[1], row[2]
 
             closure = Closure(
                 closure_id=cid,
-                version=version,
-                type=ctype,
+                version=row[0],
+                type=row[1],
                 content="",
-                prior=prior,
+                prior=row[2],
                 source_package_id="",
                 source_module_id="",
                 created_at=datetime(2026, 1, 1),
             )
-            score = 1.0 / (hop_dist + 2)
-            results.append(ScoredClosure(closure=closure, score=score))
+            results.append(ScoredClosure(closure=closure, score=1.0 / (hop_dist + 2)))
 
-        # Sort by score descending
         results.sort(key=lambda sc: sc.score, reverse=True)
         return results
 
