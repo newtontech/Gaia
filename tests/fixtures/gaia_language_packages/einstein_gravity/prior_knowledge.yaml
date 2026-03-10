@@ -2,6 +2,7 @@
 
 type: reasoning_module
 name: prior_knowledge
+title: "先验知识 — 从其他 package 和历史背景引入的前提"
 
 knowledge:
   # === 引用 Newton package ===

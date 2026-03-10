@@ -3,6 +3,7 @@
 
 type: reasoning_module
 name: implications
+title: "含义 — 牛顿推导与伽利略和亚里士多德的关系"
 
 knowledge:
   # === 引用本 package 的结论 ===
