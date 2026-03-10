@@ -134,6 +134,16 @@ _TABLE_SCHEMAS: dict[str, pa.Schema] = {
     "resource_attachments": _RESOURCE_ATTACHMENTS_SCHEMA,
 }
 
+# ── Helpers ──
+
+_MAX_SCAN = 100_000
+
+
+def _q(s: str) -> str:
+    """Escape single quotes for LanceDB SQL filter expressions."""
+    return s.replace("'", "''")
+
+
 # ── Serialization helpers ──
 
 
@@ -300,7 +310,7 @@ def _resource_to_row(r: Resource) -> dict[str, Any]:
 
 
 def _row_to_resource(row: dict[str, Any]) -> Resource:
-    size = row["size_bytes"]
+    size_raw = row["size_bytes"]
     return Resource(
         resource_id=row["resource_id"],
         type=row["type"],
@@ -309,7 +319,7 @@ def _row_to_resource(row: dict[str, Any]) -> Resource:
         description=row["description"] or None,
         storage_backend=row["storage_backend"],
         storage_path=row["storage_path"],
-        size_bytes=size if size else None,
+        size_bytes=size_raw if size_raw != 0 else None,
         checksum=row["checksum"] or None,
         metadata=json.loads(row["metadata"]),
         created_at=datetime.fromisoformat(row["created_at"]),
@@ -371,7 +381,7 @@ class LanceContentStore(ContentStore):
         for c in closures:
             existing = (
                 table.search()
-                .where(f"closure_id = '{c.closure_id}' AND version = {c.version}")
+                .where(f"closure_id = '{_q(c.closure_id)}' AND version = {c.version}")
                 .limit(1)
                 .to_list()
             )
@@ -416,13 +426,15 @@ class LanceContentStore(ContentStore):
         if version is not None:
             results = (
                 table.search()
-                .where(f"closure_id = '{closure_id}' AND version = {version}")
+                .where(f"closure_id = '{_q(closure_id)}' AND version = {version}")
                 .limit(1)
                 .to_list()
             )
         else:
             # Get all versions, return the latest
-            results = table.search().where(f"closure_id = '{closure_id}'").limit(1000).to_list()
+            results = (
+                table.search().where(f"closure_id = '{_q(closure_id)}'").limit(_MAX_SCAN).to_list()
+            )
             if not results:
                 return None
             results = [max(results, key=lambda r: r["version"])]
@@ -432,43 +444,47 @@ class LanceContentStore(ContentStore):
 
     async def get_closure_versions(self, closure_id: str) -> list[Closure]:
         table = self._db.open_table("closures")
-        results = table.search().where(f"closure_id = '{closure_id}'").limit(1000).to_list()
+        results = (
+            table.search().where(f"closure_id = '{_q(closure_id)}'").limit(_MAX_SCAN).to_list()
+        )
         closures = [_row_to_closure(r) for r in results]
         return sorted(closures, key=lambda c: c.version)
 
     async def get_package(self, package_id: str) -> Package | None:
         table = self._db.open_table("packages")
-        results = table.search().where(f"package_id = '{package_id}'").limit(1).to_list()
+        results = table.search().where(f"package_id = '{_q(package_id)}'").limit(1).to_list()
         if not results:
             return None
         return _row_to_package(results[0])
 
     async def get_module(self, module_id: str) -> Module | None:
         table = self._db.open_table("modules")
-        results = table.search().where(f"module_id = '{module_id}'").limit(1).to_list()
+        results = table.search().where(f"module_id = '{_q(module_id)}'").limit(1).to_list()
         if not results:
             return None
         return _row_to_module(results[0])
 
     async def get_chains_by_module(self, module_id: str) -> list[Chain]:
         table = self._db.open_table("chains")
-        results = table.search().where(f"module_id = '{module_id}'").limit(10000).to_list()
+        results = table.search().where(f"module_id = '{_q(module_id)}'").limit(_MAX_SCAN).to_list()
         return [_row_to_chain(r) for r in results]
 
     async def get_probability_history(
         self, chain_id: str, step_index: int | None = None
     ) -> list[ProbabilityRecord]:
         table = self._db.open_table("probabilities")
-        where = f"chain_id = '{chain_id}'"
+        where = f"chain_id = '{_q(chain_id)}'"
         if step_index is not None:
             where += f" AND step_index = {step_index}"
-        results = table.search().where(where).limit(10000).to_list()
+        results = table.search().where(where).limit(_MAX_SCAN).to_list()
         records = [_row_to_probability(r) for r in results]
         return sorted(records, key=lambda r: r.recorded_at)
 
     async def get_belief_history(self, closure_id: str) -> list[BeliefSnapshot]:
         table = self._db.open_table("belief_history")
-        results = table.search().where(f"closure_id = '{closure_id}'").limit(10000).to_list()
+        results = (
+            table.search().where(f"closure_id = '{_q(closure_id)}'").limit(_MAX_SCAN).to_list()
+        )
         snapshots = [_row_to_belief(r) for r in results]
         return sorted(snapshots, key=lambda s: s.computed_at)
 
@@ -476,8 +492,8 @@ class LanceContentStore(ContentStore):
         att_table = self._db.open_table("resource_attachments")
         att_results = (
             att_table.search()
-            .where(f"target_type = '{target_type}' AND target_id = '{target_id}'")
-            .limit(10000)
+            .where(f"target_type = '{_q(target_type)}' AND target_id = '{_q(target_id)}'")
+            .limit(_MAX_SCAN)
             .to_list()
         )
         if not att_results:
@@ -486,7 +502,7 @@ class LanceContentStore(ContentStore):
         res_table = self._db.open_table("resources")
         resources = []
         for rid in resource_ids:
-            rows = res_table.search().where(f"resource_id = '{rid}'").limit(1).to_list()
+            rows = res_table.search().where(f"resource_id = '{_q(rid)}'").limit(1).to_list()
             if rows:
                 resources.append(_row_to_resource(rows[0]))
         return resources
@@ -511,14 +527,16 @@ class LanceContentStore(ContentStore):
 
     async def list_closures(self) -> list[Closure]:
         table = self._db.open_table("closures")
-        if table.count_rows() == 0:
+        count = table.count_rows()
+        if count == 0:
             return []
-        results = table.search().limit(table.count_rows()).to_list()
+        results = table.search().limit(count).to_list()
         return [_row_to_closure(r) for r in results]
 
     async def list_chains(self) -> list[Chain]:
         table = self._db.open_table("chains")
-        if table.count_rows() == 0:
+        count = table.count_rows()
+        if count == 0:
             return []
-        results = table.search().limit(table.count_rows()).to_list()
+        results = table.search().limit(count).to_list()
         return [_row_to_chain(r) for r in results]
