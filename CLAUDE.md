@@ -11,8 +11,8 @@ Gaia is a Large Knowledge Model (LKM) — a billion-scale reasoning hypergraph f
 ## Common Commands
 
 ```bash
-# Install dependencies
-pip install -e ".[dev]"
+# Install dependencies (always use uv, never pip)
+uv sync
 
 # Run all tests (auto-skips Neo4j tests if unavailable)
 pytest
@@ -111,6 +111,27 @@ Neo4j is optional — the system degrades gracefully without it. All writes go t
 - Type hints use PEP 604 union syntax (`X | None` not `Optional[X]`)
 - Google-style docstrings
 - Pydantic v2 API: `.model_dump()`, `.model_validate()`, `.model_validate_json()`
+
+## Worktrees
+
+Worktrees live in `.worktrees/` (gitignored). Create new worktrees there:
+
+```bash
+git worktree add .worktrees/<name> -b feature/<name>
+```
+
+## Workflow
+
+每项工作完成后，**必须**提交 PR 到 main。流程：
+
+1. 完成开发并确认测试通过
+2. 运行 ruff lint 和 format 检查：
+   ```bash
+   ruff check .
+   ruff format --check .
+   ```
+3. 修复所有 lint/format 错误
+4. 提交 commit，push 分支，创建 PR
 
 ## Design Documents
 

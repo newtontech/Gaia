@@ -1,9 +1,12 @@
 # tests/services/test_search_engine/test_engine.py
 """SearchEngine tests — real storage instead of mocks."""
 
+from unittest.mock import AsyncMock
+
 import pytest
 
 from libs.embedding import StubEmbeddingModel
+from libs.models import HyperEdge
 from services.search_engine.engine import SearchEngine
 from services.search_engine.models import EdgeFilters, NodeFilters
 
@@ -131,6 +134,35 @@ def test_node_filters_new_fields():
     assert f.paper_id == "arxiv:2301.12345"
     assert f.min_quality == 3.0
     assert f.edge_type == ["abstraction"]
+
+
+async def test_search_edges_with_mock_graph(search, storage):
+    """Edge search scores edges by connected node scores using premises/conclusions."""
+    # First get some node results to know which IDs exist
+    scored_nodes = await search.search_nodes(text="superconductor", k=5)
+    if not scored_nodes:
+        pytest.skip("No node results to build edge search from")
+
+    node_ids = [sn.node.id for sn in scored_nodes]
+
+    # Create a mock edge referencing real node IDs
+    mock_edge = HyperEdge(
+        id=9999,
+        type="deduction",
+        premises=node_ids[:1],
+        conclusions=node_ids[1:2] if len(node_ids) > 1 else node_ids[:1],
+        probability=0.9,
+    )
+
+    mock_graph = AsyncMock()
+    mock_graph.get_subgraph = AsyncMock(return_value=(node_ids, [9999]))
+    mock_graph.get_hyperedge = AsyncMock(return_value=mock_edge)
+    storage.graph = mock_graph
+
+    results = await search.search_edges(text="superconductor", k=10)
+    assert len(results) > 0
+    assert results[0].edge.id == 9999
+    assert results[0].score > 0
 
 
 def test_node_filters_new_fields_default_none():

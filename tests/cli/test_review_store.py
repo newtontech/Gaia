@@ -10,11 +10,11 @@ from cli.review_store import (
     read_review,
     write_review,
 )
-from libs.dsl.loader import load_package
-from libs.dsl.resolver import resolve_refs
+from libs.lang.loader import load_package
+from libs.lang.resolver import resolve_refs
 
 
-FIXTURE_PATH = Path("tests/fixtures/dsl_packages/galileo_falling_bodies")
+FIXTURE_PATH = Path("tests/fixtures/gaia_language_packages/galileo_falling_bodies")
 
 
 def _sample_review() -> dict:

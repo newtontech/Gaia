@@ -8,7 +8,7 @@ from cli.main import app
 
 runner = CliRunner()
 
-FIXTURE_PATH = "tests/fixtures/dsl_packages/galileo_falling_bodies"
+FIXTURE_PATH = "tests/fixtures/gaia_language_packages/galileo_falling_bodies"
 
 
 def test_build_creates_gaia_dir(tmp_path):
@@ -42,7 +42,7 @@ def test_build_markdown_contains_chain_sections(tmp_path):
     runner.invoke(app, ["build", str(pkg_dir)])
     reasoning_md = (pkg_dir / ".gaia" / "build" / "reasoning.md").read_text()
     assert "## drag_prediction_chain" in reasoning_md
-    assert "## contradiction_chain (contradiction)" in reasoning_md
+    assert "## contradiction_chain (deduction)" in reasoning_md
 
 
 def test_build_markdown_has_premise_and_conclusion(tmp_path):
