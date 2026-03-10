@@ -233,7 +233,7 @@ def add_node_box(slide, left, top, width, height, lines, fill_color,
         p.space_after = Pt(0)
         p.space_before = Pt(0)
     # Center text vertically
-    from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+    from pptx.enum.text import PP_ALIGN
     for p in tf.paragraphs:
         p.alignment = PP_ALIGN.CENTER
     tf.paragraphs[0].alignment = PP_ALIGN.CENTER
@@ -471,12 +471,12 @@ def build_diagram_pkg1(slide):
               RGBColor(0xFF, 0xFF, 0xFF), bold=True)
 
     # Node 5001
-    n1 = add_node_box(slide, E(5940000), E(2160000), E(2340000), E(720000),
+    add_node_box(slide, E(5940000), E(2160000), E(2340000), E(720000),
                       ["5001", "自然运动学说: 重物趋下"],
                       NODE_GRAY, Pt(9))
 
     # Node 5002
-    n2 = add_node_box(slide, E(8820000), E(2160000), E(2340000), E(720000),
+    add_node_box(slide, E(8820000), E(2160000), E(2340000), E(720000),
                       ["5002", "日常观察: 石头>叶子"],
                       NODE_GRAY, Pt(9))
 
@@ -490,7 +490,7 @@ def build_diagram_pkg1(slide):
               "abstraction", Pt(8), RGBColor(0x99, 0x99, 0x99))
 
     # Node 5003 — the key node
-    n3 = add_node_box(slide, E(7200000), E(3600000), E(2880000), E(900000),
+    add_node_box(slide, E(7200000), E(3600000), E(2880000), E(900000),
                       ["5003: v ∝ W 定律", "越重越快", "belief = 0.70"],
                       NODE_RED, Pt(10))
 
@@ -760,8 +760,8 @@ def main():
 
     # Step 1: Duplicate slide 10 (idx 10) twice to get 2 extra slides
     # They'll be appended at the end; we'll move them later
-    dup1 = duplicate_slide(prs, 10)  # will be new Pkg 5 slide
-    dup2 = duplicate_slide(prs, 10)  # will be new Pkg 6 slide
+    duplicate_slide(prs, 10)  # will be new Pkg 5 slide
+    duplicate_slide(prs, 10)  # will be new Pkg 6 slide
 
     total = len(prs.slides)
     print(f"Total slides after duplication: {total}")

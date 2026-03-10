@@ -1,7 +1,6 @@
 """Add syntax highlighting to code blocks in Galileo + Einstein slides."""
 
 from pptx import Presentation
-from pptx.util import Pt
 from copy import deepcopy
 from lxml import etree
 

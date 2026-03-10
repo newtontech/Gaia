@@ -1,9 +1,6 @@
 """Fix slide issues: remove duplicate Galileo slides and recreate missing Einstein slides."""
 
 from pptx import Presentation
-from pptx.util import Pt, Emu
-from pptx.enum.shapes import MSO_SHAPE
-from pptx.dml.color import RGBColor
 from copy import deepcopy
 from lxml import etree
 import warnings
@@ -228,8 +225,8 @@ def main():
     # to get the right layout/template
     einstein_pkg4_idx = 15  # After removing 2 slides, Einstein Pkg 4 is at idx 15
 
-    dup1 = duplicate_slide(prs, einstein_pkg4_idx)  # Einstein overview
-    dup2 = duplicate_slide(prs, einstein_pkg4_idx)  # Einstein Pkg 1-3
+    duplicate_slide(prs, einstein_pkg4_idx)  # Einstein overview
+    duplicate_slide(prs, einstein_pkg4_idx)  # Einstein Pkg 1-3
 
     # Move them to position 15 (before Pkg 4)
     total = len(prs.slides)

@@ -3,10 +3,9 @@
 from pptx import Presentation
 from pptx.util import Pt, Emu
 from pptx.enum.shapes import MSO_SHAPE
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
+from pptx.enum.text import PP_ALIGN
 from pptx.dml.color import RGBColor
 from copy import deepcopy
-from lxml import etree
 
 NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main"
@@ -144,7 +143,7 @@ def main():
     print(f"Starting with {total} slides")
 
     # Duplicate slide 2 (idx 1, Part 1 layout) as template for dark background
-    new_slide = duplicate_slide(prs, 1)
+    duplicate_slide(prs, 1)
     # Move to index 1 (after title)
     move_slide(prs, len(prs.slides) - 1, 1)
     print(f"Added slide. Now: {len(prs.slides)} slides")

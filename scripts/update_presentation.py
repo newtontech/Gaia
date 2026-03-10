@@ -1,10 +1,8 @@
 """Update Gaia presentation slides to match CLI design doc."""
 
 from pptx import Presentation
-from pptx.util import Pt, Emu
 from copy import deepcopy
 from lxml import etree
-import sys
 
 
 def clear_and_set_text(text_frame, lines):

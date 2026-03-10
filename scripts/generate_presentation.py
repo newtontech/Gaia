@@ -15,7 +15,7 @@ from pathlib import Path
 from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
-from pptx.util import Cm, Emu, Inches, Pt
+from pptx.util import Cm, Inches, Pt
 
 # ── Colors ──────────────────────────────────────────────────────────────
 WHITE = RGBColor(0xFF, 0xFF, 0xFF)
@@ -116,7 +116,6 @@ def add_section_header(slide, section_tag, slide_title):
     add_text_box(slide, Cm(2), Cm(1.3), Cm(29), Cm(2),
                  slide_title, font_size=32, color=BLACK, bold=True)
     # Divider line
-    from pptx.util import Emu as E
     line = slide.shapes.add_connector(1, Cm(2), Cm(3.5), Cm(31), Cm(3.5))
     line.line.color.rgb = LIGHT_GRAY
     line.line.width = Pt(1)
@@ -135,7 +134,7 @@ def make_table(slide, left, top, width, rows_data, col_widths=None, font_size=14
             table.columns[i].width = w
 
     # Auto-size height
-    total_height = Cm(0)
+    Cm(0)
     for r_idx, row_data in enumerate(rows_data):
         row = table.rows[r_idx]
         row.height = Cm(1.2) if r_idx == 0 else Cm(1.0)
@@ -416,9 +415,9 @@ def slide_05_core_idea(prs):
     ], font_size=20)
 
     # Simple 3-node diagram
-    n1 = draw_node(slide, Cm(19), Cm(5), Cm(5.5), Cm(2), "前提 A\nbelief=0.9", ACCENT_BLUE, 13)
-    n2 = draw_node(slide, Cm(26), Cm(5), Cm(5.5), Cm(2), "前提 B\nbelief=0.8", ACCENT_BLUE, 13)
-    n3 = draw_node(slide, Cm(22.5), Cm(11), Cm(5.5), Cm(2), "结论 C\nbelief=?", GREEN, 13)
+    draw_node(slide, Cm(19), Cm(5), Cm(5.5), Cm(2), "前提 A\nbelief=0.9", ACCENT_BLUE, 13)
+    draw_node(slide, Cm(26), Cm(5), Cm(5.5), Cm(2), "前提 B\nbelief=0.8", ACCENT_BLUE, 13)
+    draw_node(slide, Cm(22.5), Cm(11), Cm(5.5), Cm(2), "结论 C\nbelief=?", GREEN, 13)
 
     # Reasoning edge box
     from pptx.enum.shapes import MSO_SHAPE
@@ -478,9 +477,9 @@ def slide_07_contradiction(prs):
     ], font_size=20)
 
     # A ↔ B contradiction diagram
-    nA = draw_node(slide, Cm(21), Cm(5.5), Cm(5), Cm(2.5),
+    draw_node(slide, Cm(21), Cm(5.5), Cm(5), Cm(2.5),
                    "理论 A\n预测: 1.75\"", ACCENT_BLUE, 14)
-    nB = draw_node(slide, Cm(28), Cm(5.5), Cm(5), Cm(2.5),
+    draw_node(slide, Cm(28), Cm(5.5), Cm(5), Cm(2.5),
                    "理论 B\n预测: 0.87\"", ACCENT_BLUE, 14)
 
     # Contradiction line
@@ -491,9 +490,9 @@ def slide_07_contradiction(prs):
                  font_size=14, color=RED, bold=True, alignment=PP_ALIGN.CENTER)
 
     # Result
-    nA2 = draw_node(slide, Cm(21), Cm(11), Cm(5), Cm(2),
+    draw_node(slide, Cm(21), Cm(11), Cm(5), Cm(2),
                     "belief ↑ 0.85", GREEN, 14)
-    nB2 = draw_node(slide, Cm(28), Cm(11), Cm(5), Cm(2),
+    draw_node(slide, Cm(28), Cm(11), Cm(5), Cm(2),
                     "belief ↓ 0.15", RED, 14, WHITE)
 
     add_text_box(slide, Cm(23.5), Cm(10), Cm(7), Cm(1),
@@ -526,8 +525,8 @@ def slide_08_bp(prs):
     ], font_size=20)
 
     # Message passing diagram
-    p1 = draw_node(slide, Cm(20), Cm(7.5), Cm(4), Cm(1.6), "前提₁ 0.9", ACCENT_BLUE, 12)
-    p2 = draw_node(slide, Cm(20), Cm(10), Cm(4), Cm(1.6), "前提₂ 0.8", ACCENT_BLUE, 12)
+    draw_node(slide, Cm(20), Cm(7.5), Cm(4), Cm(1.6), "前提₁ 0.9", ACCENT_BLUE, 12)
+    draw_node(slide, Cm(20), Cm(10), Cm(4), Cm(1.6), "前提₂ 0.8", ACCENT_BLUE, 12)
 
     from pptx.enum.shapes import MSO_SHAPE
     f = slide.shapes.add_shape(MSO_SHAPE.RECTANGLE, Cm(25.5), Cm(8.5), Cm(2.5), Cm(2))
@@ -543,7 +542,7 @@ def slide_08_bp(prs):
     p.alignment = PP_ALIGN.CENTER
     tf.vertical_anchor = MSO_ANCHOR.MIDDLE
 
-    c = draw_node(slide, Cm(29.5), Cm(8.5), Cm(3.5), Cm(2), "结论\n0.65", GREEN, 13)
+    draw_node(slide, Cm(29.5), Cm(8.5), Cm(3.5), Cm(2), "结论\n0.65", GREEN, 13)
 
     draw_arrow(slide, Cm(24), Cm(8.3), Cm(25.5), Cm(9), ACCENT_BLUE)
     draw_arrow(slide, Cm(24), Cm(10.8), Cm(25.5), Cm(10), ACCENT_BLUE)
@@ -888,7 +887,7 @@ def slide_13_galileo_pkg6(prs):
         draw_arrow(slide, Cm(27), y + Cm(1), Cm(28), y + Cm(1), color, Pt(2))
 
     # Convergence target
-    target = draw_node(slide, Cm(28.5), Cm(7.5), Cm(4.5), Cm(4),
+    draw_node(slide, Cm(28.5), Cm(7.5), Cm(4.5), Cm(4),
                        "5012\n真空等速\nbelief\n0.98", GREEN, 13)
 
     # Bottom: key takeaway
