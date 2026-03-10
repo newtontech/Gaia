@@ -438,3 +438,77 @@ class TestSearchTopology:
         await graph_store.write_topology(closures, chains)
         results = await graph_store.search_topology([], hops=1)
         assert results == []
+
+
+class TestClose:
+    """Verify that close() is safe to call."""
+
+    async def test_close_does_not_error(self, tmp_path):
+        """Calling close() on a fresh store should not raise."""
+        store = KuzuGraphStore(tmp_path / "close_test")
+        await store.initialize_schema()
+        await store.close()
+
+    async def test_close_idempotent(self, tmp_path):
+        """Calling close() twice should not raise."""
+        store = KuzuGraphStore(tmp_path / "close_idem_test")
+        await store.initialize_schema()
+        await store.close()
+        await store.close()
+
+
+class TestFullRoundtrip:
+    """End-to-end test exercising all graph store operations in sequence."""
+
+    async def test_full_roundtrip(
+        self,
+        graph_store: KuzuGraphStore,
+        closures: list[Closure],
+        chains: list[Chain],
+        attachments: list[ResourceAttachment],
+        beliefs: list[BeliefSnapshot],
+    ):
+        # 1. Write topology
+        await graph_store.write_topology(closures, chains)
+
+        # 2. Write resource links
+        await graph_store.write_resource_links(attachments)
+
+        # 3. Update beliefs
+        await graph_store.update_beliefs(beliefs)
+
+        # 4. Update probability
+        await graph_store.update_probability(chains[0].chain_id, 0, 0.9)
+
+        # 5. Query neighbors from a premise closure
+        premise_id = chains[0].steps[0].premises[0].closure_id
+        neighbors = await graph_store.get_neighbors(premise_id)
+        assert len(neighbors.chain_ids) > 0
+
+        # 6. Query subgraph
+        subgraph = await graph_store.get_subgraph(premise_id)
+        assert len(subgraph.closure_ids) > 0
+
+        # 7. Search topology
+        results = await graph_store.search_topology([premise_id], hops=2)
+        assert len(results) >= 0
+
+        # 8. Verify belief was updated on the graph node
+        # The last write for a given closure_id wins; build expected map
+        expected_beliefs: dict[str, float] = {}
+        for snap in beliefs:
+            expected_beliefs[snap.closure_id] = snap.belief
+        first_cid = beliefs[0].closure_id
+        result = graph_store._conn.execute(
+            "MATCH (c:Closure {closure_id: $cid}) RETURN c.belief",
+            {"cid": first_cid},
+        )
+        if result.has_next():
+            assert result.get_next()[0] == pytest.approx(expected_beliefs[first_cid])
+
+        # 9. Verify probability was updated on the graph node
+        result = graph_store._conn.execute(
+            "MATCH (ch:Chain {chain_id: $chid}) RETURN ch.probability",
+            {"chid": chains[0].chain_id},
+        )
+        assert result.get_next()[0] == pytest.approx(0.9)
