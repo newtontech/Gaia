@@ -203,6 +203,112 @@ class TestIngestPartialFailure:
         assert p.status == "merged"
 
 
+class TestPartialWriteVisibility:
+    """Reproduce the exact scenarios from PR review:
+    partial writes to GraphStore/VectorStore must be invisible through manager reads.
+    """
+
+    async def test_partial_graph_write_invisible_via_manager(
+        self, manager, packages, modules, knowledge_items, chains
+    ):
+        """If write_topology partially writes some nodes then fails,
+        graph_store.get_subgraph() may return data, but manager.get_subgraph()
+        must NOT — the package is still 'preparing'.
+        """
+        pkg = packages[0]
+        pkg_modules = [m for m in modules if m.package_id == pkg.package_id]
+        pkg_knowledge = [c for c in knowledge_items if c.source_package_id == pkg.package_id]
+        pkg_chains = [ch for ch in chains if ch.package_id == pkg.package_id]
+
+        # Simulate partial graph write: write some data, then fail
+        real_write = manager.graph_store.write_topology
+
+        async def partial_then_fail(knowledge_items, chains):
+            # Write just the first knowledge item to graph
+            await real_write(knowledge_items[:1], [])
+            raise RuntimeError("graph partially failed")
+
+        manager.graph_store.write_topology = partial_then_fail
+
+        with pytest.raises(RuntimeError, match="graph partially failed"):
+            await manager.ingest_package(
+                package=pkg,
+                modules=pkg_modules,
+                knowledge_items=pkg_knowledge,
+                chains=pkg_chains,
+            )
+
+        # Direct graph store access shows data (the leak)
+        raw_sub = await manager.graph_store.get_subgraph(pkg_knowledge[0].knowledge_id)
+        assert len(raw_sub.knowledge_ids) > 0, "graph store has partial data"
+
+        # Manager reads must filter it out (visibility gate)
+        filtered_sub = await manager.get_subgraph(pkg_knowledge[0].knowledge_id)
+        assert len(filtered_sub.knowledge_ids) == 0, "manager must hide preparing data"
+
+    async def test_partial_vector_write_invisible_via_manager(
+        self, manager, packages, modules, knowledge_items, chains
+    ):
+        """If write_embeddings partially writes then fails,
+        vector_store.search() may return data, but manager.search_vector()
+        must NOT — the package is still 'preparing'.
+        """
+        pkg = packages[0]
+        pkg_modules = [m for m in modules if m.package_id == pkg.package_id]
+        pkg_knowledge = [c for c in knowledge_items if c.source_package_id == pkg.package_id]
+        pkg_chains = [ch for ch in chains if ch.package_id == pkg.package_id]
+        embeddings = _make_embeddings(pkg_knowledge)
+
+        # Simulate partial vector write: write first embedding, then fail
+        real_write = manager.vector_store.write_embeddings
+
+        async def partial_then_fail(items):
+            await real_write(items[:1])
+            raise RuntimeError("vector partially failed")
+
+        manager.vector_store.write_embeddings = partial_then_fail
+
+        with pytest.raises(RuntimeError, match="vector partially failed"):
+            await manager.ingest_package(
+                package=pkg,
+                modules=pkg_modules,
+                knowledge_items=pkg_knowledge,
+                chains=pkg_chains,
+                embeddings=embeddings,
+            )
+
+        # Direct vector store access shows data (the leak)
+        raw_results = await manager.vector_store.search([0.1 * i for i in range(8)], top_k=5)
+        assert len(raw_results) >= 1, "vector store has partial data"
+
+        # Manager reads must filter it out (visibility gate)
+        filtered_results = await manager.search_vector([0.1 * i for i in range(8)], top_k=5)
+        assert len(filtered_results) == 0, "manager must hide preparing data"
+
+    async def test_topology_search_invisible_for_preparing(
+        self, manager, packages, modules, knowledge_items, chains
+    ):
+        """search_topology must also filter out preparing package data."""
+        pkg = packages[0]
+        pkg_modules = [m for m in modules if m.package_id == pkg.package_id]
+        pkg_knowledge = [c for c in knowledge_items if c.source_package_id == pkg.package_id]
+        pkg_chains = [ch for ch in chains if ch.package_id == pkg.package_id]
+
+        # Write graph data but don't commit (simulate partial failure)
+        manager.graph_store.write_topology = AsyncMock(side_effect=RuntimeError("graph failed"))
+        with pytest.raises(RuntimeError):
+            await manager.ingest_package(
+                package=pkg,
+                modules=pkg_modules,
+                knowledge_items=pkg_knowledge,
+                chains=pkg_chains,
+            )
+
+        # search_topology through manager should return nothing
+        results = await manager.search_topology([pkg_knowledge[0].knowledge_id], hops=1)
+        assert len(results) == 0
+
+
 class TestPassthroughWrites:
     async def test_add_probabilities(
         self, manager, packages, modules, knowledge_items, chains, probabilities

@@ -17,6 +17,7 @@ from libs.storage_v2.models import (
     ProbabilityRecord,
     Resource,
     ResourceAttachment,
+    ScoredKnowledge,
     Subgraph,
 )
 from libs.storage_v2.vector_store import VectorStore
@@ -159,6 +160,22 @@ class StorageManager:
     async def list_chains(self):
         return await self.content_store.list_chains()
 
+    # ── Visibility helpers ──
+
+    async def _filter_subgraph(self, subgraph: Subgraph) -> Subgraph:
+        """Filter a Subgraph to only include IDs from committed packages."""
+        # Filter knowledge_ids via ContentStore (already visibility-gated)
+        visible_kids: set[str] = set()
+        for kid in subgraph.knowledge_ids:
+            k = await self.content_store.get_knowledge(kid)
+            if k is not None:
+                visible_kids.add(kid)
+        # Filter chain_ids: list_chains() is already visibility-gated
+        all_visible_chains = await self.content_store.list_chains()
+        visible_chain_ids = {c.chain_id for c in all_visible_chains}
+        visible_chains = subgraph.chain_ids & visible_chain_ids
+        return Subgraph(knowledge_ids=visible_kids, chain_ids=visible_chains)
+
     # ── Read delegation (GraphStore — degraded-safe) ──
 
     async def get_neighbors(
@@ -170,21 +187,34 @@ class StorageManager:
     ):
         if self.graph_store is None:
             return Subgraph()
-        return await self.graph_store.get_neighbors(knowledge_id, direction, chain_types, max_hops)
+        raw = await self.graph_store.get_neighbors(knowledge_id, direction, chain_types, max_hops)
+        return await self._filter_subgraph(raw)
 
     async def get_subgraph(self, knowledge_id: str, max_knowledge: int = 500):
         if self.graph_store is None:
             return Subgraph()
-        return await self.graph_store.get_subgraph(knowledge_id, max_knowledge)
+        raw = await self.graph_store.get_subgraph(knowledge_id, max_knowledge)
+        return await self._filter_subgraph(raw)
 
     async def search_topology(self, seed_ids: list[str], hops: int = 1):
         if self.graph_store is None:
             return []
-        return await self.graph_store.search_topology(seed_ids, hops)
+        results = await self.graph_store.search_topology(seed_ids, hops)
+        committed = await self.content_store.get_committed_package_ids()
+        return [r for r in results if r.knowledge.source_package_id in committed]
 
     # ── Read delegation (VectorStore — degraded-safe) ──
 
     async def search_vector(self, embedding: list[float], top_k: int):
         if self.vector_store is None:
             return []
-        return await self.vector_store.search(embedding, top_k)
+        results = await self.vector_store.search(embedding, top_k)
+        # VectorStore returns stubs without source_package_id; hydrate via ContentStore
+        filtered: list[ScoredKnowledge] = []
+        for r in results:
+            k = await self.content_store.get_knowledge(
+                r.knowledge.knowledge_id, r.knowledge.version
+            )
+            if k is not None:  # visibility-gated
+                filtered.append(ScoredKnowledge(knowledge=k, score=r.score))
+        return filtered
