@@ -248,15 +248,20 @@ All modules approved    → entire package enters LKM, exports become searchable
 ```
 pending_review → in_review → approved
                      │
-                     ▼
-               revision_required → (agent revises) → in_review
-                                                         │
-                                                   (round > 5)
-                                                         │
-                                                         ▼
-                                                   under_debate
-                                                   (human escalation)
+                     ├── revision_required → (agent revises) → in_review
+                     │                                             │
+                     │                                       (round > 5)
+                     │                                             │
+                     │                                             ▼
+                     │                                       under_debate
+                     │                                       (human escalation)
+                     │
+                     └── rejected (editor decides package is fundamentally inadequate)
+                           → author may revise and start a new gaia publish cycle
+                             (new cycle, round counter resets)
 ```
+
+**Terminal states:** `approved`, `rejected`, `under_debate`. A `rejected` package can always be revised and resubmitted via a new `gaia publish` — rejection applies to the current submission, not permanently.
 
 **Visibility rules:**
 
@@ -279,7 +284,7 @@ peer_review_report:
   timestamp: "2026-03-11T10:00:00Z"
   round: 1
 
-  verdict: revision_required    # approved | revision_required
+  verdict: revision_required    # approved | revision_required | rejected
 
   # ── Terminology ──
   # category:
@@ -315,7 +320,7 @@ peer_review_report:
       category: duplicate
       severity: blocking
       target: "reasoning.vacuum_prediction"
-      related: "newton_principia::equal_fall_derived"
+      related: "newton_principia.equal_fall_derived"
       similarity: 0.94
       description: "Highly similar to existing knowledge, relationship needed"
       suggestion: "Mark as equivalent or supporting with justification"
@@ -324,7 +329,7 @@ peer_review_report:
       category: missing_ref
       severity: advisory
       target: "aristotle.heavier_falls_faster"
-      related: "newton_principia::universal_law"
+      related: "newton_principia.universal_law"
       description: "Aristotle's doctrine already refuted from another angle
                     by newton package, consider referencing"
 ```
@@ -359,7 +364,7 @@ rebuttal_report:
 
     - finding_id: conflict_001
       action: rebuttal
-      argument: "galileo::vacuum_prediction and newton::equal_fall_derived
+      argument: "galileo_falling_bodies.vacuum_prediction and newton::equal_fall_derived
                  reach similar conclusions via entirely different paths:
                  Galileo uses reductio ad absurdum from thought experiment;
                  Newton uses mathematical derivation from universal gravitation.
@@ -367,8 +372,8 @@ rebuttal_report:
                  conclusion), not 'equivalent' (interchangeable)."
       proposed_relation:
         type: supporting
-        from: "galileo::vacuum_prediction"
-        to: "newton_principia::equal_fall_derived"
+        from: "galileo_falling_bodies.vacuum_prediction"
+        to: "newton_principia.equal_fall_derived"
 
     - finding_id: conflict_002
       action: dismiss
@@ -402,8 +407,10 @@ During peer review's global search phase:
 | ID not found | New knowledge | Global search returns similar candidates (exported + intermediate) for relationship marking |
 
 **Exported vs Intermediate knowledge:**
-- Exported: package-level exports, have independent BP, are primary search targets
-- Intermediate: internal chain knowledge, no independent BP, promoted to exported if referenced frequently
+- Exported: explicitly declared in `package.yaml` `export` list, have independent BP, are primary search targets
+- Intermediate: internal chain knowledge, not in `export` list, no independent BP
+
+**Intermediate promotion:** Export is always an explicit package-level declaration. When the server detects an intermediate node referenced by many external packages, it upgrades the source package: increment version, add the node to `export`, and trigger BP recomputation.
 
 ## 8. Open Questions
 
