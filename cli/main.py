@@ -38,6 +38,7 @@ def build(
     path: str = typer.Argument(".", help="Path to knowledge package directory"),
 ) -> None:
     """Elaborate: parse + resolve + instantiate params."""
+    from cli.manifest import save_manifest
     from libs.lang.build_store import save_build
     from libs.lang.elaborator import elaborate_package
 
@@ -52,6 +53,7 @@ def build(
 
     build_dir = pkg_path / ".gaia" / "build"
     save_build(elaborated, build_dir)
+    save_manifest(pkg, build_dir, pkg_path=pkg_path)
 
     n_mods = len(pkg.loaded_modules)
     n_prompts = len(elaborated.prompts)
