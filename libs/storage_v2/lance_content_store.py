@@ -406,51 +406,66 @@ class LanceContentStore(ContentStore):
 
         self._fts_dirty = True
 
+    # ── Commit / visibility ──
+
+    async def commit_package(self, package_id: str) -> None:
+        """Flip a package's status from 'preparing' to 'merged'."""
+        table = self._db.open_table("packages")
+        table.update(
+            where=f"package_id = '{_q(package_id)}'",
+            values={"status": "merged"},
+        )
+
+    async def get_committed_package_ids(self) -> set[str]:
+        """Return all package_ids with status='merged'."""
+        table = self._db.open_table("packages")
+        rows = table.search().where("status = 'merged'").select(["package_id"]).to_list()
+        return {row["package_id"] for row in rows}
+
     # ── Write ──
 
     async def write_package(self, package: Package, modules: list[Module]) -> None:
         pkg_table = self._db.open_table("packages")
-        existing = (
-            pkg_table.search().where(f"package_id = '{_q(package.package_id)}'").limit(1).to_list()
+        (
+            pkg_table.merge_insert("package_id")
+            .when_matched_update_all()
+            .when_not_matched_insert_all()
+            .execute([_package_to_row(package)])
         )
-        if not existing:
-            pkg_table.add([_package_to_row(package)])
         if modules:
             mod_table = self._db.open_table("modules")
-            new_modules = []
-            for m in modules:
-                exists = (
-                    mod_table.search().where(f"module_id = '{_q(m.module_id)}'").limit(1).to_list()
-                )
-                if not exists:
-                    new_modules.append(_module_to_row(m))
-            if new_modules:
-                mod_table.add(new_modules)
+            rows = [_module_to_row(m) for m in modules]
+            (
+                mod_table.merge_insert("module_id")
+                .when_matched_update_all()
+                .when_not_matched_insert_all()
+                .execute(rows)
+            )
 
     async def write_knowledge(self, knowledge_items: list[Knowledge]) -> None:
         if not knowledge_items:
             return
         table = self._db.open_table("knowledge")
-        # Filter out duplicates by (knowledge_id, version)
-        new_rows = []
-        for k in knowledge_items:
-            existing = (
-                table.search()
-                .where(f"knowledge_id = '{_q(k.knowledge_id)}' AND version = {k.version}")
-                .limit(1)
-                .to_list()
-            )
-            if not existing:
-                new_rows.append(_knowledge_to_row(k))
-        if new_rows:
-            table.add(new_rows)
-            self._fts_dirty = True
+        rows = [_knowledge_to_row(k) for k in knowledge_items]
+        (
+            table.merge_insert(["knowledge_id", "version"])
+            .when_matched_update_all()
+            .when_not_matched_insert_all()
+            .execute(rows)
+        )
+        self._fts_dirty = True
 
     async def write_chains(self, chains: list[Chain]) -> None:
         if not chains:
             return
         table = self._db.open_table("chains")
-        table.add([_chain_to_row(c) for c in chains])
+        rows = [_chain_to_row(c) for c in chains]
+        (
+            table.merge_insert("chain_id")
+            .when_matched_update_all()
+            .when_not_matched_insert_all()
+            .execute(rows)
+        )
 
     async def write_probabilities(self, records: list[ProbabilityRecord]) -> None:
         if not records:

@@ -120,6 +120,18 @@ class TestWriteKnowledge:
         versions = await content_store.get_knowledge_versions(knowledge_items[0].knowledge_id)
         assert len(versions) == 1
 
+    async def test_write_knowledge_upsert_updates_content(self, content_store, knowledge_items):
+        """Writing the same (knowledge_id, version) twice should update, not duplicate."""
+        await content_store.write_knowledge(knowledge_items)
+        updated = knowledge_items[0].model_copy(update={"content": "updated via upsert"})
+        await content_store.write_knowledge([updated])
+        k = await content_store.get_knowledge(knowledge_items[0].knowledge_id, version=1)
+        assert k is not None
+        assert k.content == "updated via upsert"
+        # No duplicates
+        versions = await content_store.get_knowledge_versions(knowledge_items[0].knowledge_id)
+        assert len(versions) == 1
+
 
 class TestWriteChains:
     async def test_write_and_get_chains_by_module(self, content_store, chains):
