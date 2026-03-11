@@ -74,37 +74,32 @@ class StorageManager:
         chains: list[Chain],
         embeddings: list[KnowledgeEmbedding] | None = None,
     ) -> None:
-        """Write a complete package to all stores with compensating rollback.
+        """Write a complete package to all stores with publish state machine.
 
-        Write order: ContentStore → GraphStore → VectorStore.
-        On failure, previously-written stores are cleaned up via delete_package.
+        1. Write package as 'preparing' (invisible to reads).
+        2. Write content, graph, vector idempotently.
+        3. Flip status to 'committed' (visible to reads).
+
+        On failure, data stays in 'preparing' — invisible and safe to retry.
         """
-        package_id = package.package_id
+        # Force status to 'preparing' during writes
+        preparing_pkg = package.model_copy(update={"status": "preparing"})
 
         # Step 1: ContentStore (source of truth)
-        await self.content_store.write_package(package, modules)
+        await self.content_store.write_package(preparing_pkg, modules)
         await self.content_store.write_knowledge(knowledge_items)
         await self.content_store.write_chains(chains)
 
-        # Step 2: GraphStore (optional)
+        # Step 2: GraphStore (optional, idempotent)
         if self.graph_store is not None:
-            try:
-                await self.graph_store.write_topology(knowledge_items, chains)
-            except Exception:
-                logger.error("GraphStore write failed; rolling back ContentStore")
-                await self.content_store.delete_package(package_id)
-                raise
+            await self.graph_store.write_topology(knowledge_items, chains)
 
-        # Step 3: VectorStore (optional)
+        # Step 3: VectorStore (optional, idempotent)
         if self.vector_store is not None and embeddings:
-            try:
-                await self.vector_store.write_embeddings(embeddings)
-            except Exception:
-                logger.error("VectorStore write failed; rolling back ContentStore + GraphStore")
-                if self.graph_store is not None:
-                    await self.graph_store.delete_package(package_id)
-                await self.content_store.delete_package(package_id)
-                raise
+            await self.vector_store.write_embeddings(embeddings)
+
+        # Step 4: Commit — flip to visible
+        await self.content_store.commit_package(preparing_pkg.package_id)
 
     # ── Passthrough writes ──
 

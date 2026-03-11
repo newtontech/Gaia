@@ -110,16 +110,16 @@ class TestIngestSuccess:
         await mgr.close()
 
 
-class TestIngestRollback:
-    async def test_graph_failure_rolls_back_content(
+class TestIngestPartialFailure:
+    async def test_graph_failure_leaves_package_invisible(
         self, manager, packages, modules, knowledge_items, chains
     ):
+        """If GraphStore fails, package stays in 'preparing' — invisible to reads."""
         pkg = packages[0]
         pkg_modules = [m for m in modules if m.package_id == pkg.package_id]
         pkg_knowledge_items = [c for c in knowledge_items if c.source_package_id == pkg.package_id]
         pkg_chains = [ch for ch in chains if ch.package_id == pkg.package_id]
 
-        # Make graph_store.write_topology raise
         manager.graph_store.write_topology = AsyncMock(
             side_effect=RuntimeError("graph write failed")
         )
@@ -132,11 +132,11 @@ class TestIngestRollback:
                 chains=pkg_chains,
             )
 
-        # Content should be rolled back
-        p = await manager.content_store.get_package(pkg.package_id)
+        # Package is invisible via manager reads (visibility gate)
+        p = await manager.get_package(pkg.package_id)
         assert p is None
 
-    async def test_vector_failure_rolls_back_content_and_graph(
+    async def test_vector_failure_leaves_package_invisible(
         self, manager, packages, modules, knowledge_items, chains
     ):
         pkg = packages[0]
@@ -145,7 +145,6 @@ class TestIngestRollback:
         pkg_chains = [ch for ch in chains if ch.package_id == pkg.package_id]
         embeddings = _make_embeddings(pkg_knowledge_items)
 
-        # Make vector_store.write_embeddings raise
         manager.vector_store.write_embeddings = AsyncMock(
             side_effect=RuntimeError("vector write failed")
         )
@@ -159,9 +158,48 @@ class TestIngestRollback:
                 embeddings=embeddings,
             )
 
-        # Content should be rolled back
-        p = await manager.content_store.get_package(pkg.package_id)
+        # Package invisible
+        p = await manager.get_package(pkg.package_id)
         assert p is None
+
+    async def test_retry_after_failure_succeeds(
+        self, manager, packages, modules, knowledge_items, chains
+    ):
+        """Retrying ingest after a failure should succeed (idempotent writes)."""
+        pkg = packages[0]
+        pkg_modules = [m for m in modules if m.package_id == pkg.package_id]
+        pkg_knowledge_items = [c for c in knowledge_items if c.source_package_id == pkg.package_id]
+        pkg_chains = [ch for ch in chains if ch.package_id == pkg.package_id]
+
+        # First attempt fails at graph
+        manager.graph_store.write_topology = AsyncMock(
+            side_effect=RuntimeError("transient failure")
+        )
+        with pytest.raises(RuntimeError):
+            await manager.ingest_package(
+                package=pkg,
+                modules=pkg_modules,
+                knowledge_items=pkg_knowledge_items,
+                chains=pkg_chains,
+            )
+
+        # Restore real implementation and retry
+        from libs.storage_v2.kuzu_graph_store import KuzuGraphStore
+        manager.graph_store.write_topology = KuzuGraphStore.write_topology.__get__(
+            manager.graph_store
+        )
+
+        await manager.ingest_package(
+            package=pkg,
+            modules=pkg_modules,
+            knowledge_items=pkg_knowledge_items,
+            chains=pkg_chains,
+        )
+
+        # Now visible
+        p = await manager.get_package(pkg.package_id)
+        assert p is not None
+        assert p.status == "merged"
 
 
 class TestPassthroughWrites:
