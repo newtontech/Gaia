@@ -293,142 +293,106 @@ def publish(
 
 
 async def _publish_local(pkg_path: Path, db_path: str) -> None:
-    """Run full pipeline and triple-write to LanceDB + Kuzu."""
-    from cli.lang_to_storage import convert_package_to_storage
-    from cli.review_store import find_latest_review, merge_review, read_review
-    from libs.lang.compiler import compile_factor_graph
-    from libs.inference.bp import BeliefPropagation
-    from libs.inference.factor_graph import FactorGraph
-    from libs.storage.config import StorageConfig
-    from libs.storage.manager import StorageManager
+    """Convert artifacts to v2 models and write to LanceDB + Kuzu."""
+    from cli.infer_store import load_infer_result
+    from cli.lang_to_v2 import convert_to_v2
+    from cli.manifest import deserialize_package
+    from cli.review_store import find_latest_review, read_review
+    from libs.storage_v2.kuzu_graph_store import KuzuGraphStore
+    from libs.storage_v2.lance_content_store import LanceContentStore
 
     build_dir = pkg_path / ".gaia" / "build"
     reviews_dir = pkg_path / ".gaia" / "reviews"
+    infer_dir = pkg_path / ".gaia" / "infer"
+    publish_dir = pkg_path / ".gaia" / "publish"
 
-    # 1. Check build exists
-    if not build_dir.exists():
-        typer.echo(
-            f"Error: no build artifacts found.\nRun 'gaia build {pkg_path}' first.",
-            err=True,
-        )
+    # 1. Read artifacts
+    manifest_path = build_dir / "manifest.json"
+    infer_path = infer_dir / "infer_result.json"
+
+    if not manifest_path.exists():
+        typer.echo("Error: no manifest.json. Run 'gaia build' first.", err=True)
+        raise typer.Exit(1)
+    if not infer_path.exists():
+        typer.echo("Error: no infer_result.json. Run 'gaia infer' first.", err=True)
         raise typer.Exit(1)
 
-    # 2. Read review file
+    pkg = deserialize_package(manifest_path)
+    infer_result = load_infer_result(infer_path)
+
     try:
-        latest = find_latest_review(reviews_dir)
-        review = read_review(latest)
+        review = read_review(find_latest_review(reviews_dir))
     except FileNotFoundError:
-        typer.echo(
-            f"Error: no review file found.\nRun 'gaia review {pkg_path}' first.",
-            err=True,
-        )
+        typer.echo("Error: no review file. Run 'gaia review' first.", err=True)
         raise typer.Exit(1)
 
-    # 3. Load package, resolve refs, merge review
-    pkg = _load_with_deps(pkg_path)
-    fp = _compute_source_fingerprint(pkg_path)
-    pkg = merge_review(pkg, review, source_fingerprint=fp)
+    # 2. Extract beliefs from infer result
+    beliefs = {
+        name: var_data["belief"]
+        for name, var_data in infer_result["variables"].items()
+        if var_data.get("belief") is not None
+    }
 
-    # 4. Compile factor graph and run BP
-    compiled_fg = compile_factor_graph(pkg)
-
-    bp_fg = FactorGraph()
-    name_to_id: dict[str, int] = {}
-    for i, (name, prior) in enumerate(compiled_fg.variables.items()):
-        node_id = i + 1
-        name_to_id[name] = node_id
-        bp_fg.add_variable(node_id, prior)
-
-    for j, factor in enumerate(compiled_fg.factors):
-        premise_ids = [name_to_id[n] for n in factor["premises"] if n in name_to_id]
-        conclusion_ids = [name_to_id[n] for n in factor["conclusions"] if n in name_to_id]
-        bp_fg.add_factor(
-            edge_id=j + 1,
-            premises=premise_ids,
-            conclusions=conclusion_ids,
-            probability=factor["probability"],
-            edge_type=factor.get("edge_type", "deduction"),
-        )
-
-    bp = BeliefPropagation()
-    beliefs = bp.run(bp_fg)
-
-    # 5. Map beliefs back to names
-    id_to_name = {v: k for k, v in name_to_id.items()}
-    named_beliefs = {id_to_name[nid]: belief for nid, belief in beliefs.items()}
-
-    # 6. Convert to storage models
-    storage_result = convert_package_to_storage(pkg, compiled_fg, named_beliefs)
-
-    # 7. Initialize StorageManager with Kuzu backend
-    config = StorageConfig(
-        lancedb_path=db_path,
-        graph_backend="kuzu",
-        deployment_mode="local",
+    # 3. Convert to v2 models
+    data = convert_to_v2(
+        pkg=pkg,
+        review=review,
+        beliefs=beliefs,
+        bp_run_id=infer_result.get("bp_run_id", "unknown"),
     )
-    storage = StorageManager(config)
 
-    try:
-        # 8. Delete existing data for idempotent re-publish
-        node_ids = [n.id for n in storage_result.nodes]
-        edge_ids = [e.id for e in storage_result.edges]
-        if node_ids:
-            table = storage.lance._get_or_create_table()
-            id_list = ", ".join(str(i) for i in node_ids)
-            try:
-                table.delete(f"id IN ({id_list})")
-            except Exception:
-                pass  # Table may be empty or IDs don't exist yet
-        if edge_ids and storage.graph:
-            for eid in edge_ids:
-                storage.graph._conn.execute(
-                    "MATCH (h:Hyperedge {id: $eid}) DETACH DELETE h", {"eid": eid}
-                )
+    # 4. Initialize v2 stores
+    content = LanceContentStore(db_path)
+    await content.initialize()
+    graph = KuzuGraphStore(f"{db_path}/kuzu")
+    await graph.initialize_schema()
 
-        # 9. Triple-write: LanceDB nodes
-        saved_ids = await storage.lance.save_nodes(storage_result.nodes)
+    # 5. Idempotent cleanup
+    await content.delete_package(data.package.package_id)
+    await graph.delete_package(data.package.package_id)
 
-        # 10. Kuzu edges
-        edge_ids: list[int] = []
-        if storage.graph and storage_result.edges:
-            edge_ids = await storage.graph.create_hyperedges_bulk(storage_result.edges)
+    # 6. Write to LanceDB
+    await content.write_closures(data.closures)
+    await content.write_chains(data.chains)
+    await content.write_package(data.package, data.modules)
+    if data.probabilities:
+        await content.write_probabilities(data.probabilities)
+    if data.belief_snapshots:
+        await content.write_belief_snapshots(data.belief_snapshots)
 
-        # 11. Embeddings (optional — requires OPENAI_API_KEY)
-        n_embeddings = 0
-        try:
-            import litellm
+    # 7. Write to Kuzu
+    await graph.write_topology(data.closures, data.chains)
+    if data.belief_snapshots:
+        await graph.update_beliefs(data.belief_snapshots)
 
-            # Build (node_id, content) pairs, skipping empty content
-            pairs = []
-            for n in storage_result.nodes:
-                c = n.content if isinstance(n.content, str) else str(n.content)
-                c = c.strip()
-                if c:
-                    pairs.append((n.id, c))
+    # 8. Write receipt
+    import json
+    from datetime import datetime, timezone
 
-            if pairs:
-                emb_ids, emb_texts = zip(*pairs)
-                response = litellm.embedding(model="text-embedding-3-small", input=list(emb_texts))
-                embeddings = [d["embedding"] for d in response.data]
-                await storage.vector.insert_batch(list(emb_ids), embeddings)
-                n_embeddings = len(embeddings)
-        except Exception as e:
-            typer.echo(f"  Skipped embeddings: {e}")
+    publish_dir.mkdir(parents=True, exist_ok=True)
+    receipt = {
+        "version": 1,
+        "package_id": data.package.package_id,
+        "published_at": datetime.now(timezone.utc).isoformat(),
+        "db_path": db_path,
+        "stats": {
+            "closures": len(data.closures),
+            "chains": len(data.chains),
+            "probabilities": len(data.probabilities),
+            "belief_snapshots": len(data.belief_snapshots),
+        },
+        "closure_ids": [c.closure_id for c in data.closures],
+        "chain_ids": [ch.chain_id for ch in data.chains],
+    }
+    (publish_dir / "receipt.json").write_text(json.dumps(receipt, ensure_ascii=False, indent=2))
 
-        # 12. Write beliefs back to LanceDB
-        belief_map = {n.id: n.belief for n in storage_result.nodes if n.belief is not None}
-        if belief_map:
-            await storage.lance.update_beliefs(belief_map)
+    typer.echo(
+        f"Published {pkg.name} to v2 storage:\n"
+        f"  Closures: {len(data.closures)} written to LanceDB ({db_path})\n"
+        f"  Chains: {len(data.chains)} written to LanceDB + Kuzu"
+    )
 
-        emb_str = f"\n  Embeddings: {n_embeddings} written" if n_embeddings else ""
-        typer.echo(
-            f"Published {pkg.name} to local databases:\n"
-            f"  Nodes: {len(saved_ids)} written to LanceDB ({db_path})\n"
-            f"  Edges: {len(edge_ids)} written to Kuzu ({db_path}/kuzu)"
-            f"{emb_str}"
-        )
-    finally:
-        await storage.close()
+    await graph.close()
 
 
 @app.command("init")
