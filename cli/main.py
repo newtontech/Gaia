@@ -26,9 +26,7 @@ def _load_with_deps(pkg_path: Path) -> "Package":
     for dep in pkg.dependencies:
         dep_path = pkg_path.parent / dep.package
         if not dep_path.exists():
-            typer.echo(
-                f"Error: dependency '{dep.package}' not found at {dep_path}", err=True
-            )
+            typer.echo(f"Error: dependency '{dep.package}' not found at {dep_path}", err=True)
             raise typer.Exit(1)
         deps[dep.package] = _load_with_deps(dep_path)
 
@@ -85,19 +83,26 @@ def review(
         typer.echo(f"Error: no build artifacts.\nRun 'gaia build {path}' first.", err=True)
         raise typer.Exit(1)
 
-    # 2. Parse chain sections from all .md files
+    # 2. Parse chain sections from package.md
     import re
 
-    chain_header_re = re.compile(r"^## (\w+) \(\w+\)$", re.MULTILINE)
+    chain_header_re = re.compile(r"^### Chain: (\w+) \[chain:\w+\] \(\w+\)", re.MULTILINE)
+    # Section ends at next ### or ## or --- or EOF
+    section_end_re = re.compile(r"^(?:###\s|##\s|---)", re.MULTILINE)
     all_chain_data = []
     for md_file in md_files:
         content = md_file.read_text()
-        # Find all valid chain header positions
         matches = list(chain_header_re.finditer(content))
         for j, m in enumerate(matches):
             chain_name = m.group(1)
             start = m.start()
-            end = matches[j + 1].start() if j + 1 < len(matches) else len(content)
+            # Find the end: next chain header, module header, or separator
+            rest = content[m.end() :]
+            end_match = section_end_re.search(rest)
+            if end_match:
+                end = m.end() + end_match.start()
+            else:
+                end = len(content)
             chain_section = content[start:end].strip()
             all_chain_data.append(
                 {

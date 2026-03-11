@@ -89,13 +89,13 @@ def test_review_sidecar_has_fingerprint(tmp_path):
 def test_review_ignores_markdown_headers_in_content(tmp_path):
     """## in claim content should NOT be treated as chain boundaries."""
     pkg_dir = _setup_build(tmp_path)
-    # Inject a fake ## header into a build .md file
-    md_file = pkg_dir / ".gaia" / "build" / "reasoning.md"
+    # Inject a fake ### header into the package.md file
+    md_file = pkg_dir / ".gaia" / "build" / "package.md"
     original = md_file.read_text()
-    # Insert a line with "## 小标题" inside an existing section
+    # Insert a line with "### 小标题" inside an existing section
     poisoned = original.replace(
         "**Conclusion:**",
-        "Some text before\n## 小标题\nSome text after\n\n**Conclusion:**",
+        "Some text before\n### 小标题\nSome text after\n\n**Conclusion:**",
         1,
     )
     md_file.write_text(poisoned)

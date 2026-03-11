@@ -25,8 +25,9 @@ def test_galileo_elaborate_and_build(tmp_path):
 
     build_dir = tmp_path / "build"
     save_build(elaborated, build_dir)
-    md_files = list(build_dir.glob("*.md"))
-    assert len(md_files) >= 2
+    assert (build_dir / "package.md").exists()
+    content = (build_dir / "package.md").read_text()
+    assert "galileo_falling_bodies" in content
 
 
 def test_newton_elaborate_and_build(tmp_path):
@@ -43,8 +44,9 @@ def test_newton_elaborate_and_build(tmp_path):
 
     build_dir = tmp_path / "build"
     save_build(elaborated, build_dir)
-    md_files = list(build_dir.glob("*.md"))
-    assert len(md_files) >= 1
+    assert (build_dir / "package.md").exists()
+    content = (build_dir / "package.md").read_text()
+    assert "newton_principia" in content
 
 
 def test_einstein_elaborate_and_build(tmp_path):
@@ -67,8 +69,9 @@ def test_einstein_elaborate_and_build(tmp_path):
 
     build_dir = tmp_path / "build"
     save_build(elaborated, build_dir)
-    md_files = list(build_dir.glob("*.md"))
-    assert len(md_files) >= 2
+    assert (build_dir / "package.md").exists()
+    content = (build_dir / "package.md").read_text()
+    assert "einstein_gravity" in content
 
 
 def test_all_three_compile_factor_graphs():
