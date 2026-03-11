@@ -42,6 +42,7 @@ _MODULES_SCHEMA = pa.schema(
     [
         pa.field("module_id", pa.string()),
         pa.field("package_id", pa.string()),
+        pa.field("package_version", pa.string()),
         pa.field("name", pa.string()),
         pa.field("role", pa.string()),
         pa.field("imports", pa.string()),  # JSON list[ImportRef]
@@ -59,6 +60,7 @@ _KNOWLEDGE_SCHEMA = pa.schema(
         pa.field("prior", pa.float64()),
         pa.field("keywords", pa.string()),  # JSON list[str]
         pa.field("source_package_id", pa.string()),
+        pa.field("source_package_version", pa.string()),
         pa.field("source_module_id", pa.string()),
         pa.field("created_at", pa.string()),  # ISO datetime
         pa.field("embedding", pa.string()),  # JSON list[float] or ""
@@ -70,6 +72,7 @@ _CHAINS_SCHEMA = pa.schema(
         pa.field("chain_id", pa.string()),
         pa.field("module_id", pa.string()),
         pa.field("package_id", pa.string()),
+        pa.field("package_version", pa.string()),
         pa.field("type", pa.string()),
         pa.field("steps", pa.string()),  # JSON list[ChainStep]
     ]
@@ -179,6 +182,7 @@ def _module_to_row(m: Module) -> dict[str, Any]:
     return {
         "module_id": m.module_id,
         "package_id": m.package_id,
+        "package_version": m.package_version,
         "name": m.name,
         "role": m.role,
         "imports": json.dumps([i.model_dump() for i in m.imports]),
@@ -191,6 +195,7 @@ def _row_to_module(row: dict[str, Any]) -> Module:
     return Module(
         module_id=row["module_id"],
         package_id=row["package_id"],
+        package_version=row.get("package_version", "0.1.0"),
         name=row["name"],
         role=row["role"],
         imports=json.loads(row["imports"]),
@@ -208,6 +213,7 @@ def _knowledge_to_row(k: Knowledge) -> dict[str, Any]:
         "prior": k.prior,
         "keywords": json.dumps(k.keywords),
         "source_package_id": k.source_package_id,
+        "source_package_version": k.source_package_version,
         "source_module_id": k.source_module_id,
         "created_at": k.created_at.isoformat(),
         "embedding": json.dumps(k.embedding) if k.embedding else "",
@@ -224,6 +230,7 @@ def _row_to_knowledge(row: dict[str, Any]) -> Knowledge:
         prior=row["prior"],
         keywords=json.loads(row["keywords"]),
         source_package_id=row["source_package_id"],
+        source_package_version=row.get("source_package_version", "0.1.0"),
         source_module_id=row["source_module_id"],
         created_at=datetime.fromisoformat(row["created_at"]),
         embedding=json.loads(emb_raw) if emb_raw else None,
@@ -235,6 +242,7 @@ def _chain_to_row(c: Chain) -> dict[str, Any]:
         "chain_id": c.chain_id,
         "module_id": c.module_id,
         "package_id": c.package_id,
+        "package_version": c.package_version,
         "type": c.type,
         "steps": json.dumps([s.model_dump() for s in c.steps]),
     }
@@ -245,6 +253,7 @@ def _row_to_chain(row: dict[str, Any]) -> Chain:
         chain_id=row["chain_id"],
         module_id=row["module_id"],
         package_id=row["package_id"],
+        package_version=row.get("package_version", "0.1.0"),
         type=row["type"],
         steps=json.loads(row["steps"]),
     )
@@ -353,7 +362,7 @@ class LanceContentStore(ContentStore):
     def __init__(self, db_path: str) -> None:
         self._db = lancedb.connect(db_path)
         self._fts_dirty = True
-        self._committed_ids: set[str] | None = None  # lazy-loaded cache
+        self._committed_pkgs: set[tuple[str, str]] | None = None  # lazy-loaded cache
 
     # ── Schema setup ──
 
@@ -407,30 +416,39 @@ class LanceContentStore(ContentStore):
             pass
 
         self._fts_dirty = True
-        self._committed_ids = None
+        self._committed_pkgs = None
 
     # ── Commit / visibility ──
 
-    async def commit_package(self, package_id: str) -> None:
+    async def commit_package(self, package_id: str, version: str) -> None:
         """Flip a package's status from 'preparing' to 'merged'."""
         table = self._db.open_table("packages")
         table.update(
-            where=f"package_id = '{_q(package_id)}' AND status = 'preparing'",
+            where=(
+                f"package_id = '{_q(package_id)}' AND version = '{_q(version)}'"
+                " AND status = 'preparing'"
+            ),
             values={"status": "merged"},
         )
-        self._committed_ids = None
+        self._committed_pkgs = None
 
-    async def get_committed_package_ids(self) -> set[str]:
-        """Return all package_ids with status='merged'."""
+    async def get_committed_packages(self) -> set[tuple[str, str]]:
+        """Return (package_id, version) pairs with status='merged'."""
         table = self._db.open_table("packages")
-        rows = table.search().where("status = 'merged'").select(["package_id"]).to_list()
-        return {row["package_id"] for row in rows}
+        rows = table.search().where("status = 'merged'").select(["package_id", "version"]).to_list()
+        return {(row["package_id"], row["version"]) for row in rows}
 
-    async def _committed_package_ids(self) -> set[str]:
-        """Return cached set of committed package IDs, refreshing if needed."""
-        if self._committed_ids is None:
-            self._committed_ids = await self.get_committed_package_ids()
-        return self._committed_ids
+    async def _get_committed_packages(self) -> set[tuple[str, str]]:
+        """Return cached set of committed (package_id, version) pairs."""
+        if self._committed_pkgs is None:
+            self._committed_pkgs = await self.get_committed_packages()
+        return self._committed_pkgs
+
+    def _is_committed(
+        self, package_id: str, package_version: str, committed: set[tuple[str, str]]
+    ) -> bool:
+        """Check if a (package_id, version) pair is committed."""
+        return (package_id, package_version) in committed
 
     # ── Write ──
 
@@ -446,7 +464,7 @@ class LanceContentStore(ContentStore):
             mod_table = self._db.open_table("modules")
             rows = [_module_to_row(m) for m in modules]
             (
-                mod_table.merge_insert("module_id")
+                mod_table.merge_insert(["module_id", "package_version"])
                 .when_matched_update_all()
                 .when_not_matched_insert_all()
                 .execute(rows)
@@ -471,7 +489,7 @@ class LanceContentStore(ContentStore):
         table = self._db.open_table("chains")
         rows = [_chain_to_row(c) for c in chains]
         (
-            table.merge_insert("chain_id")
+            table.merge_insert(["chain_id", "package_version"])
             .when_matched_update_all()
             .when_not_matched_insert_all()
             .execute(rows)
@@ -505,7 +523,7 @@ class LanceContentStore(ContentStore):
         self, knowledge_id: str, version: int | None = None
     ) -> Knowledge | None:
         table = self._db.open_table("knowledge")
-        committed = await self._committed_package_ids()
+        committed = await self._get_committed_packages()
         if version is not None:
             results = (
                 table.search()
@@ -513,7 +531,13 @@ class LanceContentStore(ContentStore):
                 .limit(1)
                 .to_list()
             )
-            results = [r for r in results if r["source_package_id"] in committed]
+            results = [
+                r
+                for r in results
+                if self._is_committed(
+                    r["source_package_id"], r.get("source_package_version", "0.1.0"), committed
+                )
+            ]
         else:
             # Get all versions, return the latest
             results = (
@@ -522,7 +546,13 @@ class LanceContentStore(ContentStore):
                 .limit(_MAX_SCAN)
                 .to_list()
             )
-            results = [r for r in results if r["source_package_id"] in committed]
+            results = [
+                r
+                for r in results
+                if self._is_committed(
+                    r["source_package_id"], r.get("source_package_version", "0.1.0"), committed
+                )
+            ]
             if not results:
                 return None
             results = [max(results, key=lambda r: r["version"])]
@@ -535,8 +565,14 @@ class LanceContentStore(ContentStore):
         results = (
             table.search().where(f"knowledge_id = '{_q(knowledge_id)}'").limit(_MAX_SCAN).to_list()
         )
-        committed = await self._committed_package_ids()
-        results = [r for r in results if r["source_package_id"] in committed]
+        committed = await self._get_committed_packages()
+        results = [
+            r
+            for r in results
+            if self._is_committed(
+                r["source_package_id"], r.get("source_package_version", "0.1.0"), committed
+            )
+        ]
         knowledge_items = [_row_to_knowledge(r) for r in results]
         return sorted(knowledge_items, key=lambda k: k.version)
 
@@ -556,11 +592,15 @@ class LanceContentStore(ContentStore):
 
     async def get_module(self, module_id: str) -> Module | None:
         table = self._db.open_table("modules")
-        results = table.search().where(f"module_id = '{_q(module_id)}'").limit(1).to_list()
+        results = table.search().where(f"module_id = '{_q(module_id)}'").limit(_MAX_SCAN).to_list()
         if not results:
             return None
-        committed = await self._committed_package_ids()
-        results = [r for r in results if r["package_id"] in committed]
+        committed = await self._get_committed_packages()
+        results = [
+            r
+            for r in results
+            if self._is_committed(r["package_id"], r.get("package_version", "0.1.0"), committed)
+        ]
         if not results:
             return None
         return _row_to_module(results[0])
@@ -568,8 +608,12 @@ class LanceContentStore(ContentStore):
     async def get_chains_by_module(self, module_id: str) -> list[Chain]:
         table = self._db.open_table("chains")
         results = table.search().where(f"module_id = '{_q(module_id)}'").limit(_MAX_SCAN).to_list()
-        committed = await self._committed_package_ids()
-        return [_row_to_chain(r) for r in results if r["package_id"] in committed]
+        committed = await self._get_committed_packages()
+        return [
+            _row_to_chain(r)
+            for r in results
+            if self._is_committed(r["package_id"], r.get("package_version", "0.1.0"), committed)
+        ]
 
     async def get_probability_history(
         self, chain_id: str, step_index: int | None = None
@@ -618,11 +662,13 @@ class LanceContentStore(ContentStore):
         if self._fts_dirty:
             table.create_fts_index("content", replace=True)
             self._fts_dirty = False
-        committed = await self._committed_package_ids()
+        committed = await self._get_committed_packages()
         results = table.search(text, query_type="fts").limit(top_k * 3).to_list()
         scored = []
         for row in results:
-            if row["source_package_id"] not in committed:
+            if not self._is_committed(
+                row["source_package_id"], row.get("source_package_version", "0.1.0"), committed
+            ):
                 continue
             knowledge = _row_to_knowledge(row)
             scored.append(ScoredKnowledge(knowledge=knowledge, score=row["_score"]))
@@ -636,8 +682,14 @@ class LanceContentStore(ContentStore):
         if count == 0:
             return []
         results = table.search().limit(count).to_list()
-        committed = await self._committed_package_ids()
-        return [_row_to_knowledge(r) for r in results if r["source_package_id"] in committed]
+        committed = await self._get_committed_packages()
+        return [
+            _row_to_knowledge(r)
+            for r in results
+            if self._is_committed(
+                r["source_package_id"], r.get("source_package_version", "0.1.0"), committed
+            )
+        ]
 
     async def list_chains(self) -> list[Chain]:
         table = self._db.open_table("chains")
@@ -645,5 +697,9 @@ class LanceContentStore(ContentStore):
         if count == 0:
             return []
         results = table.search().limit(count).to_list()
-        committed = await self._committed_package_ids()
-        return [_row_to_chain(r) for r in results if r["package_id"] in committed]
+        committed = await self._get_committed_packages()
+        return [
+            _row_to_chain(r)
+            for r in results
+            if self._is_committed(r["package_id"], r.get("package_version", "0.1.0"), committed)
+        ]

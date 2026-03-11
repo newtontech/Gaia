@@ -85,22 +85,30 @@ class StorageManager:
         """
         # Force status to 'preparing' during writes
         preparing_pkg = package.model_copy(update={"status": "preparing"})
+        pkg_version = preparing_pkg.version
+
+        # Propagate package version to downstream models
+        versioned_modules = [m.model_copy(update={"package_version": pkg_version}) for m in modules]
+        versioned_knowledge = [
+            k.model_copy(update={"source_package_version": pkg_version}) for k in knowledge_items
+        ]
+        versioned_chains = [c.model_copy(update={"package_version": pkg_version}) for c in chains]
 
         # Step 1: ContentStore (source of truth)
-        await self.content_store.write_package(preparing_pkg, modules)
-        await self.content_store.write_knowledge(knowledge_items)
-        await self.content_store.write_chains(chains)
+        await self.content_store.write_package(preparing_pkg, versioned_modules)
+        await self.content_store.write_knowledge(versioned_knowledge)
+        await self.content_store.write_chains(versioned_chains)
 
         # Step 2: GraphStore (optional, idempotent)
         if self.graph_store is not None:
-            await self.graph_store.write_topology(knowledge_items, chains)
+            await self.graph_store.write_topology(versioned_knowledge, versioned_chains)
 
         # Step 3: VectorStore (optional, idempotent)
         if self.vector_store is not None and embeddings:
             await self.vector_store.write_embeddings(embeddings)
 
         # Step 4: Commit — flip to visible
-        await self.content_store.commit_package(preparing_pkg.package_id)
+        await self.content_store.commit_package(preparing_pkg.package_id, pkg_version)
 
     # ── Passthrough writes ──
 
@@ -200,8 +208,9 @@ class StorageManager:
         if self.graph_store is None:
             return []
         results = await self.graph_store.search_topology(seed_ids, hops)
-        committed = await self.content_store.get_committed_package_ids()
-        return [r for r in results if r.knowledge.source_package_id in committed]
+        committed = await self.content_store.get_committed_packages()
+        committed_pkg_ids = {pkg_id for pkg_id, _ver in committed}
+        return [r for r in results if r.knowledge.source_package_id in committed_pkg_ids]
 
     # ── Read delegation (VectorStore — degraded-safe) ──
 

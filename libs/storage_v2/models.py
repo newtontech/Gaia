@@ -41,6 +41,7 @@ class Knowledge(BaseModel):
     prior: float = Field(gt=0, le=1)
     keywords: list[str] = []
     source_package_id: str
+    source_package_version: str = "0.1.0"
     source_module_id: str
     created_at: datetime
     embedding: list[float] | None = None
@@ -61,6 +62,7 @@ class Chain(BaseModel):
     chain_id: str
     module_id: str
     package_id: str
+    package_version: str = "0.1.0"
     type: Literal["deduction", "induction", "abstraction", "contradiction", "retraction"]
     steps: list[ChainStep]
 
@@ -70,6 +72,7 @@ class Module(BaseModel):
 
     module_id: str
     package_id: str
+    package_version: str = "0.1.0"
     name: str
     role: Literal["reasoning", "setting", "motivation", "follow_up_question", "other"]
     imports: list[ImportRef] = []

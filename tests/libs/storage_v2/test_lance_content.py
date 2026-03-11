@@ -442,12 +442,12 @@ class TestCommitPackage:
         p = await content_store.get_package(pkg.package_id)
         assert p is None
 
-        await content_store.commit_package(pkg.package_id)
+        await content_store.commit_package(pkg.package_id, pkg.version)
         p = await content_store.get_package(pkg.package_id)
         assert p is not None
         assert p.status == "merged"
 
-    async def test_get_committed_package_ids(self, content_store, packages, modules):
+    async def test_get_committed_packages(self, content_store, packages, modules):
         # Write one committed, one preparing
         pkg1 = packages[0]  # status="merged"
         await content_store.write_package(pkg1, modules)
@@ -455,9 +455,9 @@ class TestCommitPackage:
         pkg2 = packages[0].model_copy(update={"package_id": "preparing_pkg", "status": "preparing"})
         await content_store.write_package(pkg2, [])
 
-        committed = await content_store.get_committed_package_ids()
-        assert pkg1.package_id in committed
-        assert "preparing_pkg" not in committed
+        committed = await content_store.get_committed_packages()
+        assert (pkg1.package_id, pkg1.version) in committed
+        assert ("preparing_pkg", pkg2.version) not in committed
 
 
 class TestVisibilityGate:

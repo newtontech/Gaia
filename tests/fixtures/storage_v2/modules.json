@@ -2,6 +2,7 @@
   {
     "module_id": "galileo_falling_bodies.setting",
     "package_id": "galileo_falling_bodies",
+    "package_version": "1.0.0",
     "name": "setting",
     "role": "setting",
     "imports": [],
@@ -13,6 +14,7 @@
   {
     "module_id": "galileo_falling_bodies.reasoning",
     "package_id": "galileo_falling_bodies",
+    "package_version": "1.0.0",
     "name": "reasoning",
     "role": "reasoning",
     "imports": [

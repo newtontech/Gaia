@@ -31,12 +31,12 @@ class ContentStore(ABC):
         """Delete all data belonging to a package (idempotent re-publish)."""
 
     @abstractmethod
-    async def commit_package(self, package_id: str) -> None:
+    async def commit_package(self, package_id: str, version: str) -> None:
         """Flip a package's status from 'preparing' to 'committed' (= 'merged')."""
 
     @abstractmethod
-    async def get_committed_package_ids(self) -> set[str]:
-        """Return all package_ids with status='merged'. Used by reads for visibility."""
+    async def get_committed_packages(self) -> set[tuple[str, str]]:
+        """Return (package_id, version) pairs with status='merged'. Used for visibility."""
 
     # ── Write ──
 

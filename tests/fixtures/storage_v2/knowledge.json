@@ -7,6 +7,7 @@
     "prior": 0.3,
     "keywords": ["aristotle", "falling bodies", "weight", "natural motion"],
     "source_package_id": "galileo_falling_bodies",
+    "source_package_version": "1.0.0",
     "source_module_id": "galileo_falling_bodies.reasoning",
     "created_at": "2026-01-15T10:00:00Z",
     "embedding": null
@@ -19,6 +20,7 @@
     "prior": 1.0,
     "keywords": ["thought experiment", "heavy ball", "light ball", "tied balls"],
     "source_package_id": "galileo_falling_bodies",
+    "source_package_version": "1.0.0",
     "source_module_id": "galileo_falling_bodies.setting",
     "created_at": "2026-01-15T10:00:00Z",
     "embedding": null
@@ -31,6 +33,7 @@
     "prior": 0.5,
     "keywords": ["tied balls", "drag", "slower", "prediction"],
     "source_package_id": "galileo_falling_bodies",
+    "source_package_version": "1.0.0",
     "source_module_id": "galileo_falling_bodies.reasoning",
     "created_at": "2026-01-15T10:01:00Z",
     "embedding": null
@@ -43,6 +46,7 @@
     "prior": 0.5,
     "keywords": ["tied balls", "combined weight", "faster", "prediction"],
     "source_package_id": "galileo_falling_bodies",
+    "source_package_version": "1.0.0",
     "source_module_id": "galileo_falling_bodies.reasoning",
     "created_at": "2026-01-15T10:01:00Z",
     "embedding": null
@@ -55,6 +59,7 @@
     "prior": 0.6,
     "keywords": ["contradiction", "refutation", "tied balls", "aristotle"],
     "source_package_id": "galileo_falling_bodies",
+    "source_package_version": "1.0.0",
     "source_module_id": "galileo_falling_bodies.reasoning",
     "created_at": "2026-01-15T10:02:00Z",
     "embedding": null
@@ -67,6 +72,7 @@
     "prior": 0.7,
     "keywords": ["vacuum", "equal fall rate", "galileo", "prediction"],
     "source_package_id": "galileo_falling_bodies",
+    "source_package_version": "1.0.0",
     "source_module_id": "galileo_falling_bodies.reasoning",
     "created_at": "2026-01-15T10:03:00Z",
     "embedding": null

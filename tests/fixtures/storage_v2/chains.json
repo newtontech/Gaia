@@ -3,6 +3,7 @@
     "chain_id": "galileo_falling_bodies.reasoning.contradiction_chain",
     "module_id": "galileo_falling_bodies.reasoning",
     "package_id": "galileo_falling_bodies",
+    "package_version": "1.0.0",
     "type": "contradiction",
     "steps": [
       {
@@ -20,6 +21,7 @@
     "chain_id": "galileo_falling_bodies.reasoning.verdict_chain",
     "module_id": "galileo_falling_bodies.reasoning",
     "package_id": "galileo_falling_bodies",
+    "package_version": "1.0.0",
     "type": "deduction",
     "steps": [
       {
