@@ -15,14 +15,14 @@ app = typer.Typer(
 )
 
 
-def _load_with_deps(pkg_path: Path) -> "Package":
+def _load_with_deps(pkg_path: Path):
     """Load a package and recursively resolve its declared dependencies."""
     from libs.lang.loader import load_package
     from libs.lang.resolver import resolve_refs
 
     pkg = load_package(pkg_path)
 
-    deps: dict[str, "Package"] = {}
+    deps: dict[str, object] = {}
     for dep in pkg.dependencies:
         dep_path = pkg_path.parent / dep.package
         if not dep_path.exists():

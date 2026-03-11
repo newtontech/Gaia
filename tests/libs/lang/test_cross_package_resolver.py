@@ -69,7 +69,9 @@ def test_cross_package_exported_alias_resolves():
         knowledge=[Ref(name="use_alias", target="dep_pkg.public_alias")],
         export=[],
     )
-    consumer_pkg = Package(name="consumer_pkg", modules=["consumer"], loaded_modules=[consumer_module])
+    consumer_pkg = Package(
+        name="consumer_pkg", modules=["consumer"], loaded_modules=[consumer_module]
+    )
     consumer_pkg = resolve_refs(consumer_pkg, deps={"dep_pkg": dep_pkg})
 
     ref = next(d for d in consumer_module.knowledge if isinstance(d, Ref) and d.name == "use_alias")
