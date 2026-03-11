@@ -10,8 +10,8 @@ from libs.storage_v2.graph_store import GraphStore
 from libs.storage_v2.models import (
     BeliefSnapshot,
     Chain,
-    Closure,
-    ClosureEmbedding,
+    Knowledge,
+    KnowledgeEmbedding,
     Module,
     Package,
     ProbabilityRecord,
@@ -70,9 +70,9 @@ class StorageManager:
         self,
         package: Package,
         modules: list[Module],
-        closures: list[Closure],
+        knowledges: list[Knowledge],
         chains: list[Chain],
-        embeddings: list[ClosureEmbedding] | None = None,
+        embeddings: list[KnowledgeEmbedding] | None = None,
     ) -> None:
         """Write a complete package to all stores with compensating rollback.
 
@@ -83,13 +83,13 @@ class StorageManager:
 
         # Step 1: ContentStore (source of truth)
         await self.content_store.write_package(package, modules)
-        await self.content_store.write_closures(closures)
+        await self.content_store.write_knowledges(knowledges)
         await self.content_store.write_chains(chains)
 
         # Step 2: GraphStore (optional)
         if self.graph_store is not None:
             try:
-                await self.graph_store.write_topology(closures, chains)
+                await self.graph_store.write_topology(knowledges, chains)
             except Exception:
                 logger.error("GraphStore write failed; rolling back ContentStore")
                 await self.content_store.delete_package(package_id)
@@ -131,11 +131,11 @@ class StorageManager:
 
     # ── Read delegation (ContentStore) ──
 
-    async def get_closure(self, closure_id: str, version: int | None = None):
-        return await self.content_store.get_closure(closure_id, version)
+    async def get_knowledge(self, knowledge_id: str, version: int | None = None):
+        return await self.content_store.get_knowledge(knowledge_id, version)
 
-    async def get_closure_versions(self, closure_id: str):
-        return await self.content_store.get_closure_versions(closure_id)
+    async def get_knowledge_versions(self, knowledge_id: str):
+        return await self.content_store.get_knowledge_versions(knowledge_id)
 
     async def get_package(self, package_id: str):
         return await self.content_store.get_package(package_id)
@@ -149,8 +149,8 @@ class StorageManager:
     async def get_probability_history(self, chain_id: str, step_index: int | None = None):
         return await self.content_store.get_probability_history(chain_id, step_index)
 
-    async def get_belief_history(self, closure_id: str):
-        return await self.content_store.get_belief_history(closure_id)
+    async def get_belief_history(self, knowledge_id: str):
+        return await self.content_store.get_belief_history(knowledge_id)
 
     async def get_resources_for(self, target_type: str, target_id: str):
         return await self.content_store.get_resources_for(target_type, target_id)
@@ -158,8 +158,8 @@ class StorageManager:
     async def search_bm25(self, text: str, top_k: int):
         return await self.content_store.search_bm25(text, top_k)
 
-    async def list_closures(self):
-        return await self.content_store.list_closures()
+    async def list_knowledges(self):
+        return await self.content_store.list_knowledges()
 
     async def list_chains(self):
         return await self.content_store.list_chains()
@@ -168,19 +168,19 @@ class StorageManager:
 
     async def get_neighbors(
         self,
-        closure_id: str,
+        knowledge_id: str,
         direction: str = "both",
         chain_types: list[str] | None = None,
         max_hops: int = 1,
     ):
         if self.graph_store is None:
             return Subgraph()
-        return await self.graph_store.get_neighbors(closure_id, direction, chain_types, max_hops)
+        return await self.graph_store.get_neighbors(knowledge_id, direction, chain_types, max_hops)
 
-    async def get_subgraph(self, closure_id: str, max_closures: int = 500):
+    async def get_subgraph(self, knowledge_id: str, max_knowledges: int = 500):
         if self.graph_store is None:
             return Subgraph()
-        return await self.graph_store.get_subgraph(closure_id, max_closures)
+        return await self.graph_store.get_subgraph(knowledge_id, max_knowledges)
 
     async def search_topology(self, seed_ids: list[str], hops: int = 1):
         if self.graph_store is None:

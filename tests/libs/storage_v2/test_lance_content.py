@@ -10,7 +10,7 @@ class TestInitialize:
         expected = {
             "packages",
             "modules",
-            "closures",
+            "knowledges",
             "chains",
             "probabilities",
             "belief_history",
@@ -51,51 +51,73 @@ class TestWritePackage:
         # Should still return single package, not error or duplicate
         pkg = await content_store.get_package("galileo_falling_bodies")
         assert pkg is not None
-        all_closures_table = content_store._db.open_table("packages")
-        assert all_closures_table.count_rows() == 1
+        all_knowledges_table = content_store._db.open_table("packages")
+        assert all_knowledges_table.count_rows() == 1
         all_modules_table = content_store._db.open_table("modules")
         assert all_modules_table.count_rows() == 2  # 2 unique modules, not 4
 
 
-class TestWriteClosures:
-    async def test_write_and_get_closure(self, content_store, closures):
-        await content_store.write_closures(closures)
-        c = await content_store.get_closure("galileo_falling_bodies.reasoning.heavier_falls_faster")
+class TestWriteEmptyInputs:
+    async def test_write_knowledges_empty(self, content_store):
+        await content_store.write_knowledges([])  # should not raise
+
+    async def test_write_chains_empty(self, content_store):
+        await content_store.write_chains([])  # should not raise
+
+    async def test_write_probabilities_empty(self, content_store):
+        await content_store.write_probabilities([])  # should not raise
+
+    async def test_write_belief_snapshots_empty(self, content_store):
+        await content_store.write_belief_snapshots([])  # should not raise
+
+
+class TestWriteKnowledges:
+    async def test_write_and_get_knowledge(self, content_store, knowledges):
+        await content_store.write_knowledges(knowledges)
+        c = await content_store.get_knowledge(
+            "galileo_falling_bodies.reasoning.heavier_falls_faster"
+        )
         assert c is not None
         assert c.prior == pytest.approx(0.3)
 
-    async def test_get_latest_version(self, content_store, closures):
-        await content_store.write_closures(closures)
-        v2 = closures[0].model_copy(update={"version": 2, "content": "updated content"})
-        await content_store.write_closures([v2])
-        latest = await content_store.get_closure(closures[0].closure_id)
+    async def test_get_latest_version(self, content_store, knowledges):
+        await content_store.write_knowledges(knowledges)
+        v2 = knowledges[0].model_copy(update={"version": 2, "content": "updated content"})
+        await content_store.write_knowledges([v2])
+        latest = await content_store.get_knowledge(knowledges[0].knowledge_id)
         assert latest is not None
         assert latest.version == 2
         assert latest.content == "updated content"
 
-    async def test_get_specific_version(self, content_store, closures):
-        await content_store.write_closures(closures)
-        c = await content_store.get_closure(closures[0].closure_id, version=1)
+    async def test_get_specific_version(self, content_store, knowledges):
+        await content_store.write_knowledges(knowledges)
+        c = await content_store.get_knowledge(knowledges[0].knowledge_id, version=1)
         assert c is not None
         assert c.version == 1
 
-    async def test_get_nonexistent_closure(self, content_store):
-        c = await content_store.get_closure("nonexistent")
+    async def test_get_nonexistent_knowledge(self, content_store):
+        c = await content_store.get_knowledge("nonexistent")
         assert c is None
 
-    async def test_get_closure_versions(self, content_store, closures):
-        await content_store.write_closures(closures)
-        v2 = closures[0].model_copy(update={"version": 2})
-        await content_store.write_closures([v2])
-        versions = await content_store.get_closure_versions(closures[0].closure_id)
+    async def test_get_nonexistent_specific_version(self, content_store, knowledges):
+        """get_knowledge with a specific version that doesn't exist should return None."""
+        await content_store.write_knowledges(knowledges)
+        c = await content_store.get_knowledge(knowledges[0].knowledge_id, version=999)
+        assert c is None
+
+    async def test_get_knowledge_versions(self, content_store, knowledges):
+        await content_store.write_knowledges(knowledges)
+        v2 = knowledges[0].model_copy(update={"version": 2})
+        await content_store.write_knowledges([v2])
+        versions = await content_store.get_knowledge_versions(knowledges[0].knowledge_id)
         assert len(versions) == 2
         assert versions[0].version == 1
         assert versions[1].version == 2
 
-    async def test_skip_duplicate_closure(self, content_store, closures):
-        await content_store.write_closures(closures)
-        await content_store.write_closures(closures)
-        versions = await content_store.get_closure_versions(closures[0].closure_id)
+    async def test_skip_duplicate_knowledge(self, content_store, knowledges):
+        await content_store.write_knowledges(knowledges)
+        await content_store.write_knowledges(knowledges)
+        versions = await content_store.get_knowledge_versions(knowledges[0].knowledge_id)
         assert len(versions) == 1
 
 
@@ -115,7 +137,7 @@ class TestWriteChains:
         assert len(verdict.steps) == 2
         assert verdict.steps[0].step_index == 0
         assert len(verdict.steps[0].premises) > 0
-        assert verdict.steps[0].conclusion.closure_id != ""
+        assert verdict.steps[0].conclusion.knowledge_id != ""
 
     async def test_get_chains_empty_module(self, content_store):
         result = await content_store.get_chains_by_module("nonexistent")
@@ -162,7 +184,7 @@ class TestResources:
     async def test_write_and_get_resources(self, content_store, resources, attachments):
         await content_store.write_resources(resources, attachments)
         result = await content_store.get_resources_for(
-            "closure", "galileo_falling_bodies.reasoning.contradiction_result"
+            "knowledge", "galileo_falling_bodies.reasoning.contradiction_result"
         )
         assert len(result) == 1
         assert result[0].type == "image"
@@ -175,7 +197,7 @@ class TestResources:
         assert len(result) == 1
 
     async def test_get_resources_empty(self, content_store):
-        result = await content_store.get_resources_for("closure", "nonexistent")
+        result = await content_store.get_resources_for("knowledge", "nonexistent")
         assert result == []
 
     async def test_size_bytes_zero_roundtrip(self, content_store, attachments):
@@ -195,39 +217,39 @@ class TestResources:
         )
         att = ResourceAttachment(
             resource_id="empty_file",
-            target_type="closure",
+            target_type="knowledge",
             target_id="test_target",
             role="supplement",
         )
         await content_store.write_resources([res], [att])
-        result = await content_store.get_resources_for("closure", "test_target")
+        result = await content_store.get_resources_for("knowledge", "test_target")
         assert len(result) == 1
         assert result[0].size_bytes == 0
 
 
 class TestDeletePackage:
-    async def test_delete_package_removes_all_data(self, content_store, closures, chains):
-        """delete_package should remove closures, chains, and related records."""
-        await content_store.write_closures(closures)
+    async def test_delete_package_removes_all_data(self, content_store, knowledges, chains):
+        """delete_package should remove knowledges, chains, and related records."""
+        await content_store.write_knowledges(knowledges)
         await content_store.write_chains(chains)
 
-        pkg_id = closures[0].source_package_id
+        pkg_id = knowledges[0].source_package_id
         await content_store.delete_package(pkg_id)
 
-        # All closures gone
-        for c in closures:
-            assert await content_store.get_closure(c.closure_id) is None
+        # All knowledges gone
+        for c in knowledges:
+            assert await content_store.get_knowledge(c.knowledge_id) is None
 
         # All chains gone
         result = await content_store.get_chains_by_module(chains[0].module_id)
         assert len(result) == 0
 
     async def test_delete_package_removes_packages_and_modules(
-        self, content_store, packages, modules, closures, chains
+        self, content_store, packages, modules, knowledges, chains
     ):
         """delete_package should also remove the package and module records."""
         await content_store.write_package(packages[0], modules)
-        await content_store.write_closures(closures)
+        await content_store.write_knowledges(knowledges)
         await content_store.write_chains(chains)
 
         pkg_id = packages[0].package_id
@@ -243,20 +265,20 @@ class TestDeletePackage:
 
 
 class TestBM25Search:
-    async def test_search_finds_relevant_closure(self, content_store, closures):
-        await content_store.write_closures(closures)
+    async def test_search_finds_relevant_knowledge(self, content_store, knowledges):
+        await content_store.write_knowledges(knowledges)
         results = await content_store.search_bm25("heavier objects fall faster", top_k=5)
         assert len(results) >= 1
-        ids = [r.closure.closure_id for r in results]
+        ids = [r.knowledge.knowledge_id for r in results]
         assert any("heavier" in cid for cid in ids)
 
-    async def test_search_respects_top_k(self, content_store, closures):
-        await content_store.write_closures(closures)
+    async def test_search_respects_top_k(self, content_store, knowledges):
+        await content_store.write_knowledges(knowledges)
         results = await content_store.search_bm25("falls", top_k=2)
         assert len(results) <= 2
 
-    async def test_search_returns_scores(self, content_store, closures):
-        await content_store.write_closures(closures)
+    async def test_search_returns_scores(self, content_store, knowledges):
+        await content_store.write_knowledges(knowledges)
         results = await content_store.search_bm25("experiment", top_k=5)
         if results:
             assert all(r.score > 0 for r in results)
@@ -267,9 +289,9 @@ class TestBM25Search:
 
 
 class TestBPBulkLoad:
-    async def test_list_closures(self, content_store, closures):
-        await content_store.write_closures(closures)
-        result = await content_store.list_closures()
+    async def test_list_knowledges(self, content_store, knowledges):
+        await content_store.write_knowledges(knowledges)
+        result = await content_store.list_knowledges()
         assert len(result) == 6
 
     async def test_list_chains(self, content_store, chains):
@@ -277,8 +299,8 @@ class TestBPBulkLoad:
         result = await content_store.list_chains()
         assert len(result) == 2
 
-    async def test_list_closures_empty(self, content_store):
-        result = await content_store.list_closures()
+    async def test_list_knowledges_empty(self, content_store):
+        result = await content_store.list_knowledges()
         assert result == []
 
     async def test_list_chains_empty(self, content_store):
@@ -292,7 +314,7 @@ class TestFullFixtureRoundtrip:
         content_store,
         packages,
         modules,
-        closures,
+        knowledges,
         chains,
         probabilities,
         beliefs,
@@ -301,15 +323,15 @@ class TestFullFixtureRoundtrip:
     ):
         # Write all fixture data
         await content_store.write_package(packages[0], modules)
-        await content_store.write_closures(closures)
+        await content_store.write_knowledges(knowledges)
         await content_store.write_chains(chains)
         await content_store.write_probabilities(probabilities)
         await content_store.write_belief_snapshots(beliefs)
         await content_store.write_resources(resources, attachments)
 
         # Verify counts
-        all_closures = await content_store.list_closures()
-        assert len(all_closures) == 6
+        all_knowledges = await content_store.list_knowledges()
+        assert len(all_knowledges) == 6
         all_chains = await content_store.list_chains()
         assert len(all_chains) == 2
 
@@ -339,6 +361,6 @@ class TestFullFixtureRoundtrip:
 
         # Verify resources
         res = await content_store.get_resources_for(
-            "closure", "galileo_falling_bodies.reasoning.contradiction_result"
+            "knowledge", "galileo_falling_bodies.reasoning.contradiction_result"
         )
         assert len(res) == 1

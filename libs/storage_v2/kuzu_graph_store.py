@@ -3,17 +3,17 @@
 Graph model (from docs/foundations/server/storage-schema.md §3.2):
 
 Nodes:
-    (:Closure {closure_vid, closure_id, version, type, prior, belief})
+    (:Knowledge {knowledge_vid, knowledge_id, version, type, prior, belief})
     (:Chain   {chain_id, type})
 
 Relationships:
-    (:Closure)-[:PREMISE   {step_index}]->(:Chain)
-    (:Chain)  -[:CONCLUSION{step_index, probability}]->(:Closure)
-    (:Resource)-[:ATTACHED_TO {role, step_index}]->(:Closure|:Chain)
+    (:Knowledge)-[:PREMISE   {step_index}]->(:Chain)
+    (:Chain)  -[:CONCLUSION{step_index, probability}]->(:Knowledge)
+    (:Resource)-[:ATTACHED_TO {role, step_index}]->(:Knowledge|:Chain)
 
-Closure nodes are keyed by ``closure_vid`` = ``closure_id@version``, giving
-each (closure_id, version) pair its own graph node.  BFS queries that accept
-only ``closure_id`` match all versions via the ``closure_id`` property.
+Knowledge nodes are keyed by ``knowledge_vid`` = ``knowledge_id@version``, giving
+each (knowledge_id, version) pair its own graph node.  BFS queries that accept
+only ``knowledge_id`` match all versions via the ``knowledge_id`` property.
 
 Probability is stored per (chain_id, step_index) on CONCLUSION relationships,
 not as a single scalar on the Chain node, preserving step-level granularity.
@@ -34,25 +34,25 @@ from libs.storage_v2.graph_store import GraphStore
 from libs.storage_v2.models import (
     BeliefSnapshot,
     Chain,
-    Closure,
+    Knowledge,
     ResourceAttachment,
-    ScoredClosure,
+    ScoredKnowledge,
     Subgraph,
 )
 
 _SCHEMA_STATEMENTS = [
-    # closure_vid = "closure_id@version" — composite string PK
+    # knowledge_vid = "knowledge_id@version" — composite string PK
     (
-        "CREATE NODE TABLE IF NOT EXISTS Closure("
-        "closure_vid STRING, closure_id STRING, version INT64, "
+        "CREATE NODE TABLE IF NOT EXISTS Knowledge("
+        "knowledge_vid STRING, knowledge_id STRING, version INT64, "
         "type STRING, prior DOUBLE, belief DOUBLE, "
-        "PRIMARY KEY(closure_vid))"
+        "PRIMARY KEY(knowledge_vid))"
     ),
     ("CREATE NODE TABLE IF NOT EXISTS Chain(chain_id STRING, type STRING, PRIMARY KEY(chain_id))"),
-    "CREATE REL TABLE IF NOT EXISTS PREMISE(FROM Closure TO Chain, step_index INT64)",
+    "CREATE REL TABLE IF NOT EXISTS PREMISE(FROM Knowledge TO Chain, step_index INT64)",
     (
         "CREATE REL TABLE IF NOT EXISTS CONCLUSION("
-        "FROM Chain TO Closure, step_index INT64, probability DOUBLE)"
+        "FROM Chain TO Knowledge, step_index INT64, probability DOUBLE)"
     ),
     (
         "CREATE NODE TABLE IF NOT EXISTS Resource("
@@ -61,15 +61,15 @@ _SCHEMA_STATEMENTS = [
     ),
     (
         "CREATE REL TABLE GROUP IF NOT EXISTS ATTACHED_TO("
-        "FROM Resource TO Closure, FROM Resource TO Chain, "
+        "FROM Resource TO Knowledge, FROM Resource TO Chain, "
         "role STRING, step_index INT64)"
     ),
 ]
 
 
-def _vid(closure_id: str, version: int) -> str:
-    """Build the composite primary key for a Closure node."""
-    return f"{closure_id}@{version}"
+def _vid(knowledge_id: str, version: int) -> str:
+    """Build the composite primary key for a Knowledge node."""
+    return f"{knowledge_id}@{version}"
 
 
 class KuzuGraphStore(GraphStore):
@@ -100,7 +100,7 @@ class KuzuGraphStore(GraphStore):
     # ── Delete ──
 
     async def delete_package(self, package_id: str) -> None:
-        """Delete all Closure, Chain, and Resource nodes (and their rels) for a package."""
+        """Delete all Knowledge, Chain, and Resource nodes (and their rels) for a package."""
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, partial(self._delete_package_sync, package_id))
 
@@ -112,10 +112,10 @@ class KuzuGraphStore(GraphStore):
             "MATCH (ch:Chain) WHERE starts_with(ch.chain_id, $prefix) DETACH DELETE ch",
             {"prefix": prefix},
         )
-        # Delete closures (closure_vid starts with "package_id." since
-        # closure_vid = closure_id@version and closure_id starts with package_id.)
+        # Delete knowledges (knowledge_vid starts with "package_id." since
+        # knowledge_vid = knowledge_id@version and knowledge_id starts with package_id.)
         c.execute(
-            "MATCH (cl:Closure) WHERE starts_with(cl.closure_vid, $prefix) DETACH DELETE cl",
+            "MATCH (cl:Knowledge) WHERE starts_with(cl.knowledge_vid, $prefix) DETACH DELETE cl",
             {"prefix": prefix},
         )
         # Delete resources (resource_id starts with "package_id.")
@@ -126,23 +126,23 @@ class KuzuGraphStore(GraphStore):
 
     # ── Write ──
 
-    async def write_topology(self, closures: list[Closure], chains: list[Chain]) -> None:
-        """Upsert closures and chains, then wire PREMISE/CONCLUSION rels."""
+    async def write_topology(self, knowledges: list[Knowledge], chains: list[Chain]) -> None:
+        """Upsert knowledges and chains, then wire PREMISE/CONCLUSION rels."""
         loop = asyncio.get_running_loop()
-        await loop.run_in_executor(None, partial(self._write_topology_sync, closures, chains))
+        await loop.run_in_executor(None, partial(self._write_topology_sync, knowledges, chains))
 
-    def _write_topology_sync(self, closures: list[Closure], chains: list[Chain]) -> None:
+    def _write_topology_sync(self, knowledges: list[Knowledge], chains: list[Chain]) -> None:
         c = self._conn
-        # 1. MERGE closure nodes (keyed by closure_vid)
-        for cl in closures:
-            vid = _vid(cl.closure_id, cl.version)
+        # 1. MERGE knowledge nodes (keyed by knowledge_vid)
+        for cl in knowledges:
+            vid = _vid(cl.knowledge_id, cl.version)
             c.execute(
-                "MERGE (n:Closure {closure_vid: $vid}) "
-                "SET n.closure_id = $cid, n.version = $ver, "
+                "MERGE (n:Knowledge {knowledge_vid: $vid}) "
+                "SET n.knowledge_id = $cid, n.version = $ver, "
                 "n.type = $type, n.prior = $prior, n.belief = $prior",
                 {
                     "vid": vid,
-                    "cid": cl.closure_id,
+                    "cid": cl.knowledge_id,
                     "ver": cl.version,
                     "type": cl.type,
                     "prior": cl.prior,
@@ -160,12 +160,12 @@ class KuzuGraphStore(GraphStore):
         for ch in chains:
             for step in ch.steps:
                 for prem in step.premises:
-                    self._merge_closure_stub(prem.closure_id, prem.version)
+                    self._merge_knowledge_stub(prem.knowledge_id, prem.version)
                     self._ensure_rel(
                         "PREMISE",
-                        "Closure",
-                        "closure_vid",
-                        _vid(prem.closure_id, prem.version),
+                        "Knowledge",
+                        "knowledge_vid",
+                        _vid(prem.knowledge_id, prem.version),
                         "Chain",
                         "chain_id",
                         ch.chain_id,
@@ -173,26 +173,26 @@ class KuzuGraphStore(GraphStore):
                     )
 
                 conc = step.conclusion
-                self._merge_closure_stub(conc.closure_id, conc.version)
+                self._merge_knowledge_stub(conc.knowledge_id, conc.version)
                 self._ensure_rel(
                     "CONCLUSION",
                     "Chain",
                     "chain_id",
                     ch.chain_id,
-                    "Closure",
-                    "closure_vid",
-                    _vid(conc.closure_id, conc.version),
+                    "Knowledge",
+                    "knowledge_vid",
+                    _vid(conc.knowledge_id, conc.version),
                     step.step_index,
                 )
 
-    def _merge_closure_stub(self, closure_id: str, version: int) -> None:
-        """MERGE a Closure node with minimal defaults (no-op if already exists)."""
-        vid = _vid(closure_id, version)
+    def _merge_knowledge_stub(self, knowledge_id: str, version: int) -> None:
+        """MERGE a Knowledge node with minimal defaults (no-op if already exists)."""
+        vid = _vid(knowledge_id, version)
         self._conn.execute(
-            "MERGE (n:Closure {closure_vid: $vid}) "
-            "ON CREATE SET n.closure_id = $cid, n.version = $ver, "
+            "MERGE (n:Knowledge {knowledge_vid: $vid}) "
+            "ON CREATE SET n.knowledge_id = $cid, n.version = $ver, "
             "n.type = 'claim', n.prior = 0.5, n.belief = 0.5",
-            {"vid": vid, "cid": closure_id, "ver": version},
+            {"vid": vid, "cid": knowledge_id, "ver": version},
         )
 
     def _ensure_rel(
@@ -226,7 +226,7 @@ class KuzuGraphStore(GraphStore):
     async def write_resource_links(self, attachments: list[ResourceAttachment]) -> None:
         """Write Resource nodes and ATTACHED_TO relationships.
 
-        Only ``closure``, ``chain``, and ``chain_step`` target types map to
+        Only ``knowledge``, ``chain``, and ``chain_step`` target types map to
         graph nodes.  For ``chain_step``, ``step_index`` is preserved on the
         relationship.  ``module`` and ``package`` targets are skipped.
         """
@@ -239,17 +239,17 @@ class KuzuGraphStore(GraphStore):
             if att.target_type in ("module", "package"):
                 continue
 
-            if att.target_type == "closure":
-                # Resolve to latest version of this closure in the graph
+            if att.target_type == "knowledge":
+                # Resolve to latest version of this knowledge in the graph
                 res = c.execute(
-                    "MATCH (cl:Closure) WHERE cl.closure_id = $cid "
-                    "RETURN cl.closure_vid ORDER BY cl.version DESC LIMIT 1",
+                    "MATCH (cl:Knowledge) WHERE cl.knowledge_id = $cid "
+                    "RETURN cl.knowledge_vid ORDER BY cl.version DESC LIMIT 1",
                     {"cid": att.target_id},
                 )
                 if not res.has_next():
-                    continue  # closure not in graph; skip
-                dest_label = "Closure"
-                dest_key = "closure_vid"
+                    continue  # knowledge not in graph; skip
+                dest_label = "Knowledge"
+                dest_key = "knowledge_vid"
                 dest_id = res.get_next()[0]
                 step_idx = -1
             elif att.target_type == "chain":
@@ -293,15 +293,15 @@ class KuzuGraphStore(GraphStore):
                 )
 
     async def update_beliefs(self, snapshots: list[BeliefSnapshot]) -> None:
-        """Set belief values on Closure nodes, keyed by (closure_id, version)."""
+        """Set belief values on Knowledge nodes, keyed by (knowledge_id, version)."""
         loop = asyncio.get_running_loop()
         await loop.run_in_executor(None, partial(self._update_beliefs_sync, snapshots))
 
     def _update_beliefs_sync(self, snapshots: list[BeliefSnapshot]) -> None:
         for snap in snapshots:
-            vid = _vid(snap.closure_id, snap.version)
+            vid = _vid(snap.knowledge_id, snap.version)
             self._conn.execute(
-                "MATCH (cl:Closure {closure_vid: $vid}) SET cl.belief = $belief",
+                "MATCH (cl:Knowledge {knowledge_vid: $vid}) SET cl.belief = $belief",
                 {"vid": vid, "belief": snap.belief},
             )
 
@@ -315,7 +315,7 @@ class KuzuGraphStore(GraphStore):
 
     def _update_probability_sync(self, chain_id: str, step_index: int, value: float) -> None:
         self._conn.execute(
-            "MATCH (ch:Chain {chain_id: $chid})-[r:CONCLUSION]->(:Closure) "
+            "MATCH (ch:Chain {chain_id: $chid})-[r:CONCLUSION]->(:Knowledge) "
             "WHERE r.step_index = $si SET r.probability = $val",
             {"chid": chain_id, "si": step_index, "val": value},
         )
@@ -324,25 +324,25 @@ class KuzuGraphStore(GraphStore):
 
     async def get_neighbors(
         self,
-        closure_id: str,
+        knowledge_id: str,
         direction: str = "both",
         chain_types: list[str] | None = None,
         max_hops: int = 1,
     ) -> Subgraph:
-        """BFS expansion from a closure through chains, returning discovered IDs.
+        """BFS expansion from a knowledge through chains, returning discovered IDs.
 
-        Matches all versions of the given ``closure_id``.  One "knowledge hop"
-        = Closure → Chain → Closure (two graph hops).
+        Matches all versions of the given ``knowledge_id``.  One "knowledge hop"
+        = Knowledge → Chain → Knowledge (two graph hops).
         """
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             None,
-            partial(self._get_neighbors_sync, closure_id, direction, chain_types, max_hops),
+            partial(self._get_neighbors_sync, knowledge_id, direction, chain_types, max_hops),
         )
 
     def _get_neighbors_sync(
         self,
-        closure_id: str,
+        knowledge_id: str,
         direction: str,
         chain_types: list[str] | None,
         max_hops: int,
@@ -350,16 +350,16 @@ class KuzuGraphStore(GraphStore):
         c = self._conn
         # Verify seed exists (any version)
         result = c.execute(
-            "MATCH (cl:Closure) WHERE cl.closure_id = $cid RETURN cl.closure_id LIMIT 1",
-            {"cid": closure_id},
+            "MATCH (cl:Knowledge) WHERE cl.knowledge_id = $cid RETURN cl.knowledge_id LIMIT 1",
+            {"cid": knowledge_id},
         )
         if not result.has_next():
             return Subgraph()
 
-        all_closure_ids: set[str] = set()
+        all_knowledge_ids: set[str] = set()
         all_chain_ids: set[str] = set()
-        frontier: set[str] = {closure_id}
-        visited_closures: set[str] = {closure_id}
+        frontier: set[str] = {knowledge_id}
+        visited_knowledges: set[str] = {knowledge_id}
 
         for _ in range(max_hops):
             if not frontier:
@@ -370,8 +370,8 @@ class KuzuGraphStore(GraphStore):
             for cid in frontier:
                 if direction in ("downstream", "both"):
                     res = c.execute(
-                        "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain) "
-                        "WHERE cl.closure_id = $cid "
+                        "MATCH (cl:Knowledge)-[:PREMISE]->(ch:Chain) "
+                        "WHERE cl.knowledge_id = $cid "
                         "RETURN ch.chain_id, ch.type",
                         {"cid": cid},
                     )
@@ -382,8 +382,8 @@ class KuzuGraphStore(GraphStore):
 
                 if direction in ("upstream", "both"):
                     res = c.execute(
-                        "MATCH (ch:Chain)-[:CONCLUSION]->(cl:Closure) "
-                        "WHERE cl.closure_id = $cid "
+                        "MATCH (ch:Chain)-[:CONCLUSION]->(cl:Knowledge) "
+                        "WHERE cl.knowledge_id = $cid "
                         "RETURN ch.chain_id, ch.type",
                         {"cid": cid},
                     )
@@ -398,67 +398,67 @@ class KuzuGraphStore(GraphStore):
             for ch_id in new_chains:
                 if direction in ("downstream", "both"):
                     res = c.execute(
-                        "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(cl:Closure) "
-                        "RETURN DISTINCT cl.closure_id",
+                        "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(cl:Knowledge) "
+                        "RETURN DISTINCT cl.knowledge_id",
                         {"chid": ch_id},
                     )
                     while res.has_next():
                         found = res.get_next()[0]
-                        if found not in visited_closures:
+                        if found not in visited_knowledges:
                             next_frontier.add(found)
 
                 if direction in ("upstream", "both"):
                     res = c.execute(
-                        "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
-                        "RETURN DISTINCT cl.closure_id",
+                        "MATCH (cl:Knowledge)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
+                        "RETURN DISTINCT cl.knowledge_id",
                         {"chid": ch_id},
                     )
                     while res.has_next():
                         found = res.get_next()[0]
-                        if found not in visited_closures:
+                        if found not in visited_knowledges:
                             next_frontier.add(found)
 
-            all_closure_ids.update(next_frontier)
-            visited_closures.update(next_frontier)
+            all_knowledge_ids.update(next_frontier)
+            visited_knowledges.update(next_frontier)
             frontier = next_frontier
 
-        return Subgraph(closure_ids=all_closure_ids, chain_ids=all_chain_ids)
+        return Subgraph(knowledge_ids=all_knowledge_ids, chain_ids=all_chain_ids)
 
-    async def get_subgraph(self, closure_id: str, max_closures: int = 500) -> Subgraph:
-        """BFS from root closure in both directions, up to max_closures."""
+    async def get_subgraph(self, knowledge_id: str, max_knowledges: int = 500) -> Subgraph:
+        """BFS from root knowledge in both directions, up to max_knowledges."""
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             None,
-            partial(self._get_subgraph_sync, closure_id, max_closures),
+            partial(self._get_subgraph_sync, knowledge_id, max_knowledges),
         )
 
-    def _get_subgraph_sync(self, closure_id: str, max_closures: int) -> Subgraph:
+    def _get_subgraph_sync(self, knowledge_id: str, max_knowledges: int) -> Subgraph:
         c = self._conn
         result = c.execute(
-            "MATCH (cl:Closure) WHERE cl.closure_id = $cid RETURN cl.closure_id LIMIT 1",
-            {"cid": closure_id},
+            "MATCH (cl:Knowledge) WHERE cl.knowledge_id = $cid RETURN cl.knowledge_id LIMIT 1",
+            {"cid": knowledge_id},
         )
         if not result.has_next():
             return Subgraph()
 
-        all_closure_ids: set[str] = {closure_id}
+        all_knowledge_ids: set[str] = {knowledge_id}
         all_chain_ids: set[str] = set()
-        frontier: set[str] = {closure_id}
+        frontier: set[str] = {knowledge_id}
 
-        while frontier and len(all_closure_ids) < max_closures:
+        while frontier and len(all_knowledge_ids) < max_knowledges:
             new_chains: set[str] = set()
             for cid in frontier:
                 res = c.execute(
-                    "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain) "
-                    "WHERE cl.closure_id = $cid RETURN ch.chain_id",
+                    "MATCH (cl:Knowledge)-[:PREMISE]->(ch:Chain) "
+                    "WHERE cl.knowledge_id = $cid RETURN ch.chain_id",
                     {"cid": cid},
                 )
                 while res.has_next():
                     new_chains.add(res.get_next()[0])
 
                 res = c.execute(
-                    "MATCH (ch:Chain)-[:CONCLUSION]->(cl:Closure) "
-                    "WHERE cl.closure_id = $cid RETURN ch.chain_id",
+                    "MATCH (ch:Chain)-[:CONCLUSION]->(cl:Knowledge) "
+                    "WHERE cl.knowledge_id = $cid RETURN ch.chain_id",
                     {"cid": cid},
                 )
                 while res.has_next():
@@ -469,39 +469,39 @@ class KuzuGraphStore(GraphStore):
             next_frontier: set[str] = set()
             for ch_id in new_chains:
                 res = c.execute(
-                    "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(cl:Closure) "
-                    "RETURN DISTINCT cl.closure_id",
+                    "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(cl:Knowledge) "
+                    "RETURN DISTINCT cl.knowledge_id",
                     {"chid": ch_id},
                 )
                 while res.has_next():
                     found = res.get_next()[0]
-                    if found not in all_closure_ids:
+                    if found not in all_knowledge_ids:
                         next_frontier.add(found)
 
                 res = c.execute(
-                    "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
-                    "RETURN DISTINCT cl.closure_id",
+                    "MATCH (cl:Knowledge)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
+                    "RETURN DISTINCT cl.knowledge_id",
                     {"chid": ch_id},
                 )
                 while res.has_next():
                     found = res.get_next()[0]
-                    if found not in all_closure_ids:
+                    if found not in all_knowledge_ids:
                         next_frontier.add(found)
 
-            remaining = max_closures - len(all_closure_ids)
+            remaining = max_knowledges - len(all_knowledge_ids)
             if len(next_frontier) > remaining:
                 next_frontier = set(list(next_frontier)[:remaining])
 
-            all_closure_ids.update(next_frontier)
+            all_knowledge_ids.update(next_frontier)
             frontier = next_frontier
 
-        return Subgraph(closure_ids=all_closure_ids, chain_ids=all_chain_ids)
+        return Subgraph(knowledge_ids=all_knowledge_ids, chain_ids=all_chain_ids)
 
-    async def search_topology(self, seed_ids: list[str], hops: int = 1) -> list[ScoredClosure]:
-        """BFS from seed closures, scoring by distance.
+    async def search_topology(self, seed_ids: list[str], hops: int = 1) -> list[ScoredKnowledge]:
+        """BFS from seed knowledges, scoring by distance.
 
-        Score = 1.0 / (hop + 2). Seed closures are excluded from results.
-        Returns minimal Closure objects (content not stored in graph).
+        Score = 1.0 / (hop + 2). Seed knowledges are excluded from results.
+        Returns minimal Knowledge objects (content not stored in graph).
         """
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
@@ -509,7 +509,7 @@ class KuzuGraphStore(GraphStore):
             partial(self._search_topology_sync, seed_ids, hops),
         )
 
-    def _search_topology_sync(self, seed_ids: list[str], hops: int) -> list[ScoredClosure]:
+    def _search_topology_sync(self, seed_ids: list[str], hops: int) -> list[ScoredKnowledge]:
         if not seed_ids:
             return []
 
@@ -526,16 +526,16 @@ class KuzuGraphStore(GraphStore):
             new_chains: set[str] = set()
             for cid in frontier:
                 res = c.execute(
-                    "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain) "
-                    "WHERE cl.closure_id = $cid RETURN ch.chain_id",
+                    "MATCH (cl:Knowledge)-[:PREMISE]->(ch:Chain) "
+                    "WHERE cl.knowledge_id = $cid RETURN ch.chain_id",
                     {"cid": cid},
                 )
                 while res.has_next():
                     new_chains.add(res.get_next()[0])
 
                 res = c.execute(
-                    "MATCH (ch:Chain)-[:CONCLUSION]->(cl:Closure) "
-                    "WHERE cl.closure_id = $cid RETURN ch.chain_id",
+                    "MATCH (ch:Chain)-[:CONCLUSION]->(cl:Knowledge) "
+                    "WHERE cl.knowledge_id = $cid RETURN ch.chain_id",
                     {"cid": cid},
                 )
                 while res.has_next():
@@ -544,8 +544,8 @@ class KuzuGraphStore(GraphStore):
             next_frontier: set[str] = set()
             for ch_id in new_chains:
                 res = c.execute(
-                    "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(cl:Closure) "
-                    "RETURN DISTINCT cl.closure_id",
+                    "MATCH (ch:Chain {chain_id: $chid})-[:CONCLUSION]->(cl:Knowledge) "
+                    "RETURN DISTINCT cl.knowledge_id",
                     {"chid": ch_id},
                 )
                 while res.has_next():
@@ -556,8 +556,8 @@ class KuzuGraphStore(GraphStore):
                             discovered[found] = hop
 
                 res = c.execute(
-                    "MATCH (cl:Closure)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
-                    "RETURN DISTINCT cl.closure_id",
+                    "MATCH (cl:Knowledge)-[:PREMISE]->(ch:Chain {chain_id: $chid}) "
+                    "RETURN DISTINCT cl.knowledge_id",
                     {"chid": ch_id},
                 )
                 while res.has_next():
@@ -571,14 +571,14 @@ class KuzuGraphStore(GraphStore):
             frontier = next_frontier
 
         # Build scored results, excluding seeds
-        results: list[ScoredClosure] = []
+        results: list[ScoredKnowledge] = []
         for cid, hop_dist in discovered.items():
             if cid in seed_set:
                 continue
 
             # Fetch the latest-version node properties
             res = c.execute(
-                "MATCH (cl:Closure) WHERE cl.closure_id = $cid "
+                "MATCH (cl:Knowledge) WHERE cl.knowledge_id = $cid "
                 "RETURN cl.version, cl.type, cl.prior "
                 "ORDER BY cl.version DESC LIMIT 1",
                 {"cid": cid},
@@ -587,8 +587,8 @@ class KuzuGraphStore(GraphStore):
                 continue
             row = res.get_next()
 
-            closure = Closure(
-                closure_id=cid,
+            knowledge = Knowledge(
+                knowledge_id=cid,
                 version=row[0],
                 type=row[1],
                 content="",
@@ -597,7 +597,7 @@ class KuzuGraphStore(GraphStore):
                 source_module_id="",
                 created_at=datetime(2026, 1, 1),
             )
-            results.append(ScoredClosure(closure=closure, score=1.0 / (hop_dist + 2)))
+            results.append(ScoredKnowledge(knowledge=knowledge, score=1.0 / (hop_dist + 2)))
 
         results.sort(key=lambda sc: sc.score, reverse=True)
         return results
