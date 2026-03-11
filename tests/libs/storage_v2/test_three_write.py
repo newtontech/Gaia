@@ -185,6 +185,7 @@ class TestIngestPartialFailure:
 
         # Restore real implementation and retry
         from libs.storage_v2.kuzu_graph_store import KuzuGraphStore
+
         manager.graph_store.write_topology = KuzuGraphStore.write_topology.__get__(
             manager.graph_store
         )
