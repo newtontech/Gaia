@@ -31,7 +31,7 @@ class V2IngestData:
 
     package: v2.Package
     modules: list[v2.Module] = field(default_factory=list)
-    closures: list[v2.Closure] = field(default_factory=list)
+    knowledge_items: list[v2.Knowledge] = field(default_factory=list)
     chains: list[v2.Chain] = field(default_factory=list)
     probabilities: list[v2.ProbabilityRecord] = field(default_factory=list)
     belief_snapshots: list[v2.BeliefSnapshot] = field(default_factory=list)
@@ -52,16 +52,17 @@ def convert_to_v2(
         bp_run_id: BP run identifier.
 
     Returns:
-        V2IngestData with package, modules, closures, chains, probabilities,
+        V2IngestData with package, modules, knowledge_items, chains, probabilities,
         and belief snapshots.
     """
     now = datetime.now(timezone.utc)
 
     # 1. Package -> v2.Package
     v2_package = _convert_package(pkg, now)
+    module_decl_index = _build_module_decl_index(pkg)
 
     # 2. Build a unified knowledge index resolving Refs
-    #    Maps (module_name, decl_name) -> (resolved Knowledge, owning module name)
+    #    Maps decl name -> resolved Knowledge.
     decls_by_name: dict[str, tuple[Knowledge, str]] = {}
     for mod in pkg.loaded_modules:
         for decl in mod.knowledge:
@@ -74,35 +75,42 @@ def convert_to_v2(
         v2_mod = _convert_module(pkg.name, mod)
         v2_modules.append(v2_mod)
 
-    # 4. Knowledge -> v2.Closure[] (deduped)
-    seen_closure_ids: set[str] = set()
-    v2_closures: list[v2.Closure] = []
+    # 4. Knowledge -> v2.Knowledge[] (deduped)
+    seen_knowledge_ids: set[str] = set()
+    v2_knowledge_items: list[v2.Knowledge] = []
 
     for mod in pkg.loaded_modules:
         for decl in mod.knowledge:
             actual = _resolve(decl)
-            if not _is_closure_type(actual):
+            if not _is_knowledge_type(actual):
                 continue
-            # Check if the actual declaration belongs to this package
-            if not _belongs_to_package(actual, decl, pkg):
-                continue
-            closure_id = f"{pkg.name}/{actual.name}"
-            if closure_id in seen_closure_ids:
-                continue
-            seen_closure_ids.add(closure_id)
 
-            closure = _convert_closure(
+            origin_package, origin_module = _resolve_decl_origin(
+                decl=decl,
+                module_name=mod.name,
+                pkg=pkg,
+                module_decl_index=module_decl_index,
+            )
+            if origin_package != pkg.name:
+                continue
+            knowledge_id = f"{pkg.name}/{actual.name}"
+            if knowledge_id in seen_knowledge_ids:
+                continue
+            seen_knowledge_ids.add(knowledge_id)
+
+            knowledge_item = _convert_knowledge(
                 actual=actual,
-                closure_id=closure_id,
+                knowledge_id=knowledge_id,
                 package_id=pkg.name,
-                module_id=f"{pkg.name}.{mod.name}",
+                module_id=f"{pkg.name}.{origin_module}",
                 now=now,
             )
-            v2_closures.append(closure)
+            v2_knowledge_items.append(knowledge_item)
 
     # 5. ChainExpr -> v2.Chain[] + collect chain_ids per module
     v2_chains: list[v2.Chain] = []
     module_chain_ids: dict[str, list[str]] = {mod.name: [] for mod in pkg.loaded_modules}
+    review_step_index: dict[str, tuple[str, int]] = {}
 
     for mod in pkg.loaded_modules:
         for decl in mod.knowledge:
@@ -113,6 +121,8 @@ def convert_to_v2(
                     package_name=pkg.name,
                     decls_by_name=decls_by_name,
                     pkg=pkg,
+                    module_decl_index=module_decl_index,
+                    review_step_index=review_step_index,
                 )
                 if chain is not None:
                     v2_chains.append(chain)
@@ -128,6 +138,7 @@ def convert_to_v2(
                     package_name=pkg.name,
                     decls_by_name=decls_by_name,
                     pkg=pkg,
+                    module_decl_index=module_decl_index,
                 )
                 if chain is not None:
                     v2_chains.append(chain)
@@ -137,25 +148,25 @@ def convert_to_v2(
     for v2_mod in v2_modules:
         mod_short_name = v2_mod.module_id.split(".", 1)[1] if "." in v2_mod.module_id else ""
         v2_mod.chain_ids = module_chain_ids.get(mod_short_name, [])
-        # Export IDs: closures from this module's exports
+        # Export IDs: knowledge items from this module's exports
         src_mod = next((m for m in pkg.loaded_modules if m.name == mod_short_name), None)
         if src_mod and src_mod.export:
             v2_mod.export_ids = [
                 f"{pkg.name}/{name}"
                 for name in src_mod.export
-                if f"{pkg.name}/{name}" in seen_closure_ids
+                if f"{pkg.name}/{name}" in seen_knowledge_ids
             ]
 
     # 7. Review -> ProbabilityRecord[]
-    v2_probabilities = _convert_review(review, pkg.name, now)
+    v2_probabilities = _convert_review(review, review_step_index, now)
 
     # 8. Beliefs -> BeliefSnapshot[]
-    v2_snapshots = _convert_beliefs(beliefs, pkg.name, bp_run_id, seen_closure_ids, now)
+    v2_snapshots = _convert_beliefs(beliefs, pkg.name, bp_run_id, seen_knowledge_ids, now)
 
     return V2IngestData(
         package=v2_package,
         modules=v2_modules,
-        closures=v2_closures,
+        knowledge_items=v2_knowledge_items,
         chains=v2_chains,
         probabilities=v2_probabilities,
         belief_snapshots=v2_snapshots,
@@ -172,29 +183,48 @@ def _resolve(decl: Knowledge) -> Knowledge:
     return decl
 
 
-def _is_closure_type(k: Knowledge) -> bool:
-    """Return True if the knowledge object should become a v2.Closure."""
-    return isinstance(k, (Claim, Setting, Question, Contradiction))
+def _is_knowledge_type(k: Knowledge) -> bool:
+    """Return True if the knowledge object should become a v2.Knowledge."""
+    return isinstance(k, (Claim, Setting, Question, Contradiction, Equivalence, Subsumption))
 
 
-def _belongs_to_package(actual: Knowledge, decl: Knowledge, pkg: Package) -> bool:
-    """Check if a knowledge object belongs to this package (not imported).
+def _build_module_decl_index(pkg: Package) -> dict[str, dict[str, Knowledge]]:
+    """Index declarations by module and local name for ref provenance tracing."""
+    return {mod.name: {decl.name: decl for decl in mod.knowledge} for mod in pkg.loaded_modules}
 
-    For a Ref, we check whether its target path starts with an external package.
-    If the Ref's target contains a dot and the prefix before the dot is not a
-    module name in this package, it's cross-package.
-    """
+
+def _resolve_decl_origin(
+    decl: Knowledge,
+    module_name: str,
+    pkg: Package,
+    module_decl_index: dict[str, dict[str, Knowledge]],
+    seen: set[tuple[str, str]] | None = None,
+) -> tuple[str, str]:
+    """Resolve the owning package/module for a declaration or ref alias."""
     if not isinstance(decl, Ref):
-        return True  # Non-ref declarations always belong to current package
+        return pkg.name, module_name
+
+    if seen is None:
+        seen = set()
 
     target = decl.target
-    if "." in target:
-        prefix = target.split(".")[0]
-        module_names = {m.name for m in pkg.loaded_modules}
-        if prefix not in module_names:
-            # Target is in a different package
-            return False
-    return True
+    if "." not in target:
+        return pkg.name, module_name
+
+    prefix, local_name = target.split(".", 1)
+    if prefix not in module_decl_index:
+        return prefix, module_name
+
+    marker = (prefix, local_name)
+    if marker in seen:
+        return pkg.name, prefix
+
+    target_decl = module_decl_index[prefix].get(local_name)
+    if target_decl is None:
+        return pkg.name, prefix
+
+    seen.add(marker)
+    return _resolve_decl_origin(target_decl, prefix, pkg, module_decl_index, seen)
 
 
 def _convert_package(pkg: Package, now: datetime) -> v2.Package:
@@ -233,25 +263,25 @@ def _convert_module(package_name: str, mod: Module) -> v2.Module:
     )
 
 
-def _closure_type(k: Knowledge) -> str:
-    """Map Knowledge subclass to v2 Closure type literal."""
+def _knowledge_type(k: Knowledge) -> str:
+    """Map Knowledge subclass to v2 Knowledge type literal."""
     if isinstance(k, Setting):
         return "setting"
     if isinstance(k, Question):
         return "question"
-    if isinstance(k, Contradiction):
+    if isinstance(k, (Contradiction, Equivalence, Subsumption)):
         return "claim"  # contradictions stored as claims
     return "claim"
 
 
-def _convert_closure(
+def _convert_knowledge(
     actual: Knowledge,
-    closure_id: str,
+    knowledge_id: str,
     package_id: str,
     module_id: str,
     now: datetime,
-) -> v2.Closure:
-    """Convert a Knowledge object to a v2.Closure."""
+) -> v2.Knowledge:
+    """Convert a Knowledge object to a v2.Knowledge."""
     raw_prior = actual.prior if actual.prior is not None else 0.5
     # Clamp to (0, 1] — prior must be > 0
     prior = max(raw_prior, 1e-6)
@@ -259,10 +289,10 @@ def _convert_closure(
 
     content = getattr(actual, "content", "") or ""
 
-    return v2.Closure(
-        closure_id=closure_id,
+    return v2.Knowledge(
+        knowledge_id=knowledge_id,
         version=1,
-        type=_closure_type(actual),
+        type=_knowledge_type(actual),
         content=content.strip(),
         prior=prior,
         keywords=[],
@@ -272,36 +302,33 @@ def _convert_closure(
     )
 
 
-def _make_closure_ref(
+def _make_knowledge_ref(
     name: str,
+    module_name: str,
     decls_by_name: dict[str, tuple[Knowledge, str]],
     pkg: Package,
-) -> v2.ClosureRef | None:
-    """Create a ClosureRef for a declaration name, resolving the package-qualified ID."""
+    module_decl_index: dict[str, dict[str, Knowledge]],
+) -> v2.KnowledgeRef | None:
+    """Create a KnowledgeRef for a declaration name, resolving the package-qualified ID."""
     entry = decls_by_name.get(name)
     if entry is None:
         return None
     actual, _mod_name = entry
     actual = _resolve(actual) if isinstance(actual, Ref) else actual
 
-    # Determine which package the actual declaration belongs to
-    # Check if the name was a Ref to an external package
-    closure_id = f"{pkg.name}/{actual.name}"
+    decl = module_decl_index.get(module_name, {}).get(name)
+    if decl is None:
+        knowledge_id = f"{pkg.name}/{actual.name}"
+    else:
+        origin_package, _origin_module = _resolve_decl_origin(
+            decl=decl,
+            module_name=module_name,
+            pkg=pkg,
+            module_decl_index=module_decl_index,
+        )
+        knowledge_id = f"{origin_package}/{actual.name}"
 
-    # Check all modules for this name to see if it's a cross-package ref
-    for mod in pkg.loaded_modules:
-        for decl in mod.knowledge:
-            if decl.name == name and isinstance(decl, Ref):
-                target = decl.target
-                if "." in target:
-                    prefix = target.split(".")[0]
-                    module_names = {m.name for m in pkg.loaded_modules}
-                    if prefix not in module_names:
-                        # Cross-package: use the external package name
-                        closure_id = f"{prefix}/{actual.name}"
-                        break
-
-    return v2.ClosureRef(closure_id=closure_id, version=1)
+    return v2.KnowledgeRef(knowledge_id=knowledge_id, version=1)
 
 
 def _convert_chain_expr(
@@ -310,6 +337,8 @@ def _convert_chain_expr(
     package_name: str,
     decls_by_name: dict[str, tuple[Knowledge, str]],
     pkg: Package,
+    module_decl_index: dict[str, dict[str, Knowledge]],
+    review_step_index: dict[str, tuple[str, int]],
 ) -> v2.Chain | None:
     """Convert a ChainExpr to a v2.Chain with ChainStep entries."""
     chain_id = f"{package_name}.{module_name}.{chain.name}"
@@ -335,11 +364,17 @@ def _convert_chain_expr(
     for i, step in enumerate(chain.steps):
         if isinstance(step, StepApply):
             # Premises from args
-            premises: list[v2.ClosureRef] = []
+            premises: list[v2.KnowledgeRef] = []
             for arg in step.args:
-                cref = _make_closure_ref(arg.ref, decls_by_name, pkg)
-                if cref is not None:
-                    premises.append(cref)
+                kref = _make_knowledge_ref(
+                    arg.ref,
+                    module_name=module_name,
+                    decls_by_name=decls_by_name,
+                    pkg=pkg,
+                    module_decl_index=module_decl_index,
+                )
+                if kref is not None:
+                    premises.append(kref)
 
             # Reasoning text from the InferAction's content
             reasoning = ""
@@ -359,7 +394,13 @@ def _convert_chain_expr(
             if conclusion_name is None:
                 continue
 
-            conclusion_ref = _make_closure_ref(conclusion_name, decls_by_name, pkg)
+            conclusion_ref = _make_knowledge_ref(
+                conclusion_name,
+                module_name=module_name,
+                decls_by_name=decls_by_name,
+                pkg=pkg,
+                module_decl_index=module_decl_index,
+            )
             if conclusion_ref is None:
                 continue
 
@@ -371,6 +412,7 @@ def _convert_chain_expr(
                     conclusion=conclusion_ref,
                 )
             )
+            review_step_index[f"{chain.name}.{step.step}"] = (chain_id, step_index)
             step_index += 1
 
         elif isinstance(step, StepLambda):
@@ -380,9 +422,15 @@ def _convert_chain_expr(
             if i > 0:
                 prev_step = chain.steps[i - 1]
                 if isinstance(prev_step, StepRef):
-                    cref = _make_closure_ref(prev_step.ref, decls_by_name, pkg)
-                    if cref is not None:
-                        premises.append(cref)
+                    kref = _make_knowledge_ref(
+                        prev_step.ref,
+                        module_name=module_name,
+                        decls_by_name=decls_by_name,
+                        pkg=pkg,
+                        module_decl_index=module_decl_index,
+                    )
+                    if kref is not None:
+                        premises.append(kref)
 
             reasoning = step.lambda_.strip() if step.lambda_ else ""
 
@@ -396,7 +444,13 @@ def _convert_chain_expr(
             if conclusion_name is None:
                 continue
 
-            conclusion_ref = _make_closure_ref(conclusion_name, decls_by_name, pkg)
+            conclusion_ref = _make_knowledge_ref(
+                conclusion_name,
+                module_name=module_name,
+                decls_by_name=decls_by_name,
+                pkg=pkg,
+                module_decl_index=module_decl_index,
+            )
             if conclusion_ref is None:
                 continue
 
@@ -408,6 +462,7 @@ def _convert_chain_expr(
                     conclusion=conclusion_ref,
                 )
             )
+            review_step_index[f"{chain.name}.{step.step}"] = (chain_id, step_index)
             step_index += 1
 
     if not v2_steps:
@@ -428,6 +483,7 @@ def _convert_relation_to_chain(
     package_name: str,
     decls_by_name: dict[str, tuple[Knowledge, str]],
     pkg: Package,
+    module_decl_index: dict[str, dict[str, Knowledge]],
 ) -> v2.Chain | None:
     """Convert a Relation (e.g. Contradiction) to a single-step v2.Chain."""
     chain_id = f"{package_name}.{module_name}.{rel.name}"
@@ -440,18 +496,24 @@ def _convert_relation_to_chain(
         rel_type = "deduction"
 
     # Members become premises
-    premises: list[v2.ClosureRef] = []
+    premises: list[v2.KnowledgeRef] = []
     for member_name in rel.between:
-        cref = _make_closure_ref(member_name, decls_by_name, pkg)
-        if cref is not None:
-            premises.append(cref)
+        kref = _make_knowledge_ref(
+            member_name,
+            module_name=module_name,
+            decls_by_name=decls_by_name,
+            pkg=pkg,
+            module_decl_index=module_decl_index,
+        )
+        if kref is not None:
+            premises.append(kref)
 
     if not premises:
         return None
 
-    # The Relation itself is the conclusion (if it was created as a Closure)
+    # The Relation itself is the conclusion (if it was created as a Knowledge item)
     conclusion_id = f"{pkg.name}/{rel.name}"
-    conclusion_ref = v2.ClosureRef(closure_id=conclusion_id, version=1)
+    conclusion_ref = v2.KnowledgeRef(knowledge_id=conclusion_id, version=1)
 
     reasoning = (rel.content or "").strip()
 
@@ -473,7 +535,7 @@ def _convert_relation_to_chain(
 
 def _convert_review(
     review: dict,
-    package_name: str,
+    review_step_index: dict[str, tuple[str, int]],
     now: datetime,
 ) -> list[v2.ProbabilityRecord]:
     """Convert review dict to ProbabilityRecord entries."""
@@ -481,17 +543,18 @@ def _convert_review(
     chains_data = review.get("chains", [])
 
     for chain_entry in chains_data:
-        chain_name = chain_entry.get("name", "")
+        chain_name = chain_entry.get("chain") or chain_entry.get("name") or ""
         steps = chain_entry.get("steps", [])
         for step_data in steps:
-            step_id = step_data.get("step_id", "")
-            # Step ID format: "chain_name.N" -> extract N
-            step_index = 0
-            if "." in step_id:
-                try:
-                    step_index = int(step_id.rsplit(".", 1)[1])
-                except (ValueError, IndexError):
-                    pass
+            raw_step_id = step_data.get("step") or step_data.get("step_id") or ""
+            step_id = str(raw_step_id)
+            if "." not in step_id and chain_name:
+                step_id = f"{chain_name}.{step_id}"
+
+            step_ref = review_step_index.get(step_id)
+            if step_ref is None:
+                continue
+            chain_id, step_index = step_ref
 
             value = step_data.get("conditional_prior") or step_data.get("suggested_prior")
             if value is None:
@@ -503,10 +566,11 @@ def _convert_review(
 
             records.append(
                 v2.ProbabilityRecord(
-                    chain_id=chain_name,
+                    chain_id=chain_id,
                     step_index=step_index,
                     value=value,
                     source="llm_review",
+                    source_detail=step_data.get("explanation") or None,
                     recorded_at=now,
                 )
             )
@@ -518,15 +582,15 @@ def _convert_beliefs(
     beliefs: dict[str, float],
     package_name: str,
     bp_run_id: str,
-    seen_closure_ids: set[str],
+    seen_knowledge_ids: set[str],
     now: datetime,
 ) -> list[v2.BeliefSnapshot]:
     """Convert BP belief values to BeliefSnapshot entries."""
     snapshots: list[v2.BeliefSnapshot] = []
 
     for var_name, belief_value in beliefs.items():
-        closure_id = f"{package_name}/{var_name}"
-        if closure_id not in seen_closure_ids:
+        knowledge_id = f"{package_name}/{var_name}"
+        if knowledge_id not in seen_knowledge_ids:
             continue
 
         # Clamp to [0, 1]
@@ -535,7 +599,7 @@ def _convert_beliefs(
 
         snapshots.append(
             v2.BeliefSnapshot(
-                closure_id=closure_id,
+                knowledge_id=knowledge_id,
                 version=1,
                 belief=belief_value,
                 bp_run_id=bp_run_id,
