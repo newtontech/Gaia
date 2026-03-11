@@ -140,27 +140,42 @@ def infer(
     review_file: str | None = typer.Option(None, "--review", help="Path to review sidecar file"),
 ) -> None:
     """Compile a factor graph (from review) and run BP to compute beliefs."""
+    import uuid
+
+    from cli.infer_store import save_infer_result
+    from cli.manifest import deserialize_package
     from cli.review_store import find_latest_review, merge_review, read_review
-    from libs.lang.compiler import compile_factor_graph
     from libs.inference.bp import BeliefPropagation
     from libs.inference.factor_graph import FactorGraph
+    from libs.lang.compiler import compile_factor_graph
 
     pkg_path = Path(path)
     build_dir = pkg_path / ".gaia" / "build"
     reviews_dir = pkg_path / ".gaia" / "reviews"
+    infer_dir = pkg_path / ".gaia" / "infer"
 
     # 1. Check build exists
     if not build_dir.exists():
         typer.echo(f"Error: no build artifacts found.\nRun 'gaia build {path}' first.", err=True)
         raise typer.Exit(1)
 
-    # 2. Read review file
+    # 2. Load package from manifest.json (falls back to source YAML)
+    manifest_path = build_dir / "manifest.json"
+    if manifest_path.exists():
+        pkg = deserialize_package(manifest_path)
+    else:
+        pkg = _load_with_deps(pkg_path)
+
+    # 3. Read review file
+    resolved_review_file: str | None = None
     try:
         if review_file:
             review = read_review(Path(review_file))
+            resolved_review_file = review_file
         else:
             latest = find_latest_review(reviews_dir)
             review = read_review(latest)
+            resolved_review_file = str(latest)
     except FileNotFoundError:
         typer.echo(
             f"Error: no review file found.\n"
@@ -169,15 +184,14 @@ def infer(
         )
         raise typer.Exit(1)
 
-    # 3. Load package from source YAML, resolve refs, merge review
-    pkg = _load_with_deps(pkg_path)
+    # 4. Merge review into package
     fp = _compute_source_fingerprint(pkg_path)
     pkg = merge_review(pkg, review, source_fingerprint=fp)
 
-    # 4. Compile factor graph
+    # 5. Compile factor graph
     compiled_fg = compile_factor_graph(pkg)
 
-    # 5. Convert to inference engine FactorGraph and run BP
+    # 6. Convert to inference engine FactorGraph and run BP
     bp_fg = FactorGraph()
     name_to_id: dict[str, int] = {}
     for i, (name, prior) in enumerate(compiled_fg.variables.items()):
@@ -199,10 +213,27 @@ def infer(
     bp = BeliefPropagation()
     beliefs = bp.run(bp_fg)
 
-    # 6. Map back to names and output
+    # 7. Map back to names
     id_to_name = {v: k for k, v in name_to_id.items()}
     named_beliefs = {id_to_name[nid]: belief for nid, belief in beliefs.items()}
 
+    # 8. Save infer_result.json
+    bp_run_id = str(uuid.uuid4())
+    variables_out = {
+        name: {"prior": compiled_fg.variables[name], "belief": named_beliefs.get(name)}
+        for name in compiled_fg.variables
+    }
+    save_infer_result(
+        pkg_name=pkg.name,
+        variables=variables_out,
+        factors=compiled_fg.factors,
+        bp_run_id=bp_run_id,
+        review_file=resolved_review_file,
+        source_fingerprint=fp,
+        infer_dir=infer_dir,
+    )
+
+    # 9. Print results
     typer.echo(f"Package: {pkg.name}")
     typer.echo(f"Variables: {len(compiled_fg.variables)}")
     typer.echo(f"Factors: {len(compiled_fg.factors)}")
@@ -211,6 +242,7 @@ def infer(
     for name, belief in sorted(named_beliefs.items()):
         prior = compiled_fg.variables.get(name, "?")
         typer.echo(f"  {name}: prior={prior} -> belief={belief:.4f}")
+    typer.echo(f"\nResults: {infer_dir / 'infer_result.json'}")
 
 
 @app.command()
