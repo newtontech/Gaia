@@ -4,7 +4,7 @@
 |---------|---|
 | 版本 | 4.0 |
 | 日期 | 2026-03-10 |
-| 状态 | **Draft — foundation design** |
+| 状态 | **Superseded — see [publish-pipeline.md](publish-pipeline.md)** |
 | 关联文档 | [../README.md](../README.md), [../cli/command-lifecycle.md](../cli/command-lifecycle.md), [../server/architecture.md](../server/architecture.md), [../language/gaia-language-spec.md](../language/gaia-language-spec.md) |
 
 > **Note:** This document defines the target architecture shared by Gaia CLI and Gaia Server. It does not describe the current implementation on `main` literally. Current code still has a simpler `gaia build`, a local chain-review path, and a legacy server-side `review_pipeline` attached to `/commits/*`.
