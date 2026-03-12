@@ -61,90 +61,82 @@ Graph IR is a **first-class submission artifact**, submitted alongside Gaia Lang
 
 Graph IR is a factor graph — a bipartite graph with two kinds of nodes connected by edges.
 
-### 4.1 Variable Nodes
+### 4.1 Knowledge Nodes (Factor Graph Variable Nodes)
 
-All knowledge objects that carry belief are variable nodes.
+All knowledge objects that carry belief are knowledge nodes. In factor graph theory these are called "variable nodes" — each represents a binary random variable (the proposition is true or false). In Gaia we call them **knowledge nodes** because they always correspond to knowledge objects, and to avoid confusion with the "parameters" (free placeholders) that appear in schema node content.
+
+Knowledge nodes fall into two subcategories:
+
+- **Standard knowledge nodes** — Claim, Setting, Question, Action
+- **Relation nodes** — Contradiction, Equivalence (structural assertions about logical relationships between other knowledge objects, with their own belief)
 
 ```
-VariableNode:
-    canonical_id:    str
-    type:            str              # claim | setting | question | action |
-                                      # contradiction | equivalence | ...
-    content:         str              # node content (may contain free variable placeholders)
-    free_variables:  list[Variable]   # empty = ground, non-empty = schema (∀-quantified)
+KnowledgeNode:
+    canonical_id:    str              # content hash: sha256(knowledge_type + content + sorted(parameters))
+    knowledge_type:  str              # claim | setting | question | action |
+                                      # contradiction | equivalence
+    content:         str              # node content (may contain parameter placeholders like {X})
+    parameters:      list[Parameter]  # empty = ground node, non-empty = schema node (∀-quantified)
     prior:           float
     belief:          float | None     # computed by BP
     source_refs:     list[SourceRef]  # traces back to Gaia Lang source objects
+    metadata:        dict | None      # optional extensible metadata
 
-Variable:
-    name:            str
-    type:            str              # constraint type (claim, setting, ...)
+Parameter:
+    name:            str              # placeholder name, e.g. "A", "X"
+    constraint:      str              # constraint description (includes knowledge type and semantic limits)
 
 SourceRef:
     package:         str
+    version:         str              # package semver, e.g. "1.2.0"
     module:          str
     knowledge_name:  str
 ```
 
-Variable nodes include:
-
-- **Knowledge nodes** — Claim, Setting, Question, Action
-- **Relation nodes** — Contradiction, Equivalence (structural assertions about logical relationships between other knowledge objects, with their own belief)
-
 ### 4.2 Factor Nodes
 
-Factors define constraints between variable nodes. They carry no belief. Each factor is self-contained: it directly references its connected variable nodes.
+Factors define constraints between knowledge nodes. They carry no belief. Each factor is self-contained: it directly references its connected knowledge nodes.
 
 ```
 FactorNode:
     factor_id:              str
     type:                   str              # reasoning | instantiation |
                                              # mutex_constraint | equiv_constraint
-    premises:               list[str]        # canonical_ids of premise variable nodes
-    contexts:               list[str]        # canonical_ids of context variable nodes
-    output:                 str | None       # canonical_id of output variable node (singular)
-    conditional_probability: float | None    # P(output | all premises true)
+    premises:               list[str]        # canonical_ids of premise knowledge nodes
+    contexts:               list[str]        # canonical_ids of context knowledge nodes
+    conclusion:             str              # canonical_id of conclusion knowledge node (singular)
+    conditional_probability: float | None    # P(conclusion | all premises true)
     source_ref:             SourceRef | None
+    metadata:               dict | None      # optional extensible metadata
 ```
 
 **Field semantics:**
 
-- `premises` — variable nodes with strong (direct) dependency. If a premise is false, the output's validity is undermined. Mapped from Gaia Language `dependency: direct`.
-- `contexts` — variable nodes with weak (indirect) dependency. Background knowledge that frames the reasoning but the output can stand without it. Mapped from `dependency: indirect`. Contexts do not create BP edges; their influence is folded into `conditional_probability`.
-- `output` — the single variable node produced or controlled by this factor. For reasoning factors, this is the conclusion. For constraint factors, this is the Relation variable acting as a read-only gate (see [bp-on-graph-ir.md](bp-on-graph-ir.md) §4).
-- `conditional_probability` — the probability that the output is correct, assuming all premises are true. Corresponds to `conditional_prior` from the self-review process (see [review/publish-pipeline.md](review/publish-pipeline.md) §3).
+- `premises` — knowledge nodes with strong (direct) dependency. If a premise is false, the conclusion's validity is undermined. Mapped from Gaia Language `dependency: direct`.
+- `contexts` — knowledge nodes with weak (indirect) dependency. Background knowledge that frames the reasoning but the conclusion can stand without it. Mapped from `dependency: indirect`. Contexts do not create BP edges; their influence is folded into `conditional_probability`.
+- `conclusion` — the single knowledge node produced or controlled by this factor. For reasoning and instantiation factors, this is the reasoning conclusion that receives BP messages normally. For constraint factors (`mutex_constraint`, `equiv_constraint`), this is the Relation knowledge node acting as a read-only gate — BP reads its belief to determine constraint strength but does not send messages back to it (see [bp-on-graph-ir.md](bp-on-graph-ir.md) §4).
+- `conditional_probability` — the probability that the conclusion is correct, assuming all premises are true. Corresponds to `conditional_prior` from the self-review process (see [review/publish-pipeline.md](review/publish-pipeline.md) §3).
 
-### 4.3 Edges
+### 4.3 Factor Types
 
-Edges connect variable nodes to factor nodes (bipartite property). They are an **auxiliary index** for fast lookup from variable → connected factors. The source of truth for topology is FactorNode's `premises`, `contexts`, and `output` fields.
+| Factor type | Generated by | premises | contexts | conclusion | conditional_probability |
+|-------------|-------------|----------|----------|------------|------------------------|
+| `reasoning` | ChainExpr | direct-dep knowledge nodes | indirect-dep knowledge nodes | reasoning conclusion | P(conclusion \| premises true) |
+| `instantiation` | Elaboration | `[schema node]` | `[]` | instance node | None (deterministic) |
+| `mutex_constraint` | Contradiction declaration | constrained claim nodes | `[]` | Contradiction node (read-only gate) | None (use gate belief) |
+| `equiv_constraint` | Equivalence declaration | equated claim nodes | `[]` | Equivalence node (read-only gate) | None (use gate belief) |
 
-```
-Edge:
-    variable:        str              # canonical_id of VariableNode
-    factor:          str              # factor_id of FactorNode
-    role:            str              # premise | context | output
-```
+**Reasoning factor granularity:** one FactorNode per ChainExpr (not per step). A ChainExpr represents one complete reasoning unit from premises to conclusion. Intermediate steps within the chain are internal to the factor and do not appear as separate knowledge nodes. See §6.1 for the generation rule.
 
-### 4.4 Factor Types
+**Constraint factor gate:** for `mutex_constraint` and `equiv_constraint`, the `conclusion` field holds the Relation knowledge node. This node acts as a read-only gate — BP reads its belief to determine constraint strength but does not send messages back to it. The factor type determines the gate semantics. See [bp-on-graph-ir.md](bp-on-graph-ir.md) §4.
 
-| Factor type | Generated by | premises | contexts | output | conditional_probability |
-|-------------|-------------|----------|----------|--------|------------------------|
-| `reasoning` | ChainExpr | direct-dep knowledge vars | indirect-dep knowledge vars | conclusion variable | P(conclusion \| premises true) |
-| `instantiation` | Elaboration | `[schema variable]` | `[]` | instance variable | None (deterministic) |
-| `mutex_constraint` | Contradiction declaration | constrained claim variables | `[]` | Contradiction variable (read-only gate) | None (use gate belief) |
-| `equiv_constraint` | Equivalence declaration | equated claim variables | `[]` | Equivalence variable (read-only gate) | None (use gate belief) |
-
-**Reasoning factor granularity:** one FactorNode per ChainExpr (not per step). A ChainExpr represents one complete reasoning unit from premises to conclusion. Intermediate steps within the chain are internal to the factor and do not appear as separate variable nodes. See §6.1 for the generation rule.
-
-**Constraint factor gate:** for `mutex_constraint` and `equiv_constraint`, the `output` field holds the Relation variable. This variable acts as a read-only gate — BP reads its belief to determine constraint strength but does not send messages back to it. The factor type determines the gate semantics. See [bp-on-graph-ir.md](bp-on-graph-ir.md) §4.
-
-### 4.5 Factor Functions
+### 4.4 Factor Functions
 
 Each factor type defines a potential function. Summary:
 
 | Factor type | Key semantics |
 |-------------|--------------|
-| `reasoning` | All premises true → output follows with `conditional_probability` |
+| `reasoning` | All premises true → conclusion follows with `conditional_probability` |
 | `instantiation` | Deterministic implication: schema=true → instance=true |
 | `mutex_constraint` | Penalizes all contradicted claims being simultaneously true |
 | `equiv_constraint` | Rewards agreement between equated claims |
@@ -155,30 +147,30 @@ For detailed factor function definitions, BP behavior, and gate semantics for Re
 
 ### 5.1 Definition
 
-After `gaia build` elaboration, some knowledge objects may still contain free variables. These represent universally quantified propositions.
+After `gaia build` elaboration, some knowledge objects may still contain unbound parameters (placeholders like `{X}`). These represent universally quantified propositions.
 
-- **Schema node**: `free_variables` is non-empty. Semantics: `∀x. P(x)`.
-- **Ground node**: `free_variables` is empty. Semantics: `P(a)`.
+- **Schema node**: `parameters` is non-empty. Semantics: `∀x. P(x)`.
+- **Ground node**: `parameters` is empty. Semantics: `P(a)`.
 
-A partially instantiated node with k remaining free variables out of n total is also a schema node — it represents `∀x₁...xₖ. P(a₁, ..., aₙ₋ₖ, x₁, ..., xₖ)`.
+A partially instantiated node with k remaining unbound parameters out of n total is also a schema node — it represents `∀x₁...xₖ. P(a₁, ..., aₙ₋ₖ, x₁, ..., xₖ)`.
 
 ### 5.2 Instantiation
 
-Instantiation is the relationship between a schema and its ground instance, produced deterministically by elaboration. It is modeled as a **factor node** (not a variable node) because it carries no uncertainty — if the substitution is correct, the instantiation holds.
+Instantiation is the relationship between a schema and its ground instance, produced deterministically by elaboration. It is modeled as a **factor node** (not a knowledge node) because it carries no uncertainty — if the substitution is correct, the instantiation holds.
 
-Each instantiation factor is **binary** — it connects exactly one schema variable (premise) to one instance variable (output):
+Each instantiation factor is **binary** — it connects exactly one schema node (premise) to one instance node (conclusion):
 
 ```
 V_schema ─── F_instantiation ─── V_partial
-    premises: [V_schema]
-    output:   V_partial
+    premises:   [V_schema]
+    conclusion: V_partial
 
 V_partial ─── F_instantiation ─── V_ground
-    premises: [V_partial]
-    output:   V_ground
+    premises:   [V_partial]
+    conclusion: V_ground
 ```
 
-The deductive direction (schema → instance) is modeled by `premises=[schema], output=instance`. Inductive strengthening (multiple instances supporting the schema) emerges naturally from BP: each instantiation factor sends a backward message to the shared schema node, and BP aggregates these messages at the schema variable.
+The deductive direction (schema → instance) is modeled by `premises=[schema], conclusion=instance`. Inductive strengthening (multiple instances supporting the schema) emerges naturally from BP: each instantiation factor sends a backward message to the shared schema node, and BP aggregates these messages at the schema node.
 
 The instantiation factor's implication semantics ensure:
 
@@ -188,7 +180,7 @@ The instantiation factor's implication semantics ensure:
 
 ### 5.3 All Knowledge Types Can Be Parameterized
 
-Parameters are not limited to Actions. Any knowledge type can have free variables:
+Parameters are not limited to Actions. Any knowledge type can have parameters:
 
 ```
 Schema claim:    "在{X}条件下，{Y}是混淆变量"
@@ -207,19 +199,19 @@ Ground action:   "对亚里士多德假说和真空环境进行对比分析"
 
 ### 6.1 Generation Rules
 
-| Source construct | Variable node(s) generated | Factor node(s) generated |
-|-----------------|---------------------------|--------------------------|
-| Claim, Setting, Question, Action | One knowledge variable node per elaborated object | — |
-| Contradiction declaration | Contradiction variable node | mutex_constraint factor |
-| Equivalence declaration | Equivalence variable node | equiv_constraint factor |
+| Source construct | Knowledge node(s) generated | Factor node(s) generated |
+|-----------------|----------------------------|--------------------------|
+| Claim, Setting, Question, Action | One knowledge node per elaborated object | — |
+| Contradiction declaration | Contradiction knowledge node | mutex_constraint factor |
+| Equivalence declaration | Equivalence knowledge node | equiv_constraint factor |
 | ChainExpr | — | One reasoning factor per ChainExpr |
 | Elaboration instantiation | — | One instantiation factor per schema→instance pair |
 
 ### 6.2 Build-Time Merge
 
-Only one case merges at build time: **content hash identity**. If two elaborated knowledge objects produce byte-identical content after elaboration, they map to the same variable node with combined `source_refs`.
+Only one case merges at build time: **content hash identity**. If two elaborated knowledge objects produce byte-identical content after elaboration, they map to the same knowledge node with combined `source_refs`.
 
-Equivalence declarations are NOT merged at build time. They become Equivalence variable nodes + equiv_constraint factors in the raw Graph IR. Whether to merge the equated nodes is an agent or review engine judgment.
+Equivalence declarations are NOT merged at build time. They become Equivalence knowledge nodes + equiv_constraint factors in the raw Graph IR. Whether to merge the equated nodes is an agent or review engine judgment.
 
 ### 6.3 Build Output
 
@@ -233,28 +225,28 @@ Equivalence declarations are NOT merged at build time. They become Equivalence v
 
 | Operation | Condition | Result |
 |-----------|-----------|--------|
-| Generate variable nodes | Each elaborated knowledge object | 1:1 mapping |
-| Generate reasoning factors | Each ChainExpr | One factor: premises (direct deps) + contexts (indirect deps) → output (conclusion) |
-| Generate instantiation factors | Each schema→instance pair from elaboration | Binary factor: premises=[schema] → output=instance |
-| Generate Relation node + constraint factor | Relation declaration | Preserve as variable node + factor pair |
+| Generate knowledge nodes | Each elaborated knowledge object | 1:1 mapping |
+| Generate reasoning factors | Each ChainExpr | One factor: premises (direct deps) + contexts (indirect deps) → conclusion |
+| Generate instantiation factors | Each schema→instance pair from elaboration | Binary factor: premises=[schema] → conclusion=instance |
+| Generate Relation node + constraint factor | Relation declaration | Preserve as knowledge node + factor pair |
 | Content hash merge | Byte-identical elaborated content | Merge nodes, combine source_refs |
 
 ### 7.2 Layer 2: Semantic (agent canonicalization skill)
 
-The agent receives raw Graph IR and performs semantic canonicalization. The only permitted operation is **merging semantically equivalent variable nodes**.
+The agent receives raw Graph IR and performs semantic canonicalization. The only permitted operation is **merging semantically equivalent knowledge nodes**.
 
 What the agent does:
 
-1. Examine variable nodes in the raw Graph IR
+1. Examine knowledge nodes in the raw Graph IR
 2. Identify nodes expressing the same proposition despite different content (different languages, editorial variants, synonymous phrasing)
-3. Merge identified equivalent nodes: combine `source_refs`, redirect factor edges to the surviving node
-4. For Equivalence variable nodes: if confident they hold, merge the equated nodes and remove the Equivalence node + factor pair; if uncertain, leave them in the Graph IR for BP
+3. Merge identified equivalent nodes: combine `source_refs`, redirect factor references to the surviving node
+4. For Equivalence knowledge nodes: if confident they hold, merge the equated nodes and remove the Equivalence node + factor pair; if uncertain, leave them in the Graph IR for BP
 5. Record every merge judgment in a canonicalization log
 
 What the agent does NOT do:
 
 - Create new nodes
-- Create new factor nodes or edges
+- Create new factor nodes
 - Modify factor graph topology beyond node merging
 - Change priors or beliefs
 
@@ -279,9 +271,9 @@ canonicalization_log:
 
 ### 7.3 Layer 3: Global (review engine, after gaia publish)
 
-The review engine uses the package's canonical variable nodes to search the global graph:
+The review engine uses the package's canonical knowledge nodes to search the global graph:
 
-1. Embed each canonical variable node
+1. Embed each canonical knowledge node
 2. Search existing global graph for high-similarity matches
 3. Generate findings: duplicate, conflict, missing_ref, equivalence candidates
 4. Agent responds via rebuttal cycle (accept → declare relationship, or rebuttal → explain difference)
@@ -314,7 +306,7 @@ The review engine evaluates each merge in the canonicalization log:
 
 **Layer 3: Global matching**
 
-The review engine uses canonical variable nodes to search the global graph for duplicates, conflicts, and missing references. Findings follow the standard review → rebuttal → editor cycle per [publish-pipeline.md](review/publish-pipeline.md).
+The review engine uses canonical knowledge nodes to search the global graph for duplicates, conflicts, and missing references. Findings follow the standard review → rebuttal → editor cycle per [publish-pipeline.md](review/publish-pipeline.md).
 
 ### 8.3 Verification Severity
 
@@ -344,7 +336,7 @@ For full details on factor functions, gate semantics for Relations, schema/groun
 | Publish artifact | Source only | Source + Graph IR + canonicalization log |
 | Review scope | Source review only | Source + IR correspondence + canonicalization audit |
 | Node identity | int (FactorGraph) or name string (CompiledFactorGraph) | canonical_id with source_refs |
-| Schema/ground | Not distinguished | Explicit via free_variables + instantiation factors |
+| Schema/ground | Not distinguished | Explicit via parameters + instantiation factors |
 
 ### 10.2 What Does NOT Change
 
@@ -385,9 +377,8 @@ After:
 ## 11. Open Questions
 
 1. **Graph IR serialization format** — JSON is natural for factor graph structure; YAML for human readability. Binary formats for performance.
-2. **Canonical ID generation** — content hash, UUID, or composite key. Must be stable across re-builds for unchanged content.
-3. **Free variable placeholder syntax** — how to consistently represent `{X}` placeholders in content strings across packages.
-4. **Factor function parameterization** — are factor functions fixed per type, or configurable per package?
-5. **Graph IR schema versioning** — version marker for the IR format itself.
-6. **Incremental build** — can `gaia build` incrementally update Graph IR when only some modules change?
-7. **Global graph storage** — how the global graph (merged canonical nodes from all packages) is stored and indexed. Extends storage-schema.md.
+2. **Parameter placeholder syntax** — how to consistently represent `{X}` placeholders in content strings across packages.
+3. **Factor function parameterization** — are factor functions fixed per type, or configurable per package?
+4. **Graph IR schema versioning** — version marker for the IR format itself.
+5. **Incremental build** — can `gaia build` incrementally update Graph IR when only some modules change?
+6. **Global graph storage** — how the global graph (merged canonical nodes from all packages) is stored and indexed. Extends storage-schema.md.
