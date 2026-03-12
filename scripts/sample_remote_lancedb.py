@@ -73,7 +73,9 @@ def main():
 
     for topic in TOPICS:
         print(f"\n=== {topic} ===")
-        edges = edges_tbl.search().where(f"metadata.location LIKE '{topic}/%'").limit(5000).to_list()
+        edges = (
+            edges_tbl.search().where(f"metadata.location LIKE '{topic}/%'").limit(5000).to_list()
+        )
         print(f"  edges: {len(edges)}")
 
         topic_node_ids = set()
@@ -87,7 +89,12 @@ def main():
 
         if topic_node_ids:
             id_str = ",".join(str(n) for n in topic_node_ids)
-            nodes = nodes_tbl.search().where(f"id IN ({id_str})").limit(len(topic_node_ids) + 100).to_list()
+            nodes = (
+                nodes_tbl.search()
+                .where(f"id IN ({id_str})")
+                .limit(len(topic_node_ids) + 100)
+                .to_list()
+            )
             print(f"  nodes fetched: {len(nodes)}")
             all_nodes.extend(nodes)
             all_node_ids.update(topic_node_ids)
@@ -96,7 +103,9 @@ def main():
 
         edge_ids = {e["id"] for e in edges}
         eid_str = ",".join(str(e) for e in edge_ids)
-        graph_entries = graph_tbl.search().where(f"edge_id IN ({eid_str})").limit(len(edge_ids) + 100).to_list()
+        graph_entries = (
+            graph_tbl.search().where(f"edge_id IN ({eid_str})").limit(len(edge_ids) + 100).to_list()
+        )
         print(f"  graph entries: {len(graph_entries)}")
         all_graph.extend(graph_entries)
 
@@ -107,7 +116,9 @@ def main():
     for i in range(0, len(batch_ids), 500):
         batch = batch_ids[i : i + 500]
         id_str = ",".join(str(n) for n in batch)
-        results = node_rel_tbl.search().where(f"node_id IN ({id_str})").limit(len(batch) + 100).to_list()
+        results = (
+            node_rel_tbl.search().where(f"node_id IN ({id_str})").limit(len(batch) + 100).to_list()
+        )
         node_rels.extend(results)
     print(f"  fetched: {len(node_rels)}")
 

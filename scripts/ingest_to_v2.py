@@ -101,9 +101,7 @@ class PaperXMLSource(Source):
                 for ref in el.findall("ref"):
                     ref_text = ref.text or ""
                     text = text.replace(ref_text, "").strip()
-                premises.append(
-                    {"id": el.get("id"), "title": el.get("title", ""), "content": text}
-                )
+                premises.append({"id": el.get("id"), "title": el.get("title", ""), "content": text})
 
         steps = []
         for s in root.findall(".//reasoning/step"):
@@ -140,9 +138,7 @@ class PaperXMLSource(Source):
                     kid = f"{slug}/{self._slugify(title)}"
                     all_premises[title] = {**p, "knowledge_id": kid}
                 local_id_to_global[p["id"]] = all_premises[title]["knowledge_id"]
-            chain_data.append(
-                {"index": i, "parsed": parsed, "local_to_global": local_id_to_global}
-            )
+            chain_data.append({"index": i, "parsed": parsed, "local_to_global": local_id_to_global})
 
         knowledge_items = []
         for _title, p in all_premises.items():
@@ -282,8 +278,7 @@ class PaperXMLSource(Source):
                 print(f"  SKIP {paper_dir.name}: no combine XMLs found")
                 continue
             print(
-                f"  OK {paper_dir.name}: "
-                f"{len(data.knowledge)} knowledge, {len(data.chains)} chains"
+                f"  OK {paper_dir.name}: {len(data.knowledge)} knowledge, {len(data.chains)} chains"
             )
             results.append(data)
         return results
@@ -389,9 +384,7 @@ class RemoteLanceDBSource(Source):
 
                 vec = embeddings_raw.get(str(nid))
                 if vec:
-                    embeddings.append(
-                        {"knowledge_id": kid, "version": 1, "embedding": vec}
-                    )
+                    embeddings.append({"knowledge_id": kid, "version": 1, "embedding": vec})
 
             # Chains
             chains = []
@@ -515,10 +508,7 @@ class RemoteLanceDBSource(Source):
                 for k in knowledge_items
             ]
 
-            print(
-                f"  OK {topic}: "
-                f"{len(knowledge_items)} knowledge, {len(chains)} chains"
-            )
+            print(f"  OK {topic}: {len(knowledge_items)} knowledge, {len(chains)} chains")
             results.append(
                 V2PackageData(
                     package=package,
@@ -557,9 +547,7 @@ def save_package(pkg_data: V2PackageData, out_dir: Path) -> None:
         ("probabilities", pkg_data.probabilities),
         ("beliefs", pkg_data.beliefs),
     ]:
-        (pkg_dir / f"{name}.json").write_text(
-            json.dumps(data, indent=2, ensure_ascii=False)
-        )
+        (pkg_dir / f"{name}.json").write_text(json.dumps(data, indent=2, ensure_ascii=False))
 
     if pkg_data.embeddings:
         (pkg_dir / "embeddings.json").write_text(
@@ -580,8 +568,7 @@ def validate_package(pkg_dir: Path) -> None:
         for p in json.loads((pkg_dir / "probabilities.json").read_text())
     ]
     beliefs = [
-        BeliefSnapshot.model_validate(b)
-        for b in json.loads((pkg_dir / "beliefs.json").read_text())
+        BeliefSnapshot.model_validate(b) for b in json.loads((pkg_dir / "beliefs.json").read_text())
     ]
     print(
         f"  ✓ {pkg_dir.name}: {pkg.package_id} "

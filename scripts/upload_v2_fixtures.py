@@ -60,9 +60,9 @@ def load_fixture(fixtures_dir: Path, slug: str) -> dict:
     emb_path = d / "embeddings.json"
     if emb_path.exists():
         from libs.storage_v2.models import KnowledgeEmbedding
+
         data["embeddings"] = [
-            KnowledgeEmbedding.model_validate(e)
-            for e in json.loads(emb_path.read_text())
+            KnowledgeEmbedding.model_validate(e) for e in json.loads(emb_path.read_text())
         ]
     else:
         data["embeddings"] = []
