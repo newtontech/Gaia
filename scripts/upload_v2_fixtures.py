@@ -185,13 +185,20 @@ async def main() -> None:
     # Graph topology sample (if available)
     if mgr.graph_store is not None:
         print_section("Graph Topology Sample")
-        sample_kid = data["knowledge"][0].knowledge_id
-        sub = await mgr.get_subgraph(sample_kid, max_knowledge=20)
-        print(f"  Subgraph from {sample_kid}:")
-        print(f"    knowledge_ids: {len(sub.knowledge_ids)}")
-        print(f"    chain_ids    : {len(sub.chain_ids)}")
-        for kid in sorted(sub.knowledge_ids)[:10]:
-            print(f"      • {kid}")
+        # Use a conclusion node as seed — it connects to more premises via chains
+        for slug in slugs:
+            data = load_fixture(slug)
+            if not data["chains"]:
+                continue
+            # Pick the conclusion of the first chain (richest connectivity)
+            first_chain = data["chains"][0]
+            sample_kid = first_chain.steps[-1].conclusion.knowledge_id
+            sub = await mgr.get_subgraph(sample_kid, max_knowledge=50)
+            print(f"\n  [{slug}] Subgraph from {sample_kid}:")
+            print(f"    knowledge_ids: {len(sub.knowledge_ids)}")
+            print(f"    chain_ids    : {len(sub.chain_ids)}")
+            for kid in sorted(sub.knowledge_ids):
+                print(f"      • {kid}")
 
     await mgr.close()
     print("\n✓ Done.")
