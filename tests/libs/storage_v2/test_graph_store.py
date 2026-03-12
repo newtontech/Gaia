@@ -299,6 +299,45 @@ class TestWriteResourceLinks:
         )
         assert result.get_next()[0] == 0
 
+    async def test_module_and_package_attachments_skipped(
+        self, graph_store, knowledge_items, chains
+    ):
+        """Attachments with target_type 'module' or 'package' should be silently skipped."""
+        await graph_store.write_topology(knowledge_items, chains)
+        atts = [
+            ResourceAttachment(
+                resource_id="res_mod",
+                target_type="module",
+                target_id="some_module",
+                role="supplement",
+            ),
+            ResourceAttachment(
+                resource_id="res_pkg",
+                target_type="package",
+                target_id="some_package",
+                role="supplement",
+            ),
+        ]
+        await graph_store.write_resource_links(atts)
+        # No resources should be created for module/package targets
+        result = graph_store._execute("MATCH (r:Resource) RETURN COUNT(r)")
+        assert result.get_next()[0] == 0
+
+    async def test_chain_attachment_direct(self, graph_store, knowledge_items, chains):
+        """Attachment with target_type='chain' creates link to chain node."""
+        await graph_store.write_topology(knowledge_items, chains)
+        att = ResourceAttachment(
+            resource_id="res_chain",
+            target_type="chain",
+            target_id=chains[0].chain_id,
+            role="evidence",
+        )
+        await graph_store.write_resource_links([att])
+        result = graph_store._execute(
+            "MATCH (r:Resource)-[a:ATTACHED_TO]->(ch:Chain) RETURN COUNT(a)"
+        )
+        assert result.get_next()[0] == 1
+
 
 # ── update_beliefs ──
 

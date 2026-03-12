@@ -56,6 +56,7 @@ def convert_to_v2(
         and belief snapshots.
     """
     now = datetime.now(timezone.utc)
+    pkg_version = pkg.version or "0.1.0"
 
     # 1. Package -> v2.Package
     v2_package = _convert_package(pkg, now)
@@ -72,7 +73,7 @@ def convert_to_v2(
     # 3. Modules -> v2.Module[]
     v2_modules = []
     for mod in pkg.loaded_modules:
-        v2_mod = _convert_module(pkg.name, mod)
+        v2_mod = _convert_module(pkg.name, mod, pkg_version)
         v2_modules.append(v2_mod)
 
     # 4. Knowledge -> v2.Knowledge[] (deduped)
@@ -102,6 +103,7 @@ def convert_to_v2(
                 actual=actual,
                 knowledge_id=knowledge_id,
                 package_id=pkg.name,
+                package_version=pkg_version,
                 module_id=f"{pkg.name}.{origin_module}",
                 now=now,
             )
@@ -119,6 +121,7 @@ def convert_to_v2(
                     chain=decl,
                     module_name=mod.name,
                     package_name=pkg.name,
+                    package_version=pkg_version,
                     decls_by_name=decls_by_name,
                     pkg=pkg,
                     module_decl_index=module_decl_index,
@@ -136,6 +139,7 @@ def convert_to_v2(
                     rel=decl,
                     module_name=mod.name,
                     package_name=pkg.name,
+                    package_version=pkg_version,
                     decls_by_name=decls_by_name,
                     pkg=pkg,
                     module_decl_index=module_decl_index,
@@ -252,12 +256,13 @@ _MODULE_ROLE_MAP: dict[str, str] = {
 }
 
 
-def _convert_module(package_name: str, mod: Module) -> v2.Module:
+def _convert_module(package_name: str, mod: Module, package_version: str) -> v2.Module:
     """Convert Language Module to v2.Module."""
     role = _MODULE_ROLE_MAP.get(mod.type, "other")
     return v2.Module(
         module_id=f"{package_name}.{mod.name}",
         package_id=package_name,
+        package_version=package_version,
         name=mod.name,
         role=role,
     )
@@ -278,6 +283,7 @@ def _convert_knowledge(
     actual: Knowledge,
     knowledge_id: str,
     package_id: str,
+    package_version: str,
     module_id: str,
     now: datetime,
 ) -> v2.Knowledge:
@@ -297,6 +303,7 @@ def _convert_knowledge(
         prior=prior,
         keywords=[],
         source_package_id=package_id,
+        source_package_version=package_version,
         source_module_id=module_id,
         created_at=now,
     )
@@ -335,6 +342,7 @@ def _convert_chain_expr(
     chain: ChainExpr,
     module_name: str,
     package_name: str,
+    package_version: str,
     decls_by_name: dict[str, tuple[Knowledge, str]],
     pkg: Package,
     module_decl_index: dict[str, dict[str, Knowledge]],
@@ -472,6 +480,7 @@ def _convert_chain_expr(
         chain_id=chain_id,
         module_id=module_id,
         package_id=package_name,
+        package_version=package_version,
         type=edge_type,
         steps=v2_steps,
     )
@@ -481,6 +490,7 @@ def _convert_relation_to_chain(
     rel: Relation,
     module_name: str,
     package_name: str,
+    package_version: str,
     decls_by_name: dict[str, tuple[Knowledge, str]],
     pkg: Package,
     module_decl_index: dict[str, dict[str, Knowledge]],
@@ -521,6 +531,7 @@ def _convert_relation_to_chain(
         chain_id=chain_id,
         module_id=module_id,
         package_id=package_name,
+        package_version=package_version,
         type=rel_type,
         steps=[
             v2.ChainStep(

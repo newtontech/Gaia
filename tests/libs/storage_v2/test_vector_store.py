@@ -169,3 +169,17 @@ class TestSearch:
         await vector_store.write_embeddings(_make_items(dim=8))
         with pytest.raises(ValueError, match="does not match stored dimension"):
             await vector_store.search(_make_embedding(4, 0.1), top_k=5)
+
+
+class TestTableReload:
+    async def test_new_store_loads_existing_table(self, tmp_path):
+        """A fresh LanceVectorStore on existing DB should discover the table."""
+        db_path = str(tmp_path / "lance_reload")
+        store1 = LanceVectorStore(db_path)
+        await store1.write_embeddings(_make_items(dim=8))
+
+        # Create a new store instance pointing at the same path
+        store2 = LanceVectorStore(db_path)
+        results = await store2.search(_make_embedding(8, 0.1), top_k=3)
+        assert len(results) == 3
+        assert store2._dim == 8

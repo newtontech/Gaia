@@ -1,4 +1,4 @@
-"""KuzuGraphStore — embedded graph backend using Kùzu.
+"""KuzuGraphStore — embedded graph backend using Kuzu.
 
 Graph model (from docs/foundations/server/storage-schema.md §3.2):
 
@@ -18,7 +18,7 @@ only ``knowledge_id`` match all versions via the ``knowledge_id`` property.
 Probability is stored per (chain_id, step_index) on CONCLUSION relationships,
 not as a single scalar on the Chain node, preserving step-level granularity.
 
-Kùzu's Python API is synchronous; we wrap calls in async methods.
+Kuzu's Python API is synchronous; we wrap calls in async methods.
 """
 
 from __future__ import annotations
@@ -73,9 +73,9 @@ def _knowledge_vid(knowledge_id: str, version: int) -> str:
 
 
 class KuzuGraphStore(GraphStore):
-    """Graph topology backend backed by an embedded Kùzu database.
+    """Graph topology backend backed by an embedded Kuzu database.
 
-    Kùzu's Python API is synchronous, so all public methods offload work to
+    Kuzu's Python API is synchronous, so all public methods offload work to
     a thread via ``asyncio.run_in_executor``.
     """
 
@@ -336,7 +336,7 @@ class KuzuGraphStore(GraphStore):
         """BFS expansion from a knowledge item through chains, returning discovered IDs.
 
         Matches all versions of the given ``knowledge_id``.  One "knowledge hop"
-        = Knowledge → Chain → Knowledge (two graph hops).
+        = Knowledge -> Chain -> Knowledge (two graph hops).
         """
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
@@ -609,7 +609,7 @@ class KuzuGraphStore(GraphStore):
     # ── Lifecycle ──
 
     async def close(self) -> None:
-        """Release the Kùzu connection (idempotent)."""
+        """Release the Kuzu connection (idempotent)."""
         if self._conn is not None:
             self._conn.close()
             self._conn = None

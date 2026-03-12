@@ -61,8 +61,23 @@ class TestWritePackage:
         assert all_modules_table.count_rows() == 2  # 2 unique modules, not 4
 
 
+class TestWriteEmptyInputs:
+    async def test_write_knowledge_empty(self, content_store):
+        await content_store.write_knowledge([])  # should not raise
+
+    async def test_write_chains_empty(self, content_store):
+        await content_store.write_chains([])  # should not raise
+
+    async def test_write_probabilities_empty(self, content_store):
+        await content_store.write_probabilities([])  # should not raise
+
+    async def test_write_belief_snapshots_empty(self, content_store):
+        await content_store.write_belief_snapshots([])  # should not raise
+
+
 class TestWriteKnowledge:
-    async def test_write_and_get_knowledge(self, content_store, knowledge_items):
+    async def test_write_and_get_knowledge(self, content_store, packages, modules, knowledge_items):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_knowledge(knowledge_items)
         c = await content_store.get_knowledge(
             "galileo_falling_bodies.reasoning.heavier_falls_faster"
@@ -70,7 +85,8 @@ class TestWriteKnowledge:
         assert c is not None
         assert c.prior == pytest.approx(0.3)
 
-    async def test_get_latest_version(self, content_store, knowledge_items):
+    async def test_get_latest_version(self, content_store, packages, modules, knowledge_items):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_knowledge(knowledge_items)
         v2 = knowledge_items[0].model_copy(update={"version": 2, "content": "updated content"})
         await content_store.write_knowledge([v2])
@@ -79,7 +95,8 @@ class TestWriteKnowledge:
         assert latest.version == 2
         assert latest.content == "updated content"
 
-    async def test_get_specific_version(self, content_store, knowledge_items):
+    async def test_get_specific_version(self, content_store, packages, modules, knowledge_items):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_knowledge(knowledge_items)
         c = await content_store.get_knowledge(knowledge_items[0].knowledge_id, version=1)
         assert c is not None
@@ -89,7 +106,17 @@ class TestWriteKnowledge:
         c = await content_store.get_knowledge("nonexistent")
         assert c is None
 
-    async def test_get_knowledge_versions(self, content_store, knowledge_items):
+    async def test_get_nonexistent_specific_version(
+        self, content_store, packages, modules, knowledge_items
+    ):
+        """get_knowledge with a specific version that doesn't exist should return None."""
+        await content_store.write_package(packages[0], modules)
+        await content_store.write_knowledge(knowledge_items)
+        c = await content_store.get_knowledge(knowledge_items[0].knowledge_id, version=999)
+        assert c is None
+
+    async def test_get_knowledge_versions(self, content_store, packages, modules, knowledge_items):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_knowledge(knowledge_items)
         v2 = knowledge_items[0].model_copy(update={"version": 2})
         await content_store.write_knowledge([v2])
@@ -98,15 +125,34 @@ class TestWriteKnowledge:
         assert versions[0].version == 1
         assert versions[1].version == 2
 
-    async def test_skip_duplicate_knowledge(self, content_store, knowledge_items):
+    async def test_skip_duplicate_knowledge(
+        self, content_store, packages, modules, knowledge_items
+    ):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_knowledge(knowledge_items)
         await content_store.write_knowledge(knowledge_items)
         versions = await content_store.get_knowledge_versions(knowledge_items[0].knowledge_id)
         assert len(versions) == 1
 
+    async def test_write_knowledge_upsert_updates_content(
+        self, content_store, packages, modules, knowledge_items
+    ):
+        """Writing the same (knowledge_id, version) twice should update, not duplicate."""
+        await content_store.write_package(packages[0], modules)
+        await content_store.write_knowledge(knowledge_items)
+        updated = knowledge_items[0].model_copy(update={"content": "updated via upsert"})
+        await content_store.write_knowledge([updated])
+        k = await content_store.get_knowledge(knowledge_items[0].knowledge_id, version=1)
+        assert k is not None
+        assert k.content == "updated via upsert"
+        # No duplicates
+        versions = await content_store.get_knowledge_versions(knowledge_items[0].knowledge_id)
+        assert len(versions) == 1
+
 
 class TestWriteChains:
-    async def test_write_and_get_chains_by_module(self, content_store, chains):
+    async def test_write_and_get_chains_by_module(self, content_store, packages, modules, chains):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_chains(chains)
         result = await content_store.get_chains_by_module("galileo_falling_bodies.reasoning")
         assert len(result) == 2
@@ -114,7 +160,8 @@ class TestWriteChains:
         assert "galileo_falling_bodies.reasoning.contradiction_chain" in chain_ids
         assert "galileo_falling_bodies.reasoning.verdict_chain" in chain_ids
 
-    async def test_chain_steps_roundtrip(self, content_store, chains):
+    async def test_chain_steps_roundtrip(self, content_store, packages, modules, chains):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_chains(chains)
         result = await content_store.get_chains_by_module("galileo_falling_bodies.reasoning")
         verdict = next(c for c in result if "verdict" in c.chain_id)
@@ -212,8 +259,11 @@ class TestResources:
 
 
 class TestDeletePackage:
-    async def test_delete_package_removes_all_data(self, content_store, knowledge_items, chains):
+    async def test_delete_package_removes_all_data(
+        self, content_store, packages, modules, knowledge_items, chains
+    ):
         """delete_package should remove knowledge, chains, and related records."""
+        await content_store.write_package(packages[0], modules)
         await content_store.write_knowledge(knowledge_items)
         await content_store.write_chains(chains)
 
@@ -276,19 +326,24 @@ class TestDeletePackage:
 
 
 class TestBM25Search:
-    async def test_search_finds_relevant_knowledge(self, content_store, knowledge_items):
+    async def test_search_finds_relevant_knowledge(
+        self, content_store, packages, modules, knowledge_items
+    ):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_knowledge(knowledge_items)
         results = await content_store.search_bm25("heavier objects fall faster", top_k=5)
         assert len(results) >= 1
         ids = [r.knowledge.knowledge_id for r in results]
         assert any("heavier" in kid for kid in ids)
 
-    async def test_search_respects_top_k(self, content_store, knowledge_items):
+    async def test_search_respects_top_k(self, content_store, packages, modules, knowledge_items):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_knowledge(knowledge_items)
         results = await content_store.search_bm25("falls", top_k=2)
         assert len(results) <= 2
 
-    async def test_search_returns_scores(self, content_store, knowledge_items):
+    async def test_search_returns_scores(self, content_store, packages, modules, knowledge_items):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_knowledge(knowledge_items)
         results = await content_store.search_bm25("experiment", top_k=5)
         if results:
@@ -300,12 +355,14 @@ class TestBM25Search:
 
 
 class TestBPBulkLoad:
-    async def test_list_knowledge(self, content_store, knowledge_items):
+    async def test_list_knowledge(self, content_store, packages, modules, knowledge_items):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_knowledge(knowledge_items)
         result = await content_store.list_knowledge()
         assert len(result) == 6
 
-    async def test_list_chains(self, content_store, chains):
+    async def test_list_chains(self, content_store, packages, modules, chains):
+        await content_store.write_package(packages[0], modules)
         await content_store.write_chains(chains)
         result = await content_store.list_chains()
         assert len(result) == 2
@@ -375,3 +432,108 @@ class TestFullFixtureRoundtrip:
             "knowledge", "galileo_falling_bodies.reasoning.contradiction_result"
         )
         assert len(res) == 1
+
+
+class TestCommitPackage:
+    async def test_commit_flips_status(self, content_store, packages, modules):
+        pkg = packages[0].model_copy(update={"status": "preparing"})
+        await content_store.write_package(pkg, modules)
+        # Preparing package is invisible to get_package
+        p = await content_store.get_package(pkg.package_id)
+        assert p is None
+
+        await content_store.commit_package(pkg.package_id, pkg.version)
+        p = await content_store.get_package(pkg.package_id)
+        assert p is not None
+        assert p.status == "merged"
+
+    async def test_get_committed_packages(self, content_store, packages, modules):
+        # Write one committed, one preparing
+        pkg1 = packages[0]  # status="merged"
+        await content_store.write_package(pkg1, modules)
+
+        pkg2 = packages[0].model_copy(update={"package_id": "preparing_pkg", "status": "preparing"})
+        await content_store.write_package(pkg2, [])
+
+        committed = await content_store.get_committed_packages()
+        assert (pkg1.package_id, pkg1.version) in committed
+        assert ("preparing_pkg", pkg2.version) not in committed
+
+
+class TestVisibilityGate:
+    async def test_preparing_package_invisible_to_get_package(
+        self, content_store, packages, modules
+    ):
+        pkg = packages[0].model_copy(update={"status": "preparing"})
+        await content_store.write_package(pkg, [])
+        assert await content_store.get_package(pkg.package_id) is None
+
+    async def test_preparing_knowledge_invisible_to_get(
+        self, content_store, packages, knowledge_items
+    ):
+        # Write a preparing package
+        pkg = packages[0].model_copy(update={"status": "preparing"})
+        await content_store.write_package(pkg, [])
+        # Write knowledge belonging to that preparing package
+        await content_store.write_knowledge(knowledge_items)
+        # Knowledge should be invisible
+        assert await content_store.get_knowledge(knowledge_items[0].knowledge_id) is None
+
+    async def test_preparing_knowledge_invisible_to_search(
+        self, content_store, packages, knowledge_items
+    ):
+        pkg = packages[0].model_copy(update={"status": "preparing"})
+        await content_store.write_package(pkg, [])
+        k = knowledge_items[0].model_copy(update={"content": "unique_invisible_content_xyz"})
+        await content_store.write_knowledge([k])
+        results = await content_store.search_bm25("unique_invisible_content_xyz", top_k=5)
+        assert all(r.knowledge.knowledge_id != k.knowledge_id for r in results)
+
+    async def test_committed_knowledge_visible(
+        self, content_store, packages, modules, knowledge_items
+    ):
+        await content_store.write_package(packages[0], modules)  # status="merged"
+        await content_store.write_knowledge(knowledge_items)
+        k = await content_store.get_knowledge(knowledge_items[0].knowledge_id)
+        assert k is not None
+
+    async def test_list_knowledge_excludes_preparing(
+        self, content_store, packages, modules, knowledge_items
+    ):
+        # Write committed package data
+        await content_store.write_package(packages[0], modules)
+        await content_store.write_knowledge(knowledge_items)
+        # Write knowledge for invisible package
+        invisible_k = knowledge_items[0].model_copy(
+            update={"source_package_id": "invisible_pkg", "knowledge_id": "invisible.k"}
+        )
+        await content_store.write_knowledge([invisible_k])
+        all_k = await content_store.list_knowledge()
+        assert all(ki.knowledge_id != "invisible.k" for ki in all_k)
+
+    async def test_list_chains_excludes_preparing(self, content_store, packages, modules, chains):
+        await content_store.write_package(packages[0], modules)
+        await content_store.write_chains(chains)
+        # Add a chain for invisible package
+        invisible_chain = chains[0].model_copy(
+            update={"package_id": "invisible_pkg", "chain_id": "invisible.chain"}
+        )
+        await content_store.write_chains([invisible_chain])
+        all_c = await content_store.list_chains()
+        assert all(c.chain_id != "invisible.chain" for c in all_c)
+
+    async def test_get_module_excludes_preparing(self, content_store, packages, modules):
+        # Write preparing package with modules
+        pkg = packages[0].model_copy(update={"status": "preparing"})
+        await content_store.write_package(pkg, modules)
+        mod = await content_store.get_module(modules[0].module_id)
+        assert mod is None
+
+    async def test_get_chains_by_module_excludes_preparing(
+        self, content_store, packages, modules, chains
+    ):
+        pkg = packages[0].model_copy(update={"status": "preparing"})
+        await content_store.write_package(pkg, modules)
+        await content_store.write_chains(chains)
+        result = await content_store.get_chains_by_module(chains[0].module_id)
+        assert len(result) == 0

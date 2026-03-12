@@ -298,8 +298,8 @@ async def _publish_local(pkg_path: Path, db_path: str) -> None:
     from cli.lang_to_v2 import convert_to_v2
     from cli.manifest import deserialize_package
     from cli.review_store import find_latest_review, read_review
-    from libs.storage_v2.kuzu_graph_store import KuzuGraphStore
-    from libs.storage_v2.lance_content_store import LanceContentStore
+    from libs.storage_v2.config import StorageConfig
+    from libs.storage_v2.manager import StorageManager
 
     build_dir = pkg_path / ".gaia" / "build"
     reviews_dir = pkg_path / ".gaia" / "reviews"
@@ -341,32 +341,48 @@ async def _publish_local(pkg_path: Path, db_path: str) -> None:
         bp_run_id=infer_result.get("bp_run_id", "unknown"),
     )
 
-    # 4. Initialize v2 stores
-    content = LanceContentStore(db_path)
-    await content.initialize()
-    graph = KuzuGraphStore(f"{db_path}/kuzu")
-    await graph.initialize_schema()
+    # 4. Generate embeddings for knowledge items
+    from libs.embedding import StubEmbeddingModel
+    from libs.storage_v2.models import KnowledgeEmbedding
 
-    # 5. Idempotent cleanup
-    await content.delete_package(data.package.package_id)
-    await graph.delete_package(data.package.package_id)
+    embed_model = StubEmbeddingModel(dim=512)
+    texts = [k.content for k in data.knowledge_items]
+    vectors = await embed_model.embed(texts) if texts else []
+    embeddings = [
+        KnowledgeEmbedding(
+            knowledge_id=k.knowledge_id,
+            version=k.version,
+            embedding=vec,
+        )
+        for k, vec in zip(data.knowledge_items, vectors)
+    ]
 
-    # 6. Write to LanceDB
-    await content.write_knowledge(data.knowledge_items)
-    await content.write_chains(data.chains)
-    await content.write_package(data.package, data.modules)
-    if data.probabilities:
-        await content.write_probabilities(data.probabilities)
-    if data.belief_snapshots:
-        await content.write_belief_snapshots(data.belief_snapshots)
+    # 5. Initialize v2 stores via StorageManager
+    config = StorageConfig(
+        lancedb_path=db_path,
+        graph_backend="kuzu",
+        kuzu_path=f"{db_path}/kuzu",
+    )
+    mgr = StorageManager(config)
+    await mgr.initialize()
 
-    # 7. Write to Kuzu
-    await graph.write_topology(data.knowledge_items, data.chains)
-    if data.probabilities:
-        for record in data.probabilities:
-            await graph.update_probability(record.chain_id, record.step_index, record.value)
-    if data.belief_snapshots:
-        await graph.update_beliefs(data.belief_snapshots)
+    try:
+        # 6. Ingest (state machine handles preparing → committed)
+        await mgr.ingest_package(
+            package=data.package,
+            modules=data.modules,
+            knowledge_items=data.knowledge_items,
+            chains=data.chains,
+            embeddings=embeddings,
+        )
+
+        # 7. Write supplementary data
+        if data.probabilities:
+            await mgr.add_probabilities(data.probabilities)
+        if data.belief_snapshots:
+            await mgr.write_beliefs(data.belief_snapshots)
+    finally:
+        await mgr.close()
 
     # 8. Write receipt
     import json
@@ -394,8 +410,6 @@ async def _publish_local(pkg_path: Path, db_path: str) -> None:
         f"  Knowledge items: {len(data.knowledge_items)} written to LanceDB ({db_path})\n"
         f"  Chains: {len(data.chains)} written to LanceDB + Kuzu"
     )
-
-    await graph.close()
 
 
 @app.command("init")

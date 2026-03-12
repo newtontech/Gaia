@@ -1,4 +1,4 @@
-"""GraphStore ABC — graph topology backend contract (Neo4j / Kùzu)."""
+"""GraphStore ABC — graph topology backend contract (Neo4j / Kuzu)."""
 
 from abc import ABC, abstractmethod
 
