@@ -35,6 +35,18 @@ def test_build_creates_single_package_md(tmp_path):
     assert "[module:follow_up]" in content
 
 
+def test_build_writes_graph_ir_artifacts(tmp_path):
+    """gaia build should write raw/local graph artifacts."""
+    pkg_dir = tmp_path / "galileo"
+    shutil.copytree(FIXTURE_PATH, pkg_dir)
+    result = runner.invoke(app, ["build", str(pkg_dir)])
+    assert result.exit_code == 0
+    graph_dir = pkg_dir / ".gaia" / "graph"
+    assert (graph_dir / "raw_graph.json").exists()
+    assert (graph_dir / "local_canonical_graph.json").exists()
+    assert (graph_dir / "canonicalization_log.json").exists()
+
+
 def test_build_markdown_contains_chain_sections(tmp_path):
     """package.md should contain chain anchors for each chain."""
     pkg_dir = tmp_path / "galileo"
