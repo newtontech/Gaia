@@ -5,7 +5,7 @@
 | 版本 | 1.0 |
 | 日期 | 2026-03-12 |
 | 状态 | **Draft — foundation design** |
-| 关联文档 | [language/gaia-language-spec.md](language/gaia-language-spec.md), [language/gaia-language-design.md](language/gaia-language-design.md), [review/publish-pipeline.md](review/publish-pipeline.md), [theory/inference-theory.md](theory/inference-theory.md), [server/storage-schema.md](server/storage-schema.md) |
+| 关联文档 | [language/gaia-language-spec.md](language/gaia-language-spec.md), [language/gaia-language-design.md](language/gaia-language-design.md), [review/publish-pipeline.md](review/publish-pipeline.md), [theory/inference-theory.md](theory/inference-theory.md), [theory/bp-on-graph-ir.md](theory/bp-on-graph-ir.md) — BP on Graph IR, [server/storage-schema.md](server/storage-schema.md) |
 
 ---
 
@@ -130,36 +130,16 @@ Relation variable nodes and their constraint factors always appear as pairs. The
 
 ### 4.5 Factor Functions
 
-**Reasoning factor** (deduction, induction, abstraction):
+Each factor type defines a potential function. Summary:
 
-When all premises are true, the conclusion follows with the factor's probability. Standard conditional potential.
+| Factor type | Key semantics |
+|-------------|--------------|
+| `reasoning` | All premises true → conclusion follows with probability `prob` |
+| `instantiation` | Deterministic implication: schema=true → instance=true |
+| `mutex_constraint` | Penalizes all contradicted claims being simultaneously true |
+| `equiv_constraint` | Rewards agreement between equated claims |
 
-**Instantiation factor** (implication):
-
-| schema | instance | potential |
-|--------|----------|-----------|
-| 1 | 1 | 1.0 |
-| 1 | 0 | 0.0 |
-| 0 | 1 | 1.0 |
-| 0 | 0 | 1.0 |
-
-If the universal holds, the instance must hold. An instance can hold without the universal.
-
-**Mutex constraint factor** (contradiction):
-
-```
-f_mutex(a, b, e) = e · (1 - a·b) + (1-e) · 1
-```
-
-When the Contradiction's belief `e` is high, penalizes both contradicted claims being simultaneously true.
-
-**Equiv constraint factor** (equivalence):
-
-```
-f_equiv(a, b, e) = e · exp(-λ(a-b)²) + (1-e) · 1
-```
-
-When the Equivalence's belief `e` is high, rewards agreement between the equated claims' beliefs. λ controls strictness (fixed in V1).
+For detailed factor function definitions, BP behavior, and gate semantics for Relations, see [theory/bp-on-graph-ir.md](theory/bp-on-graph-ir.md).
 
 ## 5. Schema and Ground Nodes
 
@@ -328,11 +308,9 @@ The review engine uses canonical variable nodes to search the global graph for d
 
 ## 9. BP Execution
 
-BP runs on the canonicalized Graph IR using standard sum-product message passing on the bipartite factor graph.
+BP runs on the canonicalized Graph IR using standard sum-product message passing on the bipartite factor graph. Cromwell's rule applies: all priors and probabilities are clamped to [ε, 1−ε] (ε = 1e-3) at Graph IR construction time.
 
-All factor types (reasoning, instantiation, mutex_constraint, equiv_constraint) participate through their respective factor functions (§4.5).
-
-Cromwell's rule applies: all priors and probabilities are clamped to [ε, 1−ε] (ε = 1e-3) at Graph IR construction time.
+For full details on factor functions, gate semantics for Relations, schema/ground interaction during BP, and the relationship to the existing BP implementation, see [theory/bp-on-graph-ir.md](theory/bp-on-graph-ir.md).
 
 ## 10. Relationship to Existing System
 
@@ -394,4 +372,4 @@ After:
 5. **Graph IR schema versioning** — version marker for the IR format itself.
 6. **Incremental build** — can `gaia build` incrementally update Graph IR when only some modules change?
 7. **Global graph storage** — how the global graph (merged canonical nodes from all packages) is stored and indexed. Extends storage-schema.md.
-8. **Relation gate semantics** — the current implementation uses read-only gate variables for Relations, preventing BP feedback. Whether Graph IR should preserve this or allow full bidirectional BP on Relation nodes needs investigation.
+8. **Relation gate semantics** — resolved: read-only gate semantics adopted. See [theory/bp-on-graph-ir.md](theory/bp-on-graph-ir.md) §4.
