@@ -1,0 +1,592 @@
+[
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952416",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952416",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952416.jensens_inequality_for_convex_functionals",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952416.independence_of_ssp_coefficient",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952416.ssp_coefficient_bound_for_explicit_methods",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952416.chain_499335"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952416.strong_stability_preservation_condition"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952422",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952422",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952422.structure_of_hyperbolic_conservation_laws",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952422.cfl_stability_condition_for_explicit_schemes",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952422.speed_of_sound_in_an_ideal_gas",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952422.chain_499336"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952422.explicit_stability_bound_for_1d_euler_equations"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952425",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952425",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.cfl_stability_condition_for_explicit_schemes",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.maximum_signal_speed_in_euler_equations",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.speed_of_sound_in_a_perfect_gas",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.adiabatic_flow_and_stagnation_temperature",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.relation_between_velocity_mach_number_and_temperature",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.normal_shock_properties",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.isentropic_expansion_properties",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952425.chain_499337"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952425.evolution_of_admissible_time_step_across_shock_and_expansion"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952428",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952428",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952428.stability_of_explicit_linear_systems",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952428.gershgorin_circle_theorem",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952428.geometric_relations_of_mesh_skewness",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952428.diffusive_flux_scaling",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952428.chain_499338"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952428.effect_of_mesh_skewness_on_cfl_stability"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952436",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952436",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952436.characteristic_propagation_in_hyperbolic_pdes",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952436.numerical_domain_of_dependence",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952436.the_cfl_condition_(necessity)",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952436.von_neumann_stability_criterion",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952436.chain_499339"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952436.relationship_between_cfl_condition_and_stability"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952441",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952441",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952441.stability_condition_for_explicit_euler",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952441.definition_of_spectral_radius",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952441.fourier_analysis_of_spatial_difference_operators",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952441.chain_499340"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952441.relation_between_time_step_spectral_radius_and_grid_spacing"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952456",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952456",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.sound_speed_in_ideal_gas",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.characteristic_speeds_of_1d_euler_equations",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.maximum_signal_speed_at_constant_mach_number",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.cfl_stability_condition",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.global_time_step_constraint",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952456.chain_499341"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952456.temperature_dependency_of_cfl_constraint"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952457",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952457",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.von_neumann_stability_analysis",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.fourier_transform_of_finite_differences",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.stability_limits_of_explicit_schemes",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.matrix_convergence_condition",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.navier-stokes_stability_components",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952457.chain_499342"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952457.analysis_of_semi-implicit_stability_and_properties"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952461",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952461",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.von_neumann_analysis_definition",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.properties_of_von_neumann_analysis",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.energy_method_definition",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.properties_of_the_energy_method",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.stability_of_non-normal_systems",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.analysis_of_diffusion",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.entropy_stability_for_conservation_laws",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952461.chain_499343"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952461.comparative_validity_of_stability_analysis_methods"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952469",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952469",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952469.characteristic_speeds_of_1d_euler_equations",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952469.speed_of_sound_in_a_perfect_gas",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952469.cfl_condition_for_explicit_fvm_stability",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952469.maximum_characteristic_speed_magnitude",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952469.chain_499344"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952469.valid_time_steps_under_cfl_constraint"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952474",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952474",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952474.hyperbolic_signal_propagation",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952474.cfl_causality_principle",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952474.characteristic_speeds_of_1d_euler_equations",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952474.explicit_finite_volume_geometric_constraint",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952474.chain_499345"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952474.valid_causality_constraints_for_explicit_euler_solvers"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952475",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952475",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.hyperbolic_domain_of_dependence",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.cfl_condition_principle",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.parabolic_stability_constraint",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.elliptic_equation_nature",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.implicit_scheme_trade-offs",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952475.chain_499346"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952475.stability_and_relevance_of_cfl_by_pde_type"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952479",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952479",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952479.integral_conservation_law_and_discrete_residual",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952479.definition_of_steady_state",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952479.discrete_conservation_property",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952479.explicit_local_time-stepping_update",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952479.chain_499347"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952479.correct_implementation_of_local_time-stepping"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952480",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952480",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.diffusion_equation_structure",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.spectral_radius_of_discrete_laplacian",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.explicit_stability_condition",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.computational_work_scaling",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.dimensional_refinement_geometry",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952480.chain_499348"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952480.explicit_diffusive_stability_and_complexity_scaling"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952488",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952488",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.explicit_stability_constraint",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.structure_of_the_dg_operator",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.polynomial_trace_inequality_scaling",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.dominance_of_boundary_lift_in_upwind_dg",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.linear_degree_scaling_of_upwind_dg_stability",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952488.chain_499349"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952488.cfl_condition_for_upwind_dg"
+    ]
+  },
+  {
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952491",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "name": "problem_3952491",
+    "role": "reasoning",
+    "imports": [
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952491.governing_equations_and_wave_speeds",
+        "version": 1,
+        "strength": "strong"
+      },
+      {
+        "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952491.cfl_stability_condition_for_explicit_finite_volume_schemes",
+        "version": 1,
+        "strength": "strong"
+      }
+    ],
+    "chain_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952491.chain_499350"
+    ],
+    "export_ids": [
+      "courant_friedrichs_lewy_condition.problem_3952491.limiting_direction_for_time_step_stability"
+    ]
+  }
+]

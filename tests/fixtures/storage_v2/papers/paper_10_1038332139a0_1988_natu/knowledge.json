@@ -2,7 +2,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/synthesis_precursors",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "The starting materials used for the preparation of superconducting samples in the Tl–Ca/Ba–Cu–O system are thallium(III) oxide ($Tl_{2}O_{3}$), calcium oxide ($CaO$), and a barium copper oxide precursor ($BaCu_{3}O_{4}$).",
     "prior": 0.7,
     "keywords": [],
@@ -15,7 +15,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/properties_of_bacu3o4_precursor",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "In the synthesis of Tl-based superconductors, $BaCu_{3}O_{4}$ is utilized as a precursor because it possesses the lowest melting point among the various barium-copper oxides ($Ba$-$Cu$-$O$); furthermore, molten $BaCu_{3}O_{4}$ exhibits high fluidity, which promotes more complete melt-solid reactions during synthesis compared to standard solid-state reactions.",
     "prior": 0.7,
     "keywords": [],
@@ -28,7 +28,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/synthesis_procedure",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "The procedure for synthesizing bulk Tl-Ca/Ba-Cu-O superconductors involves mixing stoichiometric amounts of $Tl_{2}O_{3}$, $CaO$, and $BaCu_{3}O_{4}$ precursors, grinding and pressing the mixture into a pellet, heating said pellet to a temperature between 880 °C and 910 °C for a duration of 3 to 5 minutes in a flowing oxygen environment, and subsequently quenching the sample to room temperature in air.",
     "prior": 0.7,
     "keywords": [],
@@ -41,7 +41,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/measurement_technique",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "The electrical resistance of the synthesized Tl-Ca/Ba-Cu-O superconducting samples is measured as a function of temperature using the standard four-probe technique applied to rectangular bars cut from the prepared pellets, with electrical contacts established using silver paste.",
     "prior": 0.7,
     "keywords": [],
@@ -54,7 +54,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/definition_of_onset_temperature",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "The superconducting onset temperature, denoted as the temperature at which the transition to superconductivity begins, is defined and estimated as the specific temperature at which the curvature in the electrical resistance versus temperature ($R$ vs. $T$) plot exhibits the most rapid change.",
     "prior": 0.7,
     "keywords": [],
@@ -67,7 +67,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/magnetic_indicators_of_superconductivity",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "In the Tl-Ca/Ba-Cu-O system, the presence of superconductivity is verified qualitatively by observing strong diamagnetic repulsion, characterized by the levitation of the sample over a magnetic field (Meissner effect), and is quantitatively characterized by measuring the temperature dependence of the alternating current (a.c.) magnetic susceptibility.",
     "prior": 0.7,
     "keywords": [],
@@ -80,7 +80,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/melting_point_of_bacu3o4",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "The compound $BaCu_{3}O_{4}$ possesses the lowest melting point among all barium-copper oxide (Ba-Cu-O) phases.",
     "prior": 0.7,
     "keywords": [],
@@ -93,7 +93,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/fluidity_of_molten_bacu3o4",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "In its liquid state, $BaCu_{3}O_{4}$ exhibits extremely high fluidity (low viscosity).",
     "prior": 0.7,
     "keywords": [],
@@ -106,7 +106,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/definition_of_superconducting_onset_temperature",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "The onset temperature of a superconducting transition is defined as the temperature at which the rate of change of the curvature (the second derivative) in the electrical resistance ($R$) versus temperature ($T$) plot, $d^{2}R/dT^{2}$, is maximal.",
     "prior": 0.7,
     "keywords": [],
@@ -119,7 +119,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/effect_of_calcium_substitution_in_y_and_la_based_superconductors",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "The substitution of 50% of barium atoms with calcium atoms in the superconducting compound $YBa_{2}Cu_{3}O_{7-x}$ results in a depression of the superconducting transition temperature, whereas an equivalent 50% substitution of calcium for barium in the compound $LaBa_{2}Cu_{3}O_{7-x}$ results in an increase in the superconducting transition temperature.",
     "prior": 0.7,
     "keywords": [],
@@ -132,7 +132,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/melt_solid_reaction_efficiency",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "Chemical reactions occurring between a melt phase and a solid phase proceed more completely and efficiently toward equilibrium than typical solid-state sintering reactions between purely solid precursors.",
     "prior": 0.7,
     "keywords": [],
@@ -145,7 +145,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/indicator_of_bulk_superconductivity",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "The presence of strong diamagnetic repulsion in a material is a physical property that serves as an experimental indicator of the existence of bulk superconductivity within that material.",
     "prior": 0.7,
     "keywords": [],
@@ -158,7 +158,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/manifestation_of_diamagnetism",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "The stable levitation of a material sample over a magnetic field (such as a field of approximately $5,000$ G) is a qualitative physical manifestation of strong diamagnetic repulsion, which is associated with the Meissner effect in superconductors.",
     "prior": 0.7,
     "keywords": [],
@@ -171,7 +171,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/measurement_of_ac_susceptibility",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "The technique of Norton is an experimental method used to determine the temperature dependence of the alternating current (a.c.) susceptibility of a material sample to identify its superconducting transition characteristics.",
     "prior": 0.7,
     "keywords": [],
@@ -184,7 +184,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/superconductivity_of_tl_ba_cu_o",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "Samples in the Tl-Ba-Cu-O chemical system exhibit bulk superconductivity characterized by zero electrical resistance at temperatures just above the boiling point of liquid nitrogen ($77$ K).",
     "prior": 0.7,
     "keywords": [],
@@ -197,7 +197,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/effect_of_annealing_on_tl_ba_cu_o",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "In the Tl-Ba-Cu-O superconducting system, the process of annealing samples at $450^{\\circ}\\text{C}$ in an environment of flowing oxygen results in the depression or complete destruction of the superconducting transition.",
     "prior": 0.7,
     "keywords": [],
@@ -210,7 +210,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/effect_of_annealing_on_tl_caba_cu_o",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "In the Tl-Ca/Ba-Cu-O superconducting system, the process of annealing samples at $450^{\\circ}\\text{C}$ in an environment of flowing oxygen results in a slight improvement of the superconducting properties, such as the transition temperature or resistance profile.",
     "prior": 0.7,
     "keywords": [],
@@ -223,7 +223,7 @@
   {
     "knowledge_id": "paper_10_1038332139a0_1988_natu/conductivity_of_tl_ca_cu_o",
     "version": 1,
-    "type": "claim",
+    "type": "setting",
     "content": "Samples in the Tl-Ca-Cu-O chemical system, when prepared using thermal and atmospheric conditions similar to those used for the Tl-Ca/Ba-Cu-O system (such as heating to $880$–$910^{\\circ}\\text{C}$ in flowing oxygen), exhibit semiconductor-like electrical resistivity behavior down to the temperature of liquid nitrogen ($77$ K) rather than metallic or superconducting behavior.",
     "prior": 0.7,
     "keywords": [],

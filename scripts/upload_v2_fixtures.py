@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Upload v2 paper fixtures to real LanceDB + Neo4j, then print what was stored.
+"""Upload v2 fixtures to LanceDB + graph store, then print what was stored.
 
 Usage:
-    # Use defaults (LanceDB at ./data/lancedb/gaia_v2, Neo4j at bolt://localhost:7687)
+    # Upload all paper fixtures (default)
     python scripts/upload_v2_fixtures.py
 
-    # Override via env vars
-    GAIA_LANCEDB_PATH=./data/lancedb/gaia_v2 GAIA_NEO4J_URI=bolt://localhost:7687 \
-        python scripts/upload_v2_fixtures.py
+    # Upload from a specific fixture directory
+    python scripts/upload_v2_fixtures.py --fixtures-dir tests/fixtures/remote_lancedb/v2
 
-    # Specify a single paper slug
+    # Upload a single package slug
     python scripts/upload_v2_fixtures.py paper_363056a0
+
+    # Override storage config via env vars
+    GAIA_LANCEDB_PATH=./data/lancedb/gaia_v2 python scripts/upload_v2_fixtures.py
 """
 
 from __future__ import annotations
@@ -34,12 +36,12 @@ from libs.storage_v2.models import (
     ProbabilityRecord,
 )
 
-FIXTURES_DIR = Path("tests/fixtures/storage_v2/papers")
+DEFAULT_FIXTURES_DIR = Path("tests/fixtures/storage_v2/papers")
 
 
-def load_fixture(slug: str) -> dict:
-    d = FIXTURES_DIR / slug
-    return {
+def load_fixture(fixtures_dir: Path, slug: str) -> dict:
+    d = fixtures_dir / slug
+    data = {
         "package": Package.model_validate_json((d / "package.json").read_text()),
         "modules": [Module.model_validate(m) for m in json.loads((d / "modules.json").read_text())],
         "knowledge": [
@@ -54,6 +56,17 @@ def load_fixture(slug: str) -> dict:
             BeliefSnapshot.model_validate(b) for b in json.loads((d / "beliefs.json").read_text())
         ],
     }
+    # Optional: embeddings
+    emb_path = d / "embeddings.json"
+    if emb_path.exists():
+        from libs.storage_v2.models import KnowledgeEmbedding
+        data["embeddings"] = [
+            KnowledgeEmbedding.model_validate(e)
+            for e in json.loads(emb_path.read_text())
+        ]
+    else:
+        data["embeddings"] = []
+    return data
 
 
 def print_section(title: str) -> None:
@@ -63,15 +76,30 @@ def print_section(title: str) -> None:
 
 
 async def main() -> None:
-    # Resolve which slugs to upload
-    if len(sys.argv) > 1:
-        slugs = sys.argv[1:]
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Upload v2 fixtures to storage")
+    parser.add_argument(
+        "--fixtures-dir",
+        type=Path,
+        default=DEFAULT_FIXTURES_DIR,
+        help=f"Directory containing package subdirectories (default: {DEFAULT_FIXTURES_DIR})",
+    )
+    parser.add_argument("slugs", nargs="*", help="Specific package slugs to upload (default: all)")
+    args = parser.parse_args()
+
+    fixtures_dir = args.fixtures_dir
+    if args.slugs:
+        slugs = args.slugs
     else:
-        slugs = sorted([d.name for d in FIXTURES_DIR.iterdir() if d.is_dir()])
+        slugs = sorted([d.name for d in fixtures_dir.iterdir() if d.is_dir()])
 
     if not slugs:
-        print("ERROR: No fixture directories found in", FIXTURES_DIR)
+        print("ERROR: No fixture directories found in", fixtures_dir)
         sys.exit(1)
+
+    print(f"Fixtures dir : {fixtures_dir}")
+    print(f"Packages     : {slugs}")
 
     # Initialize StorageManager from env / defaults
     config = StorageConfig()
@@ -88,7 +116,7 @@ async def main() -> None:
     # ── Upload ──
     for slug in slugs:
         print_section(f"Uploading: {slug}")
-        data = load_fixture(slug)
+        data = load_fixture(fixtures_dir, slug)
         pkg = data["package"]
         modules = data["modules"]
         knowledge = data["knowledge"]
@@ -106,6 +134,7 @@ async def main() -> None:
             modules=modules,
             knowledge_items=knowledge,
             chains=chains,
+            embeddings=data.get("embeddings") or None,
         )
         if data["probabilities"]:
             await mgr.add_probabilities(data["probabilities"])
@@ -116,7 +145,7 @@ async def main() -> None:
 
     # ── Read back and print ──
     for slug in slugs:
-        data = load_fixture(slug)
+        data = load_fixture(fixtures_dir, slug)
         pkg_id = data["package"].package_id
 
         print_section(f"Stored: {slug}")
@@ -187,7 +216,7 @@ async def main() -> None:
         print_section("Graph Topology Sample")
         # Use a conclusion node as seed — it connects to more premises via chains
         for slug in slugs:
-            data = load_fixture(slug)
+            data = load_fixture(fixtures_dir, slug)
             if not data["chains"]:
                 continue
             # Pick the conclusion of the first chain (richest connectivity)

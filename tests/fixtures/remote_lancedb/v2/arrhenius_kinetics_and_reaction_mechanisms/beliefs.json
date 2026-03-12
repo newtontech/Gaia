@@ -1,0 +1,639 @@
+[
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.governing_ode_system_for_the_reaction_substep",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.law_of_mass_action_for_elementary_reactions",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.species_conservation_in_homogeneous_systems",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.first_law_of_thermodynamics_for_isochoric_adiabatic_processe",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.criteria_for_extinction_and_sensitivity_in_radiative_arrheni",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.arrhenius_law_and_temperature_sensitivity",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.saddle-node_bifurcation_in_1d_systems",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.optically_thin_radiative_loss",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136.formulation_of_conditional_mean_reaction_rate",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136.definition_of_mass-weighted_conditional_mean",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136.averaging_of_non-linear_functions",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.critical_ignition_temperature",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.law_of_mass_action_for_bimolecular_reactions",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.arrhenius_law",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.linear_stability_criterion",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.instability_condition_for_a_2x2_matrix_with_negative_trace",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.analytical_expression_for_ignition_delay",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.law_of_mass_action",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.arrhenius_equation",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.exponential_growth_in_branched_chain_reactions",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.kinetic_formulation_for_the_reaction_h_+_o2_+_m_=_ho2_+_m",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.definition_of_elementary_reaction",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.law_of_mass_action_for_elementary_steps",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.net_rate_of_progress",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.species_production_rate",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.jacobian_structure_and_simulation_strategy_for_detailed_kine",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.definition_of_the_local_state_vector_and_jacobian_dimension",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.coupling_in_arrhenius_mass-action_kinetics",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.coupling_in_the_temperature_energy_equation",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.numerical_strategies_for_stiff_chemical_kinetics",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.governing_species_transport_equation",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.conservation_of_species_mass",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.constitutive_model_for_diffusive_flux_with_soret_effect",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.law_of_mass_action_for_elementary_kinetics",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.modified_arrhenius_equation",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.dufour_effect_decoupling",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173.two-temperature_dissociation_rate_model",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173.collision_theory_pre-factor_scaling",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173.transition_state_theory_in_non-equilibrium",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.wigner_tunneling_correction_and_activation_energy_reduction",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.definition_of_effective_activation_energy",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.multiplicative_decomposition_of_tunneling_rates",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.wigner_tunneling_correction",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.physical_nature_of_tunneling",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.dominant_reaction_pathway_and_sensitivity",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.ideal_gas_molar_concentration",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.arrhenius_rate_law",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.law_of_mass_action",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.branching_fraction_definition",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.mechanism_characteristics_and_conservation_properties",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.molecularity_of_third-body_reactions",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.net_production_coefficient_of_a_scalar_pool",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.atom_conservation_principle",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.valid_sensitivity_analysis_formulas_for_chemical_kinetics",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.chain_rule_for_logarithmic_derivatives",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.forward_sensitivity_equation",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.adjoint_sensitivity_method_for_fixed-time_functionals",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.implicit_differentiation_of_event_times",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.chemical_heat_release_source_term",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.mixture_enthalpy_definition",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.species_conservation_equation",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.energy_equation_formulation",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.arrhenius_law",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.product_formation_rate_analysis",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.law_of_mass_action_for_elementary_reactions",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.rate_of_change_of_species_concentration",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.arrhenius_equation",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.quasi-steady-state_approximation_(qssa)",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.characterization_of_lindemann_fall-off_kinetics",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.law_of_mass_action",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.steady-state_approximation_(ssa)",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.definition_of_effective_rate_coefficient",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.definition_of_reaction_order",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.ideal_gas_law_for_concentration",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.properties_of_the_troe_broadening_factor",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214.activation_energy_value",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214.generalized_arrhenius_law",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214.linearization_of_the_arrhenius_model",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.inability_of_flame-tuned_global_mechanisms_to_predict_igniti",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.scaling_of_laminar_flame_speed",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.arrhenius_rate_calibration_for_flame_speed",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.governing_equation_for_homogeneous_ignition",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.physics_of_ignition_in_hydrogen-air_mixtures",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.limitations_of_single-step_global_mechanisms",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.fractional_error_in_equilibrium_constant_due_to_activation_e",
+    "version": 1,
+    "belief": 0.5,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.ideal_gas_chemical_potential",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.condition_for_thermodynamic_equilibrium",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.law_of_mass_action_for_elementary_kinetics",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.arrhenius_rate_law",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.definition_of_equilibrium_constant",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.principle_of_detailed_balance_(thermodynamic_consistency)",
+    "version": 1,
+    "belief": 1.0,
+    "bp_run_id": "mock_bp_run",
+    "computed_at": "2026-03-12T00:00:00+00:00"
+  }
+]
