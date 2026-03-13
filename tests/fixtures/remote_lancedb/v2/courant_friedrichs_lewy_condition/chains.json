@@ -1,0 +1,586 @@
+[
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952416.chain_499335",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952416",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952416.jensens_inequality_for_convex_functionals",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952416.independence_of_ssp_coefficient",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952416.ssp_coefficient_bound_for_explicit_methods",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Decomposition into Convex Combination**: The update formula for the $i$-th stage can be viewed as a linear combination of previous states $\\mathbf{u}^{(j)}$ and Forward Euler predictor steps $\\mathbf{w}^{(j)} = \\mathbf{u}^{(j)} + \\frac{\\Delta t}{C}L(\\mathbf{u}^{(j)})$. Since $\\alpha_{ij}, \\beta_{ij} \\ge 0$ and their sum is 1, this linear combination is a convex combination.\n\n**Application of Convexity**: Applying the convex functional $\\Phi$ to the $i$-th stage $\\mathbf{u}^{(i)}$ and using Jensen's inequality yields:\n$$ \\Phi(\\mathbf{u}^{(i)}) \\le \\sum_{j=0}^{i-1} \\alpha_{ij} \\Phi(\\mathbf{u}^{(j)}) + \\sum_{j=0}^{i-1} \\beta_{ij} \\Phi\\left(\\mathbf{u}^{(j)} + \\frac{\\Delta t}{C} L(\\mathbf{u}^{(j)})\\right) $$\n\n**Enforcing Forward Euler Stability on Substeps**: To bound the terms involving $L(\\mathbf{u}^{(j)})$, we require the effective time step in the Euler-like term, $\\tau = \\frac{\\Delta t}{C}$, to fall within the Forward Euler monotonicity limit $\\Delta t_{\\mathrm{FE}}$. If $\\frac{\\Delta t}{C} \\le \\Delta t_{\\mathrm{FE}}$ (equivalently $\\Delta t \\le C \\Delta t_{\\mathrm{FE}}$), then by the Forward Euler Stability assumption, $\\Phi\\left(\\mathbf{u}^{(j)} + \\frac{\\Delta t}{C} L(\\mathbf{u}^{(j)})\\right) \\le \\Phi(\\mathbf{u}^{(j)})$.\n\n**Inductive Propagation of Stability**: Substituting the stability bound into the convexity inequality gives:\n$$ \\Phi(\\mathbf{u}^{(i)}) \\le \\sum_{j=0}^{i-1} (\\alpha_{ij} + \\beta_{ij}) \\Phi(\\mathbf{u}^{(j)}) $$\nSince $\\sum (\\alpha_{ij} + \\beta_{ij}) = 1$, $\\Phi(\\mathbf{u}^{(i)})$ is bounded by a weighted average of previous $\\Phi$ values. By mathematical induction, starting from $\\mathbf{u}^{(0)} = \\mathbf{u}^n$, it follows that $\\Phi(\\mathbf{u}^{(i)}) \\le \\Phi(\\mathbf{u}^n)$ for all stages $i$, and thus $\\Phi(\\mathbf{u}^{n+1}) \\le \\Phi(\\mathbf{u}^n)$.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952416.strong_stability_preservation_condition",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952422.chain_499336",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952422",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952422.structure_of_hyperbolic_conservation_laws",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952422.cfl_stability_condition_for_explicit_schemes",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952422.speed_of_sound_in_an_ideal_gas",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Determination of Characteristic Speeds**: By linearizing the Euler equations (or equivalently, transforming to primitive variables $[\\rho, u, p]^\\top$ and finding the eigenvalues of the resulting coefficient matrix), the characteristic wave speeds of the system are determined to be $u$ (entropy wave) and $u \\pm a$ (acoustic waves). These are the eigenvalues of the flux Jacobian $A$.\n\n**Identification of the Maximum Wave Speed**: The explicit stability limit is determined by the fastest signal propagation speed in the system. The spectral radius of the flux Jacobian is the maximum absolute eigenvalue: $\\max(|u|, |u - a|, |u + a|)$. Since $a > 0$, this maximum is always $|u| + a$, representing the speed of a sound wave traveling downstream (relative to the flow) or upstream against the flow.\n\n**Formulation of the Stability Bound**: Substituting the maximum wave speed $|\\lambda|_{\\max} = |u| + a$ into the general CFL stability condition yields the specific bound for the Euler equations: $\\Delta t \\le \\text{CFL} \\frac{\\Delta x}{|u| + a}$.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952422.explicit_stability_bound_for_1d_euler_equations",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952425.chain_499337",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952425",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.cfl_stability_condition_for_explicit_schemes",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.maximum_signal_speed_in_euler_equations",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.speed_of_sound_in_a_perfect_gas",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.adiabatic_flow_and_stagnation_temperature",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.relation_between_velocity_mach_number_and_temperature",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.normal_shock_properties",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.isentropic_expansion_properties",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Formulate the proxy for admissible time step**: From Premise 1 and 2, the admissible time step $\\Delta t$ is inversely proportional to the maximum signal speed $\\lambda_{\\max} = |u| + a$.\nTherefore:\n- If $\\lambda_{\\max}$ decreases, the admissible $\\Delta t$ increases (constraint relaxes).\n- If $\\lambda_{\\max}$ increases, the admissible $\\Delta t$ decreases (constraint tightens).\nTo compare $\\Delta t$ across regions, we must evaluate the change in $\\lambda_{\\max}$.\n\n**Analyze change in signal speed across the normal shock (State 1 to State 2)**: Using the specific values from the Assumption and Premise 6:\n- **Upstream (State 1)**: $M_1 = 2.0$.\n  Calculated values: $a_1 = \\sqrt{1.4 \\cdot 287 \\cdot 300} \\approx 347.2$ m/s, $u_1 = 2.0 \\cdot 347.2 \\approx 694.4$ m/s.\n  $\\lambda_{\\max,1} = 694.4 + 347.2 \\approx 1041.6$ m/s.\n- **Downstream (State 2)**: $M_1=2.0 \\to M_2 \\approx 0.577$ (normal shock relation).\n  Temperature ratio $T_2/T_1 \\approx 1.69 \\implies T_2 \\approx 506$ K.\n  $a_2 = \\sqrt{1.4 \\cdot 287 \\cdot 506} \\approx 451$ m/s.\n  $u_2 = M_2 a_2 \\approx 0.577 \\cdot 451 \\approx 260$ m/s.\n  $\\lambda_{\\max,2} = 260 + 451 \\approx 711$ m/s.\n- **Comparison**: $\\lambda_{\\max,2} < \\lambda_{\\max,1}$.\n- **Deduction**: The maximum signal speed decreases significantly across the shock. Therefore, the admissible $\\Delta t$ increases.\n\n**Analyze change in signal speed during expansion (State 2 to State 3)**: Using the Assumption and Premise 7:\n- **Expansion (State 3)**: Flow expands isentropically to $M_3 = 3.0$.\n  Stagnation temperature $T_0$ is constant throughout (Premise 4). From State 1 data, $T_0 = 300(1 + 0.2(4)) = 540$ K.\n  $T_3 = 540 / (1 + 0.2(9)) = 540 / 2.8 \\approx 192.9$ K.\n  $a_3 = \\sqrt{1.4 \\cdot 287 \\cdot 192.9} \\approx 278.5$ m/s.\n  $u_3 = 3.0 \\cdot 278.5 \\approx 835.5$ m/s.\n  $\\lambda_{\\max,3} = 835.5 + 278.5 \\approx 1114$ m/s.\n- **Comparison**: $\\lambda_{\\max,3} > \\lambda_{\\max,2}$. (Note: It is also greater than $\\lambda_{\\max,1}$).\n- **Deduction**: The maximum signal speed increases significantly during the expansion. Therefore, the admissible $\\Delta t$ decreases.\n\n**Synthesize final trend**: 1. Across the normal shock: $\\Delta t$ increases (constraint relaxed).\n2. During isentropic expansion: $\\Delta t$ decreases (constraint tightened).\nThis matches the trend described in Option A.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952425.evolution_of_admissible_time_step_across_shock_and_expansion",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952428.chain_499338",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952428",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952428.stability_of_explicit_linear_systems",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952428.gershgorin_circle_theorem",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952428.geometric_relations_of_mesh_skewness",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952428.diffusive_flux_scaling",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Analysis of Convective Reconstruction on Skewed Meshes**: On a skewed mesh where $\\theta_f \\neq 0$, the vector from the cell centroid to the face centroid, $\\mathbf{r}_{Pf}$, has a non-zero tangential component proportional to $|\\mathbf{r}_{Pf}| \\sin \\theta_f$. Since the reconstruction $\\mathbf{Q}_{face} \\approx \\mathbf{Q}_P + \\nabla \\mathbf{Q}_P \\cdot \\mathbf{r}_{Pf}$ incorporates this vector, the reconstructed face states depend on transverse spatial variations of the flow variables.\n\n**Emergence of Transverse Coupling in the Jacobian**: Although the Riemann solver projects the final flux along $\\mathbf{n}_f$, the input states $\\mathbf{Q}_{L/R}$ now contain terms derived from the transverse direction due to the skewness of the reconstruction vector. In the linearized discrete operator (Jacobian $\\mathbf{J}$), this dependence manifests as additional off-diagonal entries representing coupling orthogonal to the face normal (transverse advection terms), which are not present in a purely one-dimensional face-normal analysis.\n\n**Analysis of Diffusive Flux Coefficients**: The orthogonal contribution to the diffusive flux scales with $1/(\\mathbf{d}_f \\cdot \\mathbf{n}_f) = 1/(|\\mathbf{d}_f| \\cos \\theta_f)$. As skewness $\\theta_f$ increases, $\\cos \\theta_f$ decreases, causing the magnitude of this primary diffusion coefficient to increase. Additionally, the non-orthogonal cross-diffusion correction introduces explicit terms proportional to $\\tan \\theta_f$.\n\n**Aggregation of Stability Penalties**: Both the \"transverse advection\" coupling from reconstruction and the increased magnitudes of diffusive coefficients (via $1/\\cos \\theta_f$ and $\\tan \\theta_f$) increase the magnitude of the entries in the global Jacobian matrix $\\mathbf{J}$.\n\n**Application of Gershgorin Bounds**: By the Gershgorin Circle Theorem, increasing the magnitude of matrix entries (specifically off-diagonal coupling and diagonal decay rates) increases the upper bound on the spectral radius $\\rho(\\mathbf{J})$.\n\n**Conclusion on Time Step Constraints**: Since the stable time step $\\Delta t$ is inversely proportional to $\\rho(\\mathbf{J})$, the actual stability limit on a skewed mesh is smaller than an estimate that accounts only for face-normal inviscid wave speeds ($|\\mathbf{u}\\cdot\\mathbf{n}|+a$) and ideal orthogonal diffusion, as the latter ignores the spectral inflation caused by transverse reconstruction coupling and geometric diffusion scaling.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952428.effect_of_mesh_skewness_on_cfl_stability",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952436.chain_499339",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952436",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952436.characteristic_propagation_in_hyperbolic_pdes",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952436.numerical_domain_of_dependence",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952436.the_cfl_condition_(necessity)",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952436.von_neumann_stability_criterion",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Determine Physical Domain of Dependence**: For the advection equation $u_t + a u_x = 0$, the characteristic curve is $x(t) = x_0 + at$. Over a time step $\\Delta t$, the solution at $(x_j, t^{n+1})$ depends physically on the value at the location $x_j - a \\Delta t$ at time $t^n$.\n\n**Determine Numerical Domain of Dependence**: The stencil for Scheme 1 at $(x_j, t^{n+1})$ utilizes grid points $x_{j-1}$ and $x_{j+1}$ (and implicitly $x_j$) at time $t^n$. Thus, the numerical domain of dependence spans the interval $[x_j - \\Delta x, x_j + \\Delta x]$.\n\n**Apply CFL Necessity Condition**: By the CFL premise, the numerical interval must contain the physical source point.\n$$ x_j - \\Delta x \\le x_j - a \\Delta t \\le x_j + \\Delta x $$\nFor $a>0$, this implies $a \\Delta t \\le \\Delta x$, or $\\nu \\le 1$. Thus, the CFL condition is satisfied if the Courant number $\\nu \\le 1$.\n\n**Analyze Spectral Stability of Scheme 1**: Substitute the Fourier mode ansatz $u_j^n = \\hat{u}^n e^{i k j \\Delta x}$ into Scheme 1:\n$$ \\hat{u}^{n+1} = \\hat{u}^n \\left[ 1 - \\frac{\\nu}{2} (e^{i k \\Delta x} - e^{-i k \\Delta x}) \\right] = \\hat{u}^n [ 1 - i \\nu \\sin(k \\Delta x) ] $$\nThe amplification factor is $G(k) = 1 - i \\nu \\sin(k \\Delta x)$.\n\n**Evaluate Magnitude of Amplification Factor**: Calculate the squared modulus of $G(k)$:\n$$ |G(k)|^2 = 1^2 + (-\\nu \\sin(k \\Delta x))^2 = 1 + \\nu^2 \\sin^2(k \\Delta x) $$\nFor any $\\nu > 0$ and any wavenumber $k$ such that $\\sin(k \\Delta x) \\neq 0$, it follows that $|G(k)| > 1$.\n\n**Synthesize Stability and CFL Compliance**: Step 3 established that Scheme 1 satisfies the necessary CFL condition when $\\nu \\le 1$. However, Step 5 established that Scheme 1 is unconditionally unstable ($|G(k)| > 1$) for any time step $\\Delta t > 0$.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952436.relationship_between_cfl_condition_and_stability",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952441.chain_499340",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952441",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952441.stability_condition_for_explicit_euler",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952441.definition_of_spectral_radius",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952441.fourier_analysis_of_spatial_difference_operators",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Derive eigenvalues of the spatial operator**: Applying the upwind operator $L$ to a Fourier mode $u_j = e^{ij\\theta}$ yields the eigenvalue spectrum:\n$$ \\lambda(\\theta) = -\\frac{a}{\\Delta x} (1 - e^{-i\\theta}) = \\frac{a}{\\Delta x} (\\cos \\theta - 1 + i \\sin \\theta) $$\nThis locus describes a circle in the complex plane centered at $-\\frac{a}{\\Delta x}$ with radius $\\frac{a}{\\Delta x}$.\n\n**Calculate the spectral radius**: The magnitude of the eigenvalues is given by $|\\lambda(\\theta)| = \\frac{a}{\\Delta x} |1 - e^{-i\\theta}|$. The maximum value occurs at $\\theta = \\pi$, where $|1 - (-1)| = 2$. Therefore, the spectral radius is:\n$$ \\rho(L) = \\frac{2a}{\\Delta x} $$\n\n**Apply stability constraints**: For the explicit Euler method to be stable, the scaled eigenvalues $\\Delta t \\lambda(\\theta)$ must fit within the unit disk centered at $-1$. The spectrum of $L$ lies entirely in the left half-plane on a circle tangent to the imaginary axis at the origin. The most restrictive point is the leftmost eigenvalue $\\lambda(\\pi) = -\\frac{2a}{\\Delta x}$.\nThe stability condition $|1 + \\Delta t \\lambda(\\pi)| \\le 1$ becomes:\n$$ \\left| 1 - \\Delta t \\frac{2a}{\\Delta x} \\right| \\le 1 $$\nSince $\\Delta t, a, \\Delta x > 0$, this simplifies to the condition $\\Delta t \\frac{2a}{\\Delta x} \\le 2$, or equivalently:\n$$ \\Delta t \\le \\frac{\\Delta x}{a} $$\nThus, the maximum stable time step is $\\Delta t_{\\max} = \\frac{\\Delta x}{a}$.\n\n**Relate maximum time step to spectral radius**: Using the derived expression $\\rho(L) = \\frac{2a}{\\Delta x}$, we can substitute $\\frac{a}{\\Delta x} = \\frac{\\rho(L)}{2}$ into the expression for $\\Delta t_{\\max}$:\n$$ \\Delta t_{\\max} = \\frac{1}{a/\\Delta x} = \\frac{2}{\\rho(L)} $$\nAdditionally, since $\\Delta t_{\\max} = \\frac{\\Delta x}{a}$, the maximum time step scales linearly with the grid spacing $\\Delta x$.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952441.relation_between_time_step_spectral_radius_and_grid_spacing",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952456.chain_499341",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952456",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.sound_speed_in_ideal_gas",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.characteristic_speeds_of_1d_euler_equations",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.maximum_signal_speed_at_constant_mach_number",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.cfl_stability_condition",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.global_time_step_constraint",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Scaling of Sound Speed with Temperature**: From the definition of sound speed in an ideal gas, $c = \\sqrt{\\gamma R T}$. Since $\\gamma$ and $R$ are constant properties of the fluid, the sound speed scales with the square root of the temperature: $c \\propto \\sqrt{T}$.\n\n**Scaling of Maximum Characteristic Speed**: Given a constant Mach number $M$, the maximum characteristic speed magnitude is $|\\lambda|_{\\max} = (M+1)c$. Substituting the scaling of $c$, we find that $|\\lambda|_{\\max} \\propto (M+1)\\sqrt{T}$. Since $M$ is constant, $|\\lambda|_{\\max} \\propto \\sqrt{T}$.\n\n**Identification of the Restrictive Cell**: The allowable time step for a cell $i$ to meet a target CFL is $\\Delta t_i \\propto \\frac{1}{|\\lambda|_{\\max, i}}$. Because $|\\lambda|_{\\max} \\propto \\sqrt{T}$, the allowable time step scales as $\\Delta t_i \\propto \\frac{1}{\\sqrt{T}}$. Therefore, the cell with the highest temperature (the hot cell) requires the smallest time step and dictates the global stability limit.\n\n**Calculation of Characteristic Speed Ratio**: The ratio of the maximum characteristic speeds between the cold and hot cells is:\n$$ \\frac{|\\lambda|_{\\max, \\mathrm{cold}}}{|\\lambda|_{\\max, \\mathrm{hot}}} = \\frac{(M+1)\\sqrt{\\gamma R T_{\\mathrm{cold}}}}{(M+1)\\sqrt{\\gamma R T_{\\mathrm{hot}}}} = \\sqrt{\\frac{T_{\\mathrm{cold}}}{T_{\\mathrm{hot}}}} $$\nUsing the given temperatures:\n$$ \\sqrt{\\frac{300}{1800}} = \\sqrt{\\frac{1}{6}} \\approx 0.4082 $$\n\n**Derivation of Local CFL in the Cold Cell**: With the global time step $\\Delta t$ fixed by the hot cell such that $\\mathrm{CFL}_{\\mathrm{hot}} = 0.5$, the CFL number in the cold cell is:\n$$ \\mathrm{CFL}_{\\mathrm{cold}} = \\frac{|\\lambda|_{\\max, \\mathrm{cold}} \\Delta t}{\\Delta x} = \\frac{|\\lambda|_{\\max, \\mathrm{cold}}}{|\\lambda|_{\\max, \\mathrm{hot}}} \\times \\frac{|\\lambda|_{\\max, \\mathrm{hot}} \\Delta t}{\\Delta x} $$\nSubstituting the ratio derived above and the target CFL:\n$$ \\mathrm{CFL}_{\\mathrm{cold}} \\approx 0.4082 \\times 0.5 \\approx 0.204 $$",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952456.temperature_dependency_of_cfl_constraint",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952457.chain_499342",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952457",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.von_neumann_stability_analysis",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.fourier_transform_of_finite_differences",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.stability_limits_of_explicit_schemes",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.matrix_convergence_condition",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.navier-stokes_stability_components",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Derivation of Amplification Factor**: Substitute the Fourier mode ansatz into the semi-implicit difference equation.\nThe LHS becomes $\\frac{\\hat{u}^{n+1} - \\hat{u}^n}{\\Delta t} + \\frac{a}{\\Delta x}(1 - e^{-i\\theta})\\hat{u}^n$.\nThe RHS becomes $\\frac{\\nu}{\\Delta x^2} 2(\\cos\\theta - 1) \\hat{u}^{n+1}$.\nRearranging for $\\hat{u}^{n+1}$ yields the amplification factor:\n$$ G(\\theta) = \\frac{1 - C(1 - e^{-i\\theta})}{1 + 2S(1 - \\cos\\theta)} $$\n\n**Stability Analysis of Semi-Implicit Scheme**: Since $S > 0$ and $(1 - \\cos\\theta) \\ge 0$, the denominator is real and $\\ge 1$. It acts purely as a stabilizer (damping factor).\nStability is thus determined solely by the numerator, which corresponds to the explicit upwind advection operator. The numerator magnitude is $\\le 1$ if and only if the Courant number condition $C \\le 1$ holds.\nConsequently, the diffusion-induced restriction on $\\Delta t$ is removed.\n\n**Scaling Analysis of Explicit Constraints**: In a fully explicit scheme, the diffusion stability limit is $S \\le S_{max}$, implying $\\Delta t_{diff} \\propto \\Delta x^2 / \\nu$.\nOn fine grids (small $\\Delta x$), this quadratic scaling imposes a severe restriction compared to the linear advection scaling $\\Delta t_{adv} \\propto \\Delta x / a$.\n\n**Comparison of Time Scales**: The ratio of the permissible time steps in the explicit limits is:\n$$ \\frac{\\Delta t_{adv}}{\\Delta t_{diff}} \\sim \\frac{\\Delta x / a}{\\Delta x^2 / \\nu} = \\frac{\\nu}{a \\Delta x} = \\frac{1}{Re_g} $$\nIf diffusion is the limiting factor ($Re_g \\ll 1$), using an implicit scheme allows the time step to increase from $\\Delta t_{diff}$ to $\\Delta t_{adv}$. This increase factor scales as $1/Re_g$, not $Re_g$.\n\n**Matrix Property Analysis**: Rearranging the implicit update for time level $n+1$ leads to a linear system for unknowns $u_j^{n+1}$. The coefficient of $u_j^{n+1}$ (diagonal) is $(1 + 2S)$. The coefficients for $u_{j\\pm 1}^{n+1}$ (off-diagonals) are both $-S$.\nChecking diagonal dominance: $|1 + 2S| = 1 + 2S$. Sum of off-diagonals: $|-S| + |-S| = 2S$.\nSince $1 + 2S > 2S$, the matrix is strictly diagonally dominant for any $\\Delta t > 0$, ensuring convergence of Jacobi iterations.\n\n**Global Stability in 3D Navier-Stokes**: Treating viscous terms implicitly in the full Navier-Stokes equations removes the parabolic stability limit ($\\sim \\Delta x^2$). However, if advection and pressure terms remain explicit, the scheme is still subject to hyperbolic stability limits (acoustic CFL condition, $\\Delta t \\sim \\Delta x / (u+c)$). Thus, implicit viscosity does not eliminate *all* stability constraints.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952457.analysis_of_semi-implicit_stability_and_properties",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952461.chain_499343",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952461",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.von_neumann_analysis_definition",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.properties_of_von_neumann_analysis",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.energy_method_definition",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.properties_of_the_energy_method",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.stability_of_non-normal_systems",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.analysis_of_diffusion",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.entropy_stability_for_conservation_laws",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Evaluating Statement A (Periodic Constant Coefficient Case)**: For the specific case of linear, constant-coefficient advection on a periodic grid, the operator is normal. By Premise 2, Von Neumann analysis yields a necessary and sufficient bound ($|g(\\theta)| \\le 1$). By Premise 3 and 4, the Energy method yields a sufficient bound, which may or may not be as sharp as the spectral limit. Thus, statement A is correct.\n\n**Evaluating Statement B (Variable Coefficient and Boundaries)**: For variable coefficients and inflow/outflow boundaries, the operator is generally non-normal and lacks a Fourier basis. By Premise 2, Von Neumann analysis is strictly invalid or heuristic here. By Premise 4, the Energy method is designed to handle these complexities by providing a conservative sufficient bound that includes boundary contributions. Thus, statement B is correct.\n\n**Evaluating Statement C (Non-normal Amplification)**: Statement C claims Von Neumann analysis is \"universally sharper\" and guarantees stability for non-normal matrices if eigenvalues are bounded by 1. By Premise 5, this is false; the spectral radius condition is insufficient to prevent transient growth in non-normal systems. The Energy method is more informative for ensuring strict norm boundedness. Thus, statement C is incorrect.\n\n**Evaluating Statement D (Diffusion Treatment)**: Statement D claims Von Neumann analysis \"cannot treat diffusion\". By Premise 6, Von Neumann analysis handles diffusion naturally via decay factors in the amplification symbol. Thus, statement D is incorrect.\n\n**Evaluating Statement E (Non-linear Systems)**: Statement E claims Energy methods (via entropy) prove restrictions for Euler equations, while Von Neumann can analyze the linearization. By Premise 7, entropy stability provides global non-linear bounds, while Von Neumann provides local linear bounds. Both are informative in their respective scopes. Thus, statement E is correct.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952461.comparative_validity_of_stability_analysis_methods",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952469.chain_499344",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952469",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952469.characteristic_speeds_of_1d_euler_equations",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952469.speed_of_sound_in_a_perfect_gas",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952469.cfl_condition_for_explicit_fvm_stability",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952469.maximum_characteristic_speed_magnitude",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Determine the local speed of sound for each segment**: Using the relation $c = \\sqrt{\\gamma R T}$, we calculate the speed of sound for each segment:\n1.  For Segment A: $c_A = \\sqrt{1.4 \\cdot 287 \\cdot 300} \\approx 347.2\\,\\mathrm{m/s}$.\n2.  For Segment B: $c_B = \\sqrt{1.4 \\cdot 287 \\cdot 320} \\approx 358.6\\,\\mathrm{m/s}$.\n3.  For Segment C: $c_C = \\sqrt{1.4 \\cdot 287 \\cdot 400} \\approx 400.9\\,\\mathrm{m/s}$.\n\n**Calculate maximum wave speed magnitude for each segment**: Using $|\\lambda|_{\\max} = |u| + c$:\n1.  Segment A: $\\alpha_A = |250| + 347.2 = 597.2\\,\\mathrm{m/s}$.\n2.  Segment B: $\\alpha_B = |150| + 358.6 = 508.6\\,\\mathrm{m/s}$.\n3.  Segment C: $\\alpha_C = |-50| + 400.9 = 450.9\\,\\mathrm{m/s}$.\n\n**Compute local time-step limits**: The limit for each segment is $\\Delta t_i \\le \\sigma \\frac{\\Delta x_i}{\\alpha_i}$:\n1.  Segment A: $\\Delta t_A \\le 0.8 \\cdot \\frac{0.004}{597.2} \\approx 5.36 \\times 10^{-6}\\,\\mathrm{s}$.\n2.  Segment B: $\\Delta t_B \\le 0.8 \\cdot \\frac{0.002}{508.6} \\approx 3.15 \\times 10^{-6}\\,\\mathrm{s}$.\n3.  Segment C: $\\Delta t_C \\le 0.8 \\cdot \\frac{0.006}{450.9} \\approx 1.06 \\times 10^{-5}\\,\\mathrm{s}$.\n\n**Determine the global maximum permissible time step**: To satisfy the condition globally, the time step must satisfy the most restrictive of the local limits:\n$\\Delta t_{\\max} = \\min(\\Delta t_A, \\Delta t_B, \\Delta t_C) = \\Delta t_B \\approx 3.15 \\times 10^{-6}\\,\\mathrm{s}$.\n\n**Verify candidate time steps**: We compare the candidate values to the global limit $\\Delta t_{\\max} \\approx 3.15 \\times 10^{-6}\\,\\mathrm{s}$:\n- $2.0 \\times 10^{-6}\\,\\mathrm{s} \\le 3.15 \\times 10^{-6}\\,\\mathrm{s}$ (Valid)\n- $3.0 \\times 10^{-6}\\,\\mathrm{s} \\le 3.15 \\times 10^{-6}\\,\\mathrm{s}$ (Valid)\n- $3.5 \\times 10^{-6}\\,\\mathrm{s} > 3.15 \\times 10^{-6}\\,\\mathrm{s}$ (Invalid)\n- $1.0 \\times 10^{-5}\\,\\mathrm{s} > 3.15 \\times 10^{-6}\\,\\mathrm{s}$ (Invalid)",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952469.valid_time_steps_under_cfl_constraint",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952474.chain_499345",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952474",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952474.hyperbolic_signal_propagation",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952474.cfl_causality_principle",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952474.characteristic_speeds_of_1d_euler_equations",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952474.explicit_finite_volume_geometric_constraint",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Derivation of 1D CFL Constraint**: From Premise 3, the maximum physical wave speed in the 1D Euler equations is $|u| + c$.\nFrom Premise 2, causality requires that the physical distance a wave travels in time $\\Delta t$, which is $(|u| + c)\\Delta t$, must not exceed the numerical dependency range.\nFrom the Assumption (1D Uniform Grid), the numerical information propagates one grid cell $\\Delta x$ per step.\nTherefore, the condition is $(|u| + c)\\Delta t \\le \\Delta x$, or equivalently:\n$$ \\frac{\\Delta t (|u| + c)}{\\Delta x} \\le 1 $$\n\n**Derivation of Multi-dimensional Unstructured CFL Constraint**: From Premise 4, stability on an unstructured mesh is governed by the sum of outgoing wave speeds weighted by face area to cell volume ratio.\nLetting $C=1$ for a standard sufficient causality condition, the constraint for cell $K$ becomes:\n$$ \\Delta t \\sum_{f \\in \\mathcal{F}_K} \\frac{\\alpha_f S_f}{V_K} \\le 1 $$\nThis ensures the time step is small enough relative to the characteristic \"emptying time\" of the smallest effective length scale of the cell.\n\n**Analysis of Sound Speed Only Constraint**: Consider the proposition that $\\Delta t \\cdot c / \\Delta x \\le 1$ is sufficient.\nFrom Premise 3, the maximum speed is $|u| + c$.\nIf $|u| > 0$, then $|u| + c > c$.\nA constraint based solely on $c$ would allow $\\Delta t \\le \\Delta x / c$.\nHowever, the required stability limit is $\\Delta t \\le \\Delta x / (|u| + c)$.\nSince $\\Delta x / c > \\Delta x / (|u| + c)$, the \"sound speed only\" condition permits a time step that violates the true causality requirement. Thus, it is insufficient.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952474.valid_causality_constraints_for_explicit_euler_solvers",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952475.chain_499346",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952475",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.hyperbolic_domain_of_dependence",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.cfl_condition_principle",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.parabolic_stability_constraint",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.elliptic_equation_nature",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.implicit_scheme_trade-offs",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Hyperbolic Analysis**: Applying the **CFL Condition Principle** to the **Hyperbolic Domain of Dependence**, an explicit scheme for linear advection is stable only if the numerical stencil covers the distance $a \\Delta t$. This necessitates a restriction on the time step related to the wave speed: $\\Delta t \\le \\frac{\\Delta x}{|a|}$. This validates the proposition that hyperbolic explicit stability is governed by characteristic propagation (Statement A).\n\n**Parabolic Analysis**: Applying the **Parabolic Stability Constraint** to the heat equation, an explicit scheme requires $\\Delta t \\propto \\frac{\\Delta x^2}{\\nu}$ to prevent numerical instability. This refutes the idea that explicit parabolic schemes are unconditionally stable (Statement B) and confirms that the restriction scales with $\\Delta x^2$ and the inverse of diffusivity, distinct from wave propagation speed (Statement E).\n\n**Elliptic Analysis**: Based on the **Elliptic Equation Nature**, the Poisson equation has no time dependency. Therefore, stability criteria based on \"wave speeds\" or \"time steps\" (CFL) are physically meaningless for the equation itself. Convergence depends on iterative solver properties, not physical signal speed (Statement C).\n\n**Implicit Scheme Analysis**: Based on **Implicit Scheme Trade-offs**, while switching to an implicit integrator for hyperbolic problems removes the strict linear stability limit on $\\Delta t$, it does not guarantee accuracy for arbitrarily large steps. Large $\\Delta t$ introduces excessive temporal error, making the claim of \"always stable and accurate\" false (Statement D).",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952475.stability_and_relevance_of_cfl_by_pde_type",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952479.chain_499347",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952479",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952479.integral_conservation_law_and_discrete_residual",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952479.definition_of_steady_state",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952479.discrete_conservation_property",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952479.explicit_local_time-stepping_update",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Derive steady-state condition from the update formula**: Consider the update formula $\\mathbf{Q}_i^{n+1} = \\mathbf{Q}_i^n - \\frac{\\Delta \\tau_i}{|\\Omega_i|} \\mathbf{R}_i(\\mathbf{Q}^n)$. At convergence ($n \\to \\infty$), the solution reaches a steady state where $\\mathbf{Q}_i^{n+1} = \\mathbf{Q}_i^n$. This implies the update term must vanish: $\\frac{\\Delta \\tau_i}{|\\Omega_i|} \\mathbf{R}_i(\\mathbf{Q}_{ss}) = \\mathbf{0}$. Since $\\Delta \\tau_i > 0$ and $|\\Omega_i| > 0$, this condition is mathematically equivalent to $\\mathbf{R}_i(\\mathbf{Q}_{ss}) = \\mathbf{0}$.\n\n**Analyze the structure of the residual at steady state**: The condition $\\mathbf{R}_i(\\mathbf{Q}_{ss}) = \\mathbf{0}$ means the numerical scheme converges to the roots of the spatial residual operator. If the residual $\\mathbf{R}_i$ is constructed as a face-conservative sum of fluxes $\\sum \\mathbf{F}_f A_f$ without any time-step dependent scaling inside the sum, then the solution $\\mathbf{Q}_{ss}$ satisfies the discrete conservation law. The scaling factor $\\frac{\\Delta \\tau_i}{|\\Omega_i|}$ is applied *globally* to the residual vector for cell $i$, acting as a preconditioner that affects the convergence path but not the final root.\n\n**Evaluate alternative strategy: Scaling fluxes by time-step**: Suppose, hypothetically, that the time step $\\Delta \\tau$ were incorporated into the flux definition (e.g., scaling each face flux $\\mathbf{F}_f$ by an average time step $\\overline{\\Delta \\tau}_f$). The update term would become proportional to $\\sum_{f} \\overline{\\Delta \\tau}_f \\mathbf{F}_f A_f$. Setting this update to zero leads to a steady state satisfying $\\sum_{f} \\overline{\\Delta \\tau}_f \\mathbf{F}_f A_f = \\mathbf{0}$. Since $\\overline{\\Delta \\tau}_f$ varies per face, this modified sum is generally not proportional to the physical flux balance $\\sum \\mathbf{F}_f A_f$. Thus, the resulting steady state would not satisfy the original conservation law $\\mathbf{R}_i(\\mathbf{Q}_{ss}) = \\mathbf{0}$.\n\n**Synthesize the correct strategy**: To ensure both stability (via local CFL) and conservation (via $\\mathbf{R}_i = \\mathbf{0}$), the local time step $\\Delta \\tau_i$ must appear only as a scalar multiplier *outside* the assembled conservative residual. The residual $\\mathbf{R}_i$ itself must be assembled using standard unique face fluxes $\\mathbf{F}_f$, and then the update $\\mathbf{Q}_i^{n+1} = \\mathbf{Q}_i^n - (\\Delta \\tau_i / |\\Omega_i|) \\mathbf{R}_i$ is applied. This separates the definition of the physical steady state (where $\\mathbf{R}_i=0$) from the numerical convergence acceleration parameter ($\\Delta \\tau_i$).",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952479.correct_implementation_of_local_time-stepping",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952480.chain_499348",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952480",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.diffusion_equation_structure",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.spectral_radius_of_discrete_laplacian",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.explicit_stability_condition",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.computational_work_scaling",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.dimensional_refinement_geometry",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Determine Eigenvalue Scaling**: From Premise 1, the governing operator is the Laplacian. Applying Premise 2 to the specific setup in the Assumption, the discrete spatial operator has a maximum eigenvalue magnitude (spectral radius) that scales as $\\mathcal{O}(1/\\Delta x^2)$.\n\n**Derive Time Step Constraint**: Using the Explicit Stability Condition (Premise 3), stability requires $\\Delta t \\leq S / \\rho(L)$. Substituting the spectral radius scaling from the previous step, the maximum stable time step scales as $\\Delta t_{max} \\propto \\Delta x^2$.\n\n**Analyze Effect of Refinement on Time Step**: If the grid is refined by a factor $r$ (so $\\Delta x \\to \\Delta x/r$), the relation $\\Delta t_{max} \\propto \\Delta x^2$ implies that the maximum stable time step must decrease by a factor of $r^2$ (i.e., $\\Delta t_{new} = \\Delta t_{old} / r^2$).\n\n**Calculate Total Work Scaling**: To simulate a fixed physical time, the number of time steps $N_{steps}$ scales as $1/\\Delta t \\propto r^2$. From Premise 5, the number of grid points $N_{grid}$ scales as $r^d$. Using Premise 4, the total work $W$ scales as $N_{grid} \\times N_{steps} \\propto r^d \\times r^2 = r^{d+2}$.\n\n**Confirm Independence of Scheme Details**: While the constant $S$ in Premise 3 depends on the specific explicit method (e.g., Forward Euler vs. Runge-Kutta), the functional dependence $\\Delta t \\propto \\Delta x^2$ is determined solely by the spatial operator's eigenvalue scaling (Premise 2). Therefore, using higher-order explicit schemes alters the constant limit but not the quadratic scaling law.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952480.explicit_diffusive_stability_and_complexity_scaling",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952488.chain_499349",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952488",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.explicit_stability_constraint",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.structure_of_the_dg_operator",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.polynomial_trace_inequality_scaling",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.dominance_of_boundary_lift_in_upwind_dg",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.linear_degree_scaling_of_upwind_dg_stability",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Formulate the Stability Requirement**: From Premise 1, the stability condition requires $\\Delta t \\propto 1 / \\rho(L)$. To determine the scaling of $\\Delta t$, we must determine the scaling of $\\rho(L)$ with respect to $h$, $|\\lambda_{\\max}|$, and $p$.\n\n**Determine Mesh and Speed Scaling**: From Premise 2, the operator $L$ contains a global scaling factor of $|\\lambda_{\\max}| / h$ due to the transformation from physical to reference space and the flux Jacobian. Thus, $\\rho(L) \\propto \\frac{|\\lambda_{\\max}|}{h} \\rho(L_{ref})$, where $L_{ref}$ is the operator on the reference element.\n\n**Determine Polynomial Degree Scaling**: Using Premise 4, the spectral radius is dominated by the boundary lift contribution. Premise 3 establishes that boundary traces scale with $p$. Crucially, Premise 5 refines this to the specific result for upwind DG: the effective spectral radius on the reference element scales as $(2p+1)$. Thus, $\\rho(L_{ref}) \\propto (2p+1)$.\n\n**Synthesize Spectral Radius Scaling**: Combining the factors from the previous steps, the total spectral radius scales as:\n$$ \\rho(L) \\propto \\frac{|\\lambda_{\\max}|}{h} (2p+1) $$\n\n**Derive Time Step Scaling**: Substituting the spectral radius scaling back into the stability requirement (Step 1):\n$$ \\Delta t \\propto \\left( \\frac{|\\lambda_{\\max}|}{h} (2p+1) \\right)^{-1} = \\frac{h}{(2p+1) |\\lambda_{\\max}|} $$",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952488.cfl_condition_for_upwind_dg",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "courant_friedrichs_lewy_condition.problem_3952491.chain_499350",
+    "module_id": "courant_friedrichs_lewy_condition.problem_3952491",
+    "package_id": "courant_friedrichs_lewy_condition",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952491.governing_equations_and_wave_speeds",
+            "version": 1
+          },
+          {
+            "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952491.cfl_stability_condition_for_explicit_finite_volume_schemes",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Calculation of Sound Speed and Velocity**: Using the definition of sound speed $c = \\sqrt{\\gamma p / \\rho}$, substitute the given values $\\gamma=1.4$, $p=101325$, and $\\rho=1.2$. Then, determine the flow velocity magnitude $|\\mathbf{u}|$ using the relation $|\\mathbf{u}| = M c$ with $M=0.5$. Since the flow is aligned with the $x$-axis, set $u_x = |\\mathbf{u}|$ and $u_y = 0$.\n\n**Determination of Spectral Radii**: Calculate the maximum characteristic wave speeds (spectral radii) for each coordinate direction. For the $x$-direction, $\\alpha_x = |u_x| + c$. For the $y$-direction, given that $u_y = 0$, the maximum speed is purely acoustic: $\\alpha_y = |0| + c = c$.\n\n**Evaluation of Directional Frequency Contributions**: Compute the characteristic frequency (inverse time scale) for each direction by dividing the spectral radius by the corresponding cell dimension: $f_x = \\frac{\\alpha_x}{\\Delta x}$ and $f_y = \\frac{\\alpha_y}{\\Delta y}$.\n\n**Comparison of Directional Constraints**: Compare the magnitudes of $f_x$ and $f_y$. The term with the larger magnitude dominates the denominator of the CFL inequality $\\Delta t \\le C_{\\text{CFL}} / (f_x + f_y)$, thereby imposing the stricter limit on the allowable time step $\\Delta t$.\n\n**Verification of Dominance**: Observe that while $\\alpha_x > \\alpha_y$ (since $|u_x| > 0$), the grid anisotropy factor is significant: $\\Delta x$ is 10 times larger than $\\Delta y$. Consequently, the term $\\frac{c}{\\Delta y}$ in $f_y$ will be approximately 10 times larger than the acoustic contribution $\\frac{c}{\\Delta x}$ in $f_x$, and significantly larger than the convective contribution $\\frac{u_x}{\\Delta x}$. Thus, the $y$-direction term $f_y$ dominates the stability constraint.",
+        "conclusion": {
+          "knowledge_id": "courant_friedrichs_lewy_condition.problem_3952491.limiting_direction_for_time_step_stability",
+          "version": 1
+        }
+      }
+    ]
+  }
+]

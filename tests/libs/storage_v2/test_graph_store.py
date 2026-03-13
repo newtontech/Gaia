@@ -1,9 +1,15 @@
-"""Tests for KuzuGraphStore — version-aware graph topology."""
+"""Unified GraphStore ABC compliance tests — parametrized over Kuzu and Neo4j.
 
+Kuzu tests always run. Neo4j tests require a running Neo4j instance and are
+auto-skipped if unavailable.
+"""
+
+import os
 from datetime import datetime
 
 import pytest
 
+from libs.storage_v2.graph_store import GraphStore
 from libs.storage_v2.kuzu_graph_store import KuzuGraphStore, _knowledge_vid as _vid
 from libs.storage_v2.models import (
     BeliefSnapshot,
@@ -16,47 +22,93 @@ from libs.storage_v2.models import (
     Subgraph,
 )
 
-
-@pytest.fixture
-async def graph_store(tmp_path):
-    """Create a KuzuGraphStore in a temporary directory with schema initialized."""
-    store = KuzuGraphStore(tmp_path / "kuzu_db")
-    await store.initialize_schema()
-    yield store
-    await store.close()
+NEO4J_URI = os.environ.get("NEO4J_TEST_URI", "bolt://localhost:7687")
+NEO4J_PASSWORD = os.environ.get("NEO4J_TEST_PASSWORD", "")
+NEO4J_DB = os.environ.get("NEO4J_TEST_DB", "neo4j")
 
 
-def _table_names(store: KuzuGraphStore) -> set[str]:
-    result = store._execute("CALL show_tables() RETURN *")
-    names: set[str] = set()
-    while result.has_next():
-        names.add(result.get_next()[1])
-    return names
+async def _neo4j_available() -> bool:
+    try:
+        import neo4j
+
+        auth = ("neo4j", NEO4J_PASSWORD) if NEO4J_PASSWORD else None
+        driver = neo4j.AsyncGraphDatabase.driver(NEO4J_URI, auth=auth)
+        async with driver.session(database=NEO4J_DB) as session:
+            await session.run("RETURN 1")
+        await driver.close()
+        return True
+    except Exception:
+        return False
 
 
-def _count_nodes(store: KuzuGraphStore, label: str) -> int:
-    result = store._execute(f"MATCH (n:{label}) RETURN COUNT(n)")
-    return result.get_next()[0]
+# ── Backend-agnostic query helper ──
 
 
-def _count_rels(store: KuzuGraphStore, rel_type: str) -> int:
-    result = store._execute(f"MATCH ()-[r:{rel_type}]->() RETURN COUNT(r)")
-    return result.get_next()[0]
+async def _run_query(store: GraphStore, query: str, params: dict | None = None) -> list[list]:
+    """Run a Cypher query on either Kuzu or Neo4j store, return list of rows."""
+    if isinstance(store, KuzuGraphStore):
+        result = store._conn.execute(query, params or {})
+        rows = []
+        while result.has_next():
+            rows.append(result.get_next())
+        return rows
+    else:
+        from libs.storage_v2.neo4j_graph_store import Neo4jGraphStore
+
+        assert isinstance(store, Neo4jGraphStore)
+        async with store._driver.session(database=store._db) as session:
+            result = await session.run(query, params or {})
+            return [list(record.values()) async for record in result]
+
+
+async def _count_nodes(store: GraphStore, label: str) -> int:
+    rows = await _run_query(store, f"MATCH (n:{label}) RETURN COUNT(n)")
+    return rows[0][0]
+
+
+async def _count_rels(store: GraphStore, rel_type: str) -> int:
+    rows = await _run_query(store, f"MATCH ()-[r:{rel_type}]->() RETURN COUNT(r)")
+    return rows[0][0]
+
+
+# ── Parametrized fixture ──
+
+
+@pytest.fixture(params=["kuzu", "neo4j"])
+async def graph_store(request, tmp_path) -> GraphStore:
+    """Yield a GraphStore instance — Kuzu always available, Neo4j skipped if down."""
+    if request.param == "kuzu":
+        store = KuzuGraphStore(tmp_path / "kuzu_db")
+        await store.initialize_schema()
+        yield store
+        await store.close()
+
+    elif request.param == "neo4j":
+        if not await _neo4j_available():
+            pytest.skip("Neo4j not available")
+        import neo4j
+
+        from libs.storage_v2.neo4j_graph_store import Neo4jGraphStore
+
+        auth = ("neo4j", NEO4J_PASSWORD) if NEO4J_PASSWORD else None
+        driver = neo4j.AsyncGraphDatabase.driver(NEO4J_URI, auth=auth)
+        store = Neo4jGraphStore(driver=driver, database=NEO4J_DB)
+        await store.initialize_schema()
+        yield store
+        # Clean up all data after each test
+        async with driver.session(database=NEO4J_DB) as session:
+            await session.run("MATCH (n) DETACH DELETE n")
+        await driver.close()
 
 
 # ── Schema ──
 
 
 class TestInitializeSchema:
-    async def test_initialize_creates_tables(self, graph_store):
-        tables = _table_names(graph_store)
-        for expected in ("Knowledge", "Chain", "PREMISE", "CONCLUSION", "Resource"):
-            assert expected in tables
-
     async def test_initialize_idempotent(self, graph_store):
         await graph_store.initialize_schema()
-        tables = _table_names(graph_store)
-        assert "Knowledge" in tables
+        # Should not error; verify store is operational by writing
+        await graph_store.write_topology([], [])
 
 
 # ── write_topology ──
@@ -65,52 +117,46 @@ class TestInitializeSchema:
 class TestWriteTopology:
     async def test_write_creates_knowledge_nodes(self, graph_store, knowledge_items, chains):
         await graph_store.write_topology(knowledge_items, chains)
-        # Each (knowledge_id, version) gets its own node
-        count = _count_nodes(graph_store, "Knowledge")
-        # knowledge from fixtures + any extra refs from chain steps
+        count = await _count_nodes(graph_store, "Knowledge")
         expected_vids = {_vid(c.knowledge_id, c.version) for c in knowledge_items}
-        result = graph_store._execute("MATCH (n:Knowledge) RETURN n.knowledge_vid")
-        stored_vids: set[str] = set()
-        while result.has_next():
-            stored_vids.add(result.get_next()[0])
+        rows = await _run_query(graph_store, "MATCH (n:Knowledge) RETURN n.knowledge_vid")
+        stored_vids = {row[0] for row in rows}
         assert expected_vids.issubset(stored_vids)
         assert count >= len(expected_vids)
 
     async def test_write_creates_chain_nodes(self, graph_store, knowledge_items, chains):
         await graph_store.write_topology(knowledge_items, chains)
-        result = graph_store._execute("MATCH (n:Chain) RETURN n.chain_id")
-        stored = set()
-        while result.has_next():
-            stored.add(result.get_next()[0])
+        rows = await _run_query(graph_store, "MATCH (n:Chain) RETURN n.chain_id")
+        stored = {row[0] for row in rows}
         assert stored == {ch.chain_id for ch in chains}
 
     async def test_write_creates_premise_relationships(self, graph_store, knowledge_items, chains):
         await graph_store.write_topology(knowledge_items, chains)
         expected = sum(len(step.premises) for ch in chains for step in ch.steps)
-        assert _count_rels(graph_store, "PREMISE") == expected
+        assert await _count_rels(graph_store, "PREMISE") == expected
 
     async def test_write_creates_conclusion_relationships(
         self, graph_store, knowledge_items, chains
     ):
         await graph_store.write_topology(knowledge_items, chains)
         expected = sum(len(ch.steps) for ch in chains)
-        assert _count_rels(graph_store, "CONCLUSION") == expected
+        assert await _count_rels(graph_store, "CONCLUSION") == expected
 
     async def test_write_topology_idempotent(self, graph_store, knowledge_items, chains):
         await graph_store.write_topology(knowledge_items, chains)
-        c1 = _count_nodes(graph_store, "Knowledge")
-        ch1 = _count_nodes(graph_store, "Chain")
-        p1 = _count_rels(graph_store, "PREMISE")
-        co1 = _count_rels(graph_store, "CONCLUSION")
+        c1 = await _count_nodes(graph_store, "Knowledge")
+        ch1 = await _count_nodes(graph_store, "Chain")
+        p1 = await _count_rels(graph_store, "PREMISE")
+        co1 = await _count_rels(graph_store, "CONCLUSION")
 
         await graph_store.write_topology(knowledge_items, chains)
-        assert _count_nodes(graph_store, "Knowledge") == c1
-        assert _count_nodes(graph_store, "Chain") == ch1
-        assert _count_rels(graph_store, "PREMISE") == p1
-        assert _count_rels(graph_store, "CONCLUSION") == co1
+        assert await _count_nodes(graph_store, "Knowledge") == c1
+        assert await _count_nodes(graph_store, "Chain") == ch1
+        assert await _count_rels(graph_store, "PREMISE") == p1
+        assert await _count_rels(graph_store, "CONCLUSION") == co1
 
     async def test_multi_version_knowledge_creates_separate_nodes(self, graph_store):
-        """PR #100 comment 1: different versions must be separate graph nodes."""
+        """Different versions must be separate graph nodes."""
         c_v1 = Knowledge(
             knowledge_id="x",
             version=1,
@@ -139,20 +185,22 @@ class TestWriteTopology:
         await graph_store.write_topology([c_v1, c_v2], [chain])
 
         # Two distinct Knowledge nodes
-        assert _count_nodes(graph_store, "Knowledge") == 2
+        assert await _count_nodes(graph_store, "Knowledge") == 2
 
         # Each has correct properties
-        res = graph_store._conn.execute(
+        rows = await _run_query(
+            graph_store,
             "MATCH (c:Knowledge {knowledge_vid: $vid}) RETURN c.prior",
             {"vid": _vid("x", 1)},
         )
-        assert res.get_next()[0] == pytest.approx(0.5)
+        assert rows[0][0] == pytest.approx(0.5)
 
-        res = graph_store._conn.execute(
+        rows = await _run_query(
+            graph_store,
             "MATCH (c:Knowledge {knowledge_vid: $vid}) RETURN c.prior",
             {"vid": _vid("x", 2)},
         )
-        assert res.get_next()[0] == pytest.approx(0.7)
+        assert rows[0][0] == pytest.approx(0.7)
 
 
 # ── write_resource_links ──
@@ -164,34 +212,36 @@ class TestWriteResourceLinks:
     ):
         await graph_store.write_topology(knowledge_items, chains)
         await graph_store.write_resource_links(attachments)
-        result = graph_store._execute(
-            "MATCH (r:Resource)-[a:ATTACHED_TO]->(c:Knowledge) RETURN COUNT(a)"
+        rows = await _run_query(
+            graph_store,
+            "MATCH (r:Resource)-[a:ATTACHED_TO]->(c:Knowledge) RETURN COUNT(a)",
         )
         expected = sum(1 for a in attachments if a.target_type == "knowledge")
-        assert result.get_next()[0] == expected
+        assert rows[0][0] == expected
 
     async def test_write_resource_links_to_chain(
         self, graph_store, knowledge_items, chains, attachments
     ):
         await graph_store.write_topology(knowledge_items, chains)
         await graph_store.write_resource_links(attachments)
-        result = graph_store._execute(
-            "MATCH (r:Resource)-[a:ATTACHED_TO]->(ch:Chain) RETURN COUNT(a)"
+        rows = await _run_query(
+            graph_store,
+            "MATCH (r:Resource)-[a:ATTACHED_TO]->(ch:Chain) RETURN COUNT(a)",
         )
         expected = sum(1 for a in attachments if a.target_type in ("chain", "chain_step"))
-        assert result.get_next()[0] == expected
+        assert rows[0][0] == expected
 
     async def test_write_resource_links_idempotent(
         self, graph_store, knowledge_items, chains, attachments
     ):
         await graph_store.write_topology(knowledge_items, chains)
         await graph_store.write_resource_links(attachments)
-        count_1 = _count_rels(graph_store, "ATTACHED_TO")
+        count_1 = await _count_rels(graph_store, "ATTACHED_TO")
         await graph_store.write_resource_links(attachments)
-        assert _count_rels(graph_store, "ATTACHED_TO") == count_1
+        assert await _count_rels(graph_store, "ATTACHED_TO") == count_1
 
     async def test_chain_step_attachments_preserve_step_index(self, graph_store):
-        """PR #100 comment 4: chain_step attachments must preserve step identity."""
+        """chain_step attachments must preserve step identity."""
         chain = Chain(
             chain_id="ch",
             module_id="m",
@@ -227,7 +277,6 @@ class TestWriteResourceLinks:
         ]
         await graph_store.write_topology(knowledge_local, [chain])
 
-        # Two attachments to same chain, same resource, same role, different steps
         att0 = ResourceAttachment(
             resource_id="res1",
             target_type="chain_step",
@@ -242,19 +291,16 @@ class TestWriteResourceLinks:
         )
         await graph_store.write_resource_links([att0, att1])
 
-        # Both should exist (not collapsed)
-        result = graph_store._conn.execute(
+        rows = await _run_query(
+            graph_store,
             "MATCH (r:Resource)-[a:ATTACHED_TO]->(ch:Chain {chain_id: 'ch'}) "
-            "RETURN a.step_index ORDER BY a.step_index"
+            "RETURN a.step_index ORDER BY a.step_index",
         )
-        steps = []
-        while result.has_next():
-            steps.append(result.get_next()[0])
+        steps = [row[0] for row in rows]
         assert steps == [0, 1]
 
     async def test_knowledge_attachment_resolves_latest_version(self, graph_store):
-        """PR #100 follow-up: knowledge attachments must resolve to latest version,
-        not hardcode @1. If only v2 exists, attachment should still succeed."""
+        """Knowledge attachments must resolve to latest version."""
         knowledge_v2 = [
             Knowledge(
                 knowledge_id="x",
@@ -277,11 +323,12 @@ class TestWriteResourceLinks:
         )
         await graph_store.write_resource_links([att])
 
-        result = graph_store._conn.execute(
-            "MATCH (r:Resource)-[a:ATTACHED_TO]->(c:Knowledge) RETURN c.knowledge_vid"
+        rows = await _run_query(
+            graph_store,
+            "MATCH (r:Resource)-[a:ATTACHED_TO]->(c:Knowledge) RETURN c.knowledge_vid",
         )
-        assert result.has_next()
-        assert result.get_next()[0] == "x@2"
+        assert len(rows) == 1
+        assert rows[0][0] == "x@2"
 
     async def test_knowledge_attachment_skips_nonexistent(self, graph_store):
         """Attachment to a knowledge node not in the graph should be silently skipped."""
@@ -294,10 +341,11 @@ class TestWriteResourceLinks:
         )
         await graph_store.write_resource_links([att])
 
-        result = graph_store._conn.execute(
-            "MATCH (r:Resource)-[a:ATTACHED_TO]->(c:Knowledge) RETURN COUNT(a)"
+        rows = await _run_query(
+            graph_store,
+            "MATCH (r:Resource)-[a:ATTACHED_TO]->(c:Knowledge) RETURN COUNT(a)",
         )
-        assert result.get_next()[0] == 0
+        assert rows[0][0] == 0
 
     async def test_module_and_package_attachments_skipped(
         self, graph_store, knowledge_items, chains
@@ -319,9 +367,8 @@ class TestWriteResourceLinks:
             ),
         ]
         await graph_store.write_resource_links(atts)
-        # No resources should be created for module/package targets
-        result = graph_store._execute("MATCH (r:Resource) RETURN COUNT(r)")
-        assert result.get_next()[0] == 0
+        rows = await _run_query(graph_store, "MATCH (r:Resource) RETURN COUNT(r)")
+        assert rows[0][0] == 0
 
     async def test_chain_attachment_direct(self, graph_store, knowledge_items, chains):
         """Attachment with target_type='chain' creates link to chain node."""
@@ -333,10 +380,11 @@ class TestWriteResourceLinks:
             role="evidence",
         )
         await graph_store.write_resource_links([att])
-        result = graph_store._execute(
-            "MATCH (r:Resource)-[a:ATTACHED_TO]->(ch:Chain) RETURN COUNT(a)"
+        rows = await _run_query(
+            graph_store,
+            "MATCH (r:Resource)-[a:ATTACHED_TO]->(ch:Chain) RETURN COUNT(a)",
         )
-        assert result.get_next()[0] == 1
+        assert rows[0][0] == 1
 
 
 # ── update_beliefs ──
@@ -347,18 +395,18 @@ class TestUpdateBeliefs:
         await graph_store.write_topology(knowledge_items, chains)
         await graph_store.update_beliefs(beliefs)
 
-        # Last write per (knowledge_id, version) wins
         expected: dict[str, float] = {}
         for snap in beliefs:
             expected[_vid(snap.knowledge_id, snap.version)] = snap.belief
 
         for vid, expected_belief in expected.items():
-            result = graph_store._conn.execute(
+            rows = await _run_query(
+                graph_store,
                 "MATCH (cl:Knowledge {knowledge_vid: $vid}) RETURN cl.belief",
                 {"vid": vid},
             )
-            if result.has_next():
-                assert result.get_next()[0] == pytest.approx(expected_belief)
+            if rows:
+                assert rows[0][0] == pytest.approx(expected_belief)
 
     async def test_update_beliefs_nonexistent_knowledge(self, graph_store):
         snap = BeliefSnapshot(
@@ -371,7 +419,7 @@ class TestUpdateBeliefs:
         await graph_store.update_beliefs([snap])  # should not raise
 
     async def test_update_beliefs_version_aware(self, graph_store):
-        """PR #100 comment 2: beliefs for different versions are independent."""
+        """Beliefs for different versions are independent."""
         c_v1 = Knowledge(
             knowledge_id="x",
             version=1,
@@ -401,18 +449,19 @@ class TestUpdateBeliefs:
         )
         await graph_store.update_beliefs([snap_v1, snap_v2])
 
-        # v1 and v2 should have independent belief values
-        r1 = graph_store._conn.execute(
+        rows = await _run_query(
+            graph_store,
             "MATCH (c:Knowledge {knowledge_vid: $vid}) RETURN c.belief",
             {"vid": _vid("x", 1)},
         )
-        assert r1.get_next()[0] == pytest.approx(0.3)
+        assert rows[0][0] == pytest.approx(0.3)
 
-        r2 = graph_store._conn.execute(
+        rows = await _run_query(
+            graph_store,
             "MATCH (c:Knowledge {knowledge_vid: $vid}) RETURN c.belief",
             {"vid": _vid("x", 2)},
         )
-        assert r2.get_next()[0] == pytest.approx(0.9)
+        assert rows[0][0] == pytest.approx(0.9)
 
 
 # ── update_probability ──
@@ -424,15 +473,16 @@ class TestUpdateProbability:
         chain = chains[0]
         await graph_store.update_probability(chain.chain_id, 0, 0.95)
 
-        result = graph_store._conn.execute(
+        rows = await _run_query(
+            graph_store,
             "MATCH (ch:Chain {chain_id: $chid})-[r:CONCLUSION]->(:Knowledge) "
             "WHERE r.step_index = 0 RETURN r.probability",
             {"chid": chain.chain_id},
         )
-        assert result.get_next()[0] == pytest.approx(0.95)
+        assert rows[0][0] == pytest.approx(0.95)
 
     async def test_update_probability_per_step(self, graph_store):
-        """PR #100 comment 3: probability must be per (chain_id, step_index)."""
+        """Probability must be per (chain_id, step_index)."""
         knowledge_local = [
             Knowledge(
                 knowledge_id=kid,
@@ -468,22 +518,22 @@ class TestUpdateProbability:
         )
         await graph_store.write_topology(knowledge_local, [chain])
 
-        # Set different probabilities for each step
         await graph_store.update_probability("ch", 0, 0.2)
         await graph_store.update_probability("ch", 1, 0.9)
 
-        # Both should be independently stored
-        r0 = graph_store._conn.execute(
+        rows = await _run_query(
+            graph_store,
             "MATCH (ch:Chain {chain_id: 'ch'})-[r:CONCLUSION]->(:Knowledge) "
             "WHERE r.step_index = 0 RETURN r.probability",
         )
-        assert r0.get_next()[0] == pytest.approx(0.2)
+        assert rows[0][0] == pytest.approx(0.2)
 
-        r1 = graph_store._conn.execute(
+        rows = await _run_query(
+            graph_store,
             "MATCH (ch:Chain {chain_id: 'ch'})-[r:CONCLUSION]->(:Knowledge) "
             "WHERE r.step_index = 1 RETURN r.probability",
         )
-        assert r1.get_next()[0] == pytest.approx(0.9)
+        assert rows[0][0] == pytest.approx(0.9)
 
 
 # ── get_neighbors ──
@@ -535,11 +585,12 @@ class TestGetNeighbors:
             chain_types=["contradiction"],
         )
         for ch_id in result.chain_ids:
-            res = graph_store._conn.execute(
+            rows = await _run_query(
+                graph_store,
                 "MATCH (ch:Chain {chain_id: $chid}) RETURN ch.type",
                 {"chid": ch_id},
             )
-            assert res.get_next()[0] == "contradiction"
+            assert rows[0][0] == "contradiction"
 
     async def test_get_neighbors_nonexistent_chain_type(self, graph_store, knowledge_items, chains):
         """Filter with non-matching type returns empty."""
@@ -659,15 +710,10 @@ class TestDeletePackage:
         pkg_id = knowledge_items[0].source_package_id
         await graph_store.delete_package(pkg_id)
 
-        # Verify knowledge nodes are gone
-        assert _count_nodes(graph_store, "Knowledge") == 0
-
-        # Verify chain nodes are gone
-        assert _count_nodes(graph_store, "Chain") == 0
-
-        # Verify relationships are gone
-        assert _count_rels(graph_store, "PREMISE") == 0
-        assert _count_rels(graph_store, "CONCLUSION") == 0
+        assert await _count_nodes(graph_store, "Knowledge") == 0
+        assert await _count_nodes(graph_store, "Chain") == 0
+        assert await _count_rels(graph_store, "PREMISE") == 0
+        assert await _count_rels(graph_store, "CONCLUSION") == 0
 
     async def test_delete_package_neighbor_query_returns_empty(
         self, graph_store, knowledge_items, chains
@@ -718,23 +764,36 @@ class TestDeletePackage:
         await graph_store.write_topology([knowledge], [chain])
         await graph_store.delete_package("galileo_falling_bodies")
 
-        assert _count_nodes(graph_store, "Knowledge") == 0
-        assert _count_nodes(graph_store, "Chain") == 0
+        assert await _count_nodes(graph_store, "Knowledge") == 0
+        assert await _count_nodes(graph_store, "Chain") == 0
 
 
 # ── close ──
 
 
 class TestClose:
-    async def test_close_does_not_error(self, tmp_path):
+    async def test_close_kuzu(self, tmp_path):
         store = KuzuGraphStore(tmp_path / "close_test")
         await store.initialize_schema()
         await store.close()
 
-    async def test_close_idempotent(self, tmp_path):
+    async def test_close_kuzu_idempotent(self, tmp_path):
         store = KuzuGraphStore(tmp_path / "close_idem_test")
         await store.initialize_schema()
         await store.close()
+        await store.close()
+
+    async def test_close_neo4j(self):
+        if not await _neo4j_available():
+            pytest.skip("Neo4j not available")
+        import neo4j
+
+        from libs.storage_v2.neo4j_graph_store import Neo4jGraphStore
+
+        auth = ("neo4j", NEO4J_PASSWORD) if NEO4J_PASSWORD else None
+        driver = neo4j.AsyncGraphDatabase.driver(NEO4J_URI, auth=auth)
+        store = Neo4jGraphStore(driver=driver, database=NEO4J_DB)
+        await store.initialize_schema()
         await store.close()
 
 
@@ -772,17 +831,19 @@ class TestFullRoundtrip:
         # 8. Verify belief was updated (version-aware)
         last_belief = beliefs[-1]
         vid = _vid(last_belief.knowledge_id, last_belief.version)
-        result = graph_store._conn.execute(
+        rows = await _run_query(
+            graph_store,
             "MATCH (c:Knowledge {knowledge_vid: $vid}) RETURN c.belief",
             {"vid": vid},
         )
-        if result.has_next():
-            assert result.get_next()[0] == pytest.approx(last_belief.belief)
+        if rows:
+            assert rows[0][0] == pytest.approx(last_belief.belief)
 
         # 9. Verify probability was updated per step
-        result = graph_store._conn.execute(
+        rows = await _run_query(
+            graph_store,
             "MATCH (ch:Chain {chain_id: $chid})-[r:CONCLUSION]->(:Knowledge) "
             "WHERE r.step_index = 0 RETURN r.probability",
             {"chid": chain.chain_id},
         )
-        assert result.get_next()[0] == pytest.approx(0.9)
+        assert rows[0][0] == pytest.approx(0.9)

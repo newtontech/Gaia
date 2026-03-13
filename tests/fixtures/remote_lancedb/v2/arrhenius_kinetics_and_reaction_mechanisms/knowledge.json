@@ -1,0 +1,1554 @@
+[
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.governing_ode_system_for_the_reaction_substep",
+    "version": 1,
+    "type": "claim",
+    "content": "The spatially homogeneous operator-split reaction substep for the reversible reaction $A + B \\rightleftharpoons C$ under constant volume and adiabatic conditions is governed by the following system of ordinary differential equations:\n$$ \\dot{c}_A = -q,\\quad \\dot{c}_B = -q,\\quad \\dot{c}_C = +q $$\n$$ \\rho\\,c_v(\\mathbf{Y}, T)\\,\\dot{T} = -\\Delta u(T)\\,q $$\nwhere the reaction rate and internal energy of reaction are defined as:\n$$ q = k_f(T)\\,c_A\\,c_B - k_r(T)\\,c_C $$\n$$ \\Delta u(T) = u_C(T) - u_A(T) - u_B(T) $$",
+    "prior": 0.5,
+    "keywords": [
+      "chemical ODE system",
+      "Arrhenius kinetics",
+      "energy conservation"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.law_of_mass_action_for_elementary_reactions",
+    "version": 1,
+    "type": "setting",
+    "content": "For a reversible elementary reaction of the form $\\sum_i \\nu_i' M_i \\rightleftharpoons \\sum_i \\nu_i'' M_i$, the net reaction rate (rate of progress) $q$ is determined by the difference between the forward and reverse rates, proportional to the product of reactant and product concentrations respectively:\n$$ q = k_f(T) \\prod_i c_i^{\\nu_i'} - k_r(T) \\prod_i c_i^{\\nu_i''} $$",
+    "prior": 1.0,
+    "keywords": [
+      "chemical kinetics",
+      "elementary reaction",
+      "reaction rate"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.species_conservation_in_homogeneous_systems",
+    "version": 1,
+    "type": "setting",
+    "content": "In a spatially homogeneous closed system with no transport (advection/diffusion), the time rate of change of the molar concentration of species $i$ is proportional to the net reaction rate $q$ scaled by its net stoichiometric coefficient $\\nu_i$:\n$$ \\dot{c}_i = (\\nu_i'' - \\nu_i') \\, q = \\nu_i \\, q $$",
+    "prior": 1.0,
+    "keywords": [
+      "species conservation",
+      "stoichiometry",
+      "ODE formulation"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.first_law_of_thermodynamics_for_isochoric_adiabatic_processe",
+    "version": 1,
+    "type": "setting",
+    "content": "For a closed, spatially homogeneous system evolving at constant volume (isochoric) and without heat exchange (adiabatic), the total internal energy is conserved ($dU/dt = 0$). This implies that the rate of change of thermal energy is balanced by the rate of change of chemical energy. Expressed in terms of temperature $T$ and the reaction rate $q$:\n$$ \\rho \\, c_v(\\mathbf{Y}, T) \\, \\dot{T} = - \\Delta u(T) \\, q $$\nwhere $\\Delta u(T) = \\sum_i \\nu_i u_i(T)$ is the internal energy of reaction.",
+    "prior": 1.0,
+    "keywords": [
+      "First Law of Thermodynamics",
+      "isochoric process",
+      "adiabatic system",
+      "internal energy",
+      "temperature evolution"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.criteria_for_extinction_and_sensitivity_in_radiative_arrheni",
+    "version": 1,
+    "type": "claim",
+    "content": "In a well-stirred reactor governed by Arrhenius kinetics and subject to optically thin radiative heat loss, the critical condition for thermal extinction is a saddle-node bifurcation characterized by the simultaneous equality of the heat generation and loss rates and their temperature derivatives (slope-matching). furthermore, for reactions with high activation energy ($E_a \\gg RT$), the system exhibits high sensitivity to temperature perturbations, where the fractional change in the reaction rate $k(T)$ scales with the dimensionless activation energy factor $n + E_a/(RT)$.",
+    "prior": 0.5,
+    "keywords": [
+      "Thermal extinction",
+      "Saddle-node bifurcation",
+      "Arrhenius sensitivity",
+      "Slope-matching condition"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.arrhenius_law_and_temperature_sensitivity",
+    "version": 1,
+    "type": "setting",
+    "content": "For a chemical reaction governed by the Arrhenius rate law, the rate constant is given by $k(T) = A\\,T^{n}\\exp(-E_{a}/(R\\,T))$. The sensitivity of this rate to temperature changes is characterized by the logarithmic derivative with respect to temperature:\n$$ \\frac{d \\ln k}{d \\ln T} = \\frac{T}{k} \\frac{dk}{dT} = n + \\frac{E_a}{RT} $$\nThis quantity represents the fractional change in the reaction rate resulting from a unit fractional change in temperature.",
+    "prior": 1.0,
+    "keywords": [
+      "Arrhenius equation",
+      "Activation energy",
+      "Logarithmic sensitivity"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.saddle-node_bifurcation_in_1d_systems",
+    "version": 1,
+    "type": "setting",
+    "content": "Consider a dynamical system described by the scalar equation $\\frac{dT}{dt} = G(T) - L(T)$, where $G(T)$ is a source term and $L(T)$ is a sink term depending on a state variable $T$. Steady states exist where $G(T) = L(T)$. A saddle-node bifurcation (corresponding to extinction or ignition limits) occurs at a critical point $T_\\star$ where a stable and an unstable steady state merge and disappear. This condition is mathematically defined by the simultaneous satisfaction of the value matching and slope matching conditions:\n$$ G(T_\\star) = L(T_\\star) \\quad \\text{and} \\quad \\left. \\frac{dG}{dT} \\right|_{T_\\star} = \\left. \\frac{dL}{dT} \\right|_{T_\\star} $$",
+    "prior": 1.0,
+    "keywords": [
+      "Saddle-node bifurcation",
+      "Semenov theory",
+      "Criticality condition",
+      "Tangency condition"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.optically_thin_radiative_loss",
+    "version": 1,
+    "type": "setting",
+    "content": "For a gray, optically thin participating medium with Planck-mean absorption coefficient $\\kappa_p$, the net volumetric radiative loss $S_{\\text{rad}}$ is the difference between the volumetric emission and the absorption of radiation from large surroundings at uniform temperature $T_\\infty$. Following the Stefan-Boltzmann law, this is given by:\n$$ S_{\\text{rad}}(T) = 4\\kappa_p \\sigma (T^4 - T_\\infty^4) $$",
+    "prior": 1.0,
+    "keywords": [
+      "Stefan-Boltzmann law",
+      "Optically thin approximation",
+      "Volumetric emission"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136.formulation_of_conditional_mean_reaction_rate",
+    "version": 1,
+    "type": "claim",
+    "content": "The mass-weighted conditional mean reaction rate in mixture fraction space is defined as:\n$$ \\langle r \\mid Z=\\zeta \\rangle = \\frac{\\langle \\rho \\, r \\, \\delta(Z-\\zeta)\\rangle}{\\langle \\rho \\, \\delta(Z-\\zeta)\\rangle} $$\nDue to the nonlinearity of the Arrhenius function $k(T) = A_0 \\exp(-E_a/RT)$, the mean rate coefficient is not equal to the coefficient evaluated at the mean temperature ($\\langle k(T) \\mid Z=\\zeta \\rangle \\neq k(\\langle T \\mid Z=\\zeta \\rangle)$). Consequently, unresolved subgrid temperature fluctuations bias the reaction rate and must be explicitly modeled.",
+    "prior": 0.5,
+    "keywords": [
+      "Mass-weighted conditional mean",
+      "Arrhenius nonlinearity",
+      "Subgrid modeling closure"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136.definition_of_mass-weighted_conditional_mean",
+    "version": 1,
+    "type": "setting",
+    "content": "In a compressible turbulent flow characterized by a density field $\\rho$, the mass-weighted (Favre) conditional mean of a scalar quantity $\\phi$ conditioned on a variable $Z$ taking the value $\\zeta$ is defined as the ratio of the unconditional Reynolds averages of density-weighted terms:\n$$ \\langle \\phi \\mid Z=\\zeta \\rangle_{\\rho} \\equiv \\frac{\\langle \\rho \\, \\phi \\, \\delta(Z-\\zeta) \\rangle}{\\langle \\rho \\, \\delta(Z-\\zeta) \\rangle} $$\nThis definition accounts for density correlations essential in variable-density flows.",
+    "prior": 1.0,
+    "keywords": [
+      "Favre averaging",
+      "Conditional statistics",
+      "Compressible turbulence"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136.averaging_of_non-linear_functions",
+    "version": 1,
+    "type": "setting",
+    "content": "For a strictly non-linear function $f(x)$ and a stochastic variable $X$ with a non-zero variance, the expected value of the function is not equal to the function of the expected value:\n$$ \\langle f(X) \\rangle \\neq f(\\langle X \\rangle) $$\nSpecifically, if $f(x)$ is convex (e.g., exponential-like functions in certain regimes), Jensen's inequality implies $\\langle f(X) \\rangle > f(\\langle X \\rangle)$, meaning that fluctuations in $X$ effectively increase the mean value of $f(X)$ relative to the deterministic evaluation.",
+    "prior": 1.0,
+    "keywords": [
+      "Jensen's inequality",
+      "Nonlinear averaging",
+      "Statistical moment"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.critical_ignition_temperature",
+    "version": 1,
+    "type": "claim",
+    "content": "Under the assumption of constant bulk concentrations and first-order radical losses, the critical temperature $T_c$ at which the system undergoes explosive radical growth is given by:\n$$ T_c = \\frac{E_1 + E_2}{R\\,\\ln\\!\\left(\\dfrac{A_1 A_2\\,[O_2]\\,[H_2]}{k_H\\,k_O}\\right)} $$\nThis threshold is defined by the condition where the product of the chain-branching rates exceeds the product of the loss rates: $k_1(T_c)\\,k_2(T_c)\\,[O_2]\\,[H_2] = k_H\\,k_O$.",
+    "prior": 0.5,
+    "keywords": [
+      "Ignition criterion",
+      "Critical temperature formula",
+      "Branching-loss balance"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.law_of_mass_action_for_bimolecular_reactions",
+    "version": 1,
+    "type": "setting",
+    "content": "The rate of an elementary bimolecular reaction $A + B \\xrightarrow{k} \\text{Products}$ is given by $r = k(T)[A][B]$, where $k(T)$ is the rate coefficient and $[A], [B]$ are the concentrations of the reactants.",
+    "prior": 1.0,
+    "keywords": [
+      "Law of Mass Action",
+      "Reaction rate",
+      "Bimolecular kinetics"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.arrhenius_law",
+    "version": 1,
+    "type": "setting",
+    "content": "The temperature dependence of a reaction rate coefficient $k(T)$ is described by the equation $k(T) = A \\exp\\left(-\\frac{E}{RT}\\right)$, where $A$ is a constant pre-exponential factor and $E$ is the activation energy.",
+    "prior": 1.0,
+    "keywords": [
+      "Arrhenius equation",
+      "Activation energy",
+      "Temperature dependence"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.linear_stability_criterion",
+    "version": 1,
+    "type": "setting",
+    "content": "For a dynamical system $\\frac{d\\mathbf{x}}{dt} = \\mathbf{f}(\\mathbf{x})$, the stability of a fixed point (equilibrium) is determined by the eigenvalues of the Jacobian matrix $\\mathbf{J}$ evaluated at that point. If the largest real part of any eigenvalue is positive, the fixed point is unstable (perturbations grow exponentially).",
+    "prior": 1.0,
+    "keywords": [
+      "Linear stability analysis",
+      "Jacobian matrix",
+      "Eigenvalue analysis"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.instability_condition_for_a_2x2_matrix_with_negative_trace",
+    "version": 1,
+    "type": "setting",
+    "content": "For a $2 \\times 2$ matrix $\\mathbf{J}$ with a strictly negative trace ($\\operatorname{tr}(\\mathbf{J}) < 0$), the existence of an eigenvalue with a positive real part is mathematically equivalent to the condition that the determinant is negative ($\\det(\\mathbf{J}) < 0$).",
+    "prior": 1.0,
+    "keywords": [
+      "Linear algebra",
+      "Determinant",
+      "Trace",
+      "Eigenvalue sign"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.analytical_expression_for_ignition_delay",
+    "version": 1,
+    "type": "claim",
+    "content": "The ignition delay time $\\tau_{\\mathrm{ign}}$, derived from the competition between chain branching and third-body termination in the early-time exponential growth regime, is given by:\n$$\\tau_{\\mathrm{ign}} \\approx \\frac{\\ln\\!\\left(\\frac{[H]_{\\mathrm{ign}}}{[H]_0}\\right)}{[O_2]\\left(A_b T^{n_b} e^{-E_b/(R T)} - A_t [M] T^{n_t} e^{-E_t/(R T)}\\right)}$$\nThis relationship indicates that $\\tau_{\\mathrm{ign}}$ is inversely proportional to the net branching rate, decreasing as the branching rate constant $k_b$ increases and increasing as the termination rate constant $k_t$ increases.",
+    "prior": 0.5,
+    "keywords": [
+      "Ignition delay formula",
+      "Arrhenius kinetics",
+      "Branched chain theory"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.law_of_mass_action",
+    "version": 1,
+    "type": "setting",
+    "content": "For an elementary reaction step, the reaction rate is proportional to the product of the concentrations of the reacting species raised to their stoichiometric coefficients. Specifically:\n- A bimolecular reaction $A + B \\to \\dots$ has a rate $r = k [A][B]$.\n- A termolecular reaction $A + B + M \\to \\dots$ has a rate $r = k [A][B][M]$.",
+    "prior": 1.0,
+    "keywords": [
+      "Chemical kinetics",
+      "Reaction rate"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.arrhenius_equation",
+    "version": 1,
+    "type": "setting",
+    "content": "The temperature dependence of a reaction rate coefficient $k(T)$ is described by the modified Arrhenius equation:\n$$k(T) = A T^n \\exp\\left(-\\frac{E}{R T}\\right)$$\nwhere $A$ is the pre-exponential factor, $n$ is the temperature exponent, and $E$ is the activation energy.",
+    "prior": 1.0,
+    "keywords": [
+      "Arrhenius law",
+      "Temperature dependence"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.exponential_growth_in_branched_chain_reactions",
+    "version": 1,
+    "type": "setting",
+    "content": "In a chemical system where the net production rate of a radical species $X$ is proportional to its current concentration (i.e., $\\frac{\\mathrm{d}[X]}{\\mathrm{d}t} = \\lambda [X]$ with $\\lambda > 0$), the concentration grows exponentially with time:\n$$[X](t) = [X]_0 e^{\\lambda t}$$",
+    "prior": 1.0,
+    "keywords": [
+      "Exponential growth",
+      "Differential equation"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.kinetic_formulation_for_the_reaction_h_+_o2_+_m_=_ho2_+_m",
+    "version": 1,
+    "type": "claim",
+    "content": "Based on the assumption that the reaction $\\mathrm{H} + \\mathrm{O_2} + \\mathrm{M} \\rightleftharpoons \\mathrm{HO_2} + \\mathrm{M}$ is elementary, the forward and reverse reaction rates are:\n$$ r_f^s = k_f^s(T)\\, C_{\\mathrm{H}}\\, C_{\\mathrm{O_2}}\\, C_{\\mathrm{M}} $$\n$$ r_r^s = k_r^s(T)\\, C_{\\mathrm{HO_2}}\\, C_{\\mathrm{M}} $$\nThe net rate of progress is $R_s = r_f^s - r_r^s$.\nThe molar production rate for each species $i$ is given by the product of the net rate and the net change in stoichiometry:\n$$ \\dot{\\omega}_i = \\left(\\nu_i'' - \\nu_i'\\right) R_s $$\nwhere $\\nu_i'$ and $\\nu_i''$ are the stoichiometric coefficients for the reactants and products, respectively.",
+    "prior": 0.5,
+    "keywords": [
+      "mass action law",
+      "elementary reaction rates",
+      "species production",
+      "third-body reaction"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.definition_of_elementary_reaction",
+    "version": 1,
+    "type": "setting",
+    "content": "An elementary reaction is a single-step molecular event where the reaction order with respect to each reactant equals its stoichiometric coefficient in the balanced equation for that step. The molecularity of the step is the sum of the reactant stoichiometric coefficients, $\\sum_i \\nu_{i,s}'$.",
+    "prior": 1.0,
+    "keywords": [
+      "elementary reaction",
+      "molecularity",
+      "stoichiometry"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.law_of_mass_action_for_elementary_steps",
+    "version": 1,
+    "type": "setting",
+    "content": "For an elementary reversible reaction step $s$ represented generally as $\\sum_i \\nu_{i,s}' \\mathrm{X}_i \\rightleftharpoons \\sum_i \\nu_{i,s}'' \\mathrm{X}_i$, the forward rate $r_f^s$ and reverse rate $r_r^s$ are given by the product of the rate coefficient and the concentrations of the respective reactants raised to their stoichiometric coefficients:\n$$ r_f^s = k_f^s(T) \\prod_i C_i^{\\nu_{i,s}'} $$\n$$ r_r^s = k_r^s(T) \\prod_i C_i^{\\nu_{i,s}''} $$",
+    "prior": 1.0,
+    "keywords": [
+      "Law of Mass Action",
+      "reaction rate",
+      "concentration"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.net_rate_of_progress",
+    "version": 1,
+    "type": "setting",
+    "content": "The net rate of progress $R_s$ for a reversible reaction step $s$ is defined as the difference between the forward rate and the reverse rate:\n$$ R_s = r_f^s - r_r^s $$",
+    "prior": 1.0,
+    "keywords": [
+      "net rate",
+      "reversibility"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.species_production_rate",
+    "version": 1,
+    "type": "setting",
+    "content": "The molar production rate $\\dot{\\omega}_{i,s}$ of a species $i$ due to a single reaction step $s$ is the product of the net rate of progress $R_s$ and the net change in the stoichiometric coefficient for that species:\n$$ \\dot{\\omega}_{i,s} = (\\nu_{i,s}'' - \\nu_{i,s}') R_s $$",
+    "prior": 1.0,
+    "keywords": [
+      "production rate",
+      "stoichiometry",
+      "conservation of mass"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.jacobian_structure_and_simulation_strategy_for_detailed_kine",
+    "version": 1,
+    "type": "claim",
+    "content": "For a hydrocarbon mechanism with $N_s=50$ species and average connectivity $d=10$, the local chemistry Jacobian has dimension $n=51$. The estimated number of nonzero entries is $\\mathrm{nnz} \\approx 596$, resulting in a sparsity fraction $\\sigma \\approx 0.77$. Consequently, the optimal simulation strategy involves exploiting this sparsity via analytic Jacobian evaluation and sparse linear solvers, complemented by physics-based model reduction techniques such as Directed Relation Graph with Error Propagation (DRGEP), Quasi-Steady-State Approximation (QSSA), or manifold tabulation (ILDM/FGM) to manage computational cost while preserving ignition and extinction physics.",
+    "prior": 0.5,
+    "keywords": [
+      "Sparse Jacobian estimation",
+      "Computational Combustion Strategies",
+      "$n=51$, $\\sigma \\approx 0.77$"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.definition_of_the_local_state_vector_and_jacobian_dimension",
+    "version": 1,
+    "type": "setting",
+    "content": "For a local chemical system governed by $N_s$ species concentrations $c_1, \\dots, c_{N_s}$ and one temperature variable $T$, the state vector $\\mathbf{y}$ is defined as $\\mathbf{y} = [c_1, \\dots, c_{N_s}, T]^T$. Consequently, the dimension $n$ of the Jacobian matrix $J = \\partial \\dot{\\mathbf{y}} / \\partial \\mathbf{y}$ is $n = N_s + 1$.",
+    "prior": 1.0,
+    "keywords": [
+      "State vector dimension",
+      "Jacobian matrix"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.coupling_in_arrhenius_mass-action_kinetics",
+    "version": 1,
+    "type": "setting",
+    "content": "The chemical source term $\\dot{\\omega}_i$ for species $i$ is a sum over reactions involving species $i$. The partial derivative $\\partial \\dot{\\omega}_i / \\partial c_j$ is nonzero if and only if species $j$ participates in a reaction that also involves species $i$. Furthermore, since reaction rate constants in Arrhenius kinetics depend explicitly on temperature $T$, the derivative $\\partial \\dot{\\omega}_i / \\partial T$ is generally nonzero for all biologically or chemically active species $i$.",
+    "prior": 1.0,
+    "keywords": [
+      "Mass action law",
+      "Jacobian sparsity pattern",
+      "Temperature dependence"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.coupling_in_the_temperature_energy_equation",
+    "version": 1,
+    "type": "setting",
+    "content": "The time evolution of temperature $\\dot{T}$ in a reacting flow is a function of the heat release from all chemical reactions. Therefore, $\\dot{T}$ depends on the concentrations of all species involved in reactions with non-zero enthalpy changes. Consequently, the row in the Jacobian corresponding to the temperature equation, $\\partial \\dot{T} / \\partial c_j$, is nonzero for most chemically active species $j$.",
+    "prior": 1.0,
+    "keywords": [
+      "Energy equation coupling",
+      "Heat release",
+      "Jacobian temperature row"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.numerical_strategies_for_stiff_chemical_kinetics",
+    "version": 1,
+    "type": "setting",
+    "content": "High-fidelity simulation of stiff combustion chemistry requires specific numerical strategies to balance accuracy and cost. Valid strategies include:\n1.  **Analytic Sparse Jacobians**: Utilizing the known sparsity pattern to reduce memory and operation counts during linear solving (e.g., via sparse LU or preconditioned Krylov methods).\n2.  **Adaptive Mechanism Reduction (e.g., DRGEP, QSSA)**: Simplifying the reaction mechanism on the fly by removing negligible species or treating fast species algebraically.\n3.  **Manifold Tabulation (e.g., ILDM, FGM)**: Pre-computing the thermochemical state onto a lower-dimensional manifold for near-equilibrium regimes.\n4.  **Operator Splitting**: Separating the stiff chemical integration from transport processes.",
+    "prior": 1.0,
+    "keywords": [
+      "Stiff ODE solvers",
+      "Sparse linear algebra",
+      "Mechanism reduction",
+      "Manifold methods"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.governing_species_transport_equation",
+    "version": 1,
+    "type": "claim",
+    "content": "The correct modeling choice for the transport of species $k$ in this compressible, reacting flow, accounting for mixture-averaged diffusion, the Soret effect, and reversible Arrhenius kinetics, is given by the system:\n\n1.  **Transport Equation:**\n    $$ \\partial_t(\\rho Y_k) + \\nabla \\cdot (\\rho \\mathbf{u} Y_k + \\mathbf{J}_k) = \\dot{\\omega}_k $$\n2.  **Diffusive Flux (Fickian + Soret):**\n    $$ \\mathbf{J}_k = -\\rho D_k \\nabla Y_k - \\rho D_{T,k} \\nabla (\\ln T) $$\n3.  **Chemical Source (Reversible, Molar-based):**\n    $$ \\dot{\\omega}_k = W_k (\\nu''_k - \\nu'_k) \\left( k_f \\prod_i c_i^{\\nu'_i} - k_b \\prod_i c_i^{\\nu''_i} \\right) $$\n    where $c_i = \\rho Y_i / W_i$ and $k_f = A T^\\beta \\exp(-E_a/RT)$.",
+    "prior": 0.5,
+    "keywords": [
+      "Reactive transport equation",
+      "Soret diffusion flux",
+      "Arrhenius kinetics source term",
+      "Conservative form"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.conservation_of_species_mass",
+    "version": 1,
+    "type": "setting",
+    "content": "For a continuum multicomponent mixture, the local instantaneous conservation of mass for a specific chemical species $k$, derived from the integral mass balance via the divergence theorem, is expressed in conservative differential form as:\n$$ \\partial_t(\\rho Y_k) + \\nabla \\cdot (\\rho \\mathbf{u} Y_k + \\mathbf{J}_k) = \\dot{\\omega}_k $$\nwhere $\\rho \\mathbf{u} Y_k$ represents the convective mass flux and $\\mathbf{J}_k$ represents the diffusive mass flux.",
+    "prior": 1.0,
+    "keywords": [
+      "Species continuity equation",
+      "Conservation of mass",
+      "Divergence theorem"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.constitutive_model_for_diffusive_flux_with_soret_effect",
+    "version": 1,
+    "type": "setting",
+    "content": "In a mixture-averaged diffusion approximation that includes thermal diffusion (the Soret effect), the diffusive mass flux $\\mathbf{J}_k$ is composed of a Fickian diffusion term driven by concentration gradients and a thermal diffusion term driven by temperature gradients:\n$$ \\mathbf{J}_k = -\\rho D_k \\nabla Y_k - \\rho D_{T,k} \\nabla (\\ln T) $$\nwhere the negative sign on the thermal term indicates the standard phenomenological convention for flux direction relative to the gradient.",
+    "prior": 1.0,
+    "keywords": [
+      "Fick's law of diffusion",
+      "Soret effect",
+      "Thermal diffusion",
+      "Constitutive relation"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.law_of_mass_action_for_elementary_kinetics",
+    "version": 1,
+    "type": "setting",
+    "content": "For an elementary reversible reaction $\\sum_i \\nu'_i \\mathcal{M}_i \\rightleftharpoons \\sum_i \\nu''_i \\mathcal{M}_i$, the net chemical production rate of species $k$, denoted $\\dot{\\omega}_k$, is determined by the reaction stoichiometry and the difference between forward and reverse rates of progress. These rates depend on **molar concentrations** $c_i$:\n$$ \\dot{\\omega}_k = W_k (\\nu''_k - \\nu'_k) \\left( k_f \\prod_i c_i^{\\nu'_i} - k_b \\prod_i c_i^{\\nu''_i} \\right) $$\nwhere $c_i = \\rho Y_i / W_i$.",
+    "prior": 1.0,
+    "keywords": [
+      "Law of Mass Action",
+      "Chemical kinetics",
+      "Molar concentration",
+      "Reaction stoichiometry"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.modified_arrhenius_equation",
+    "version": 1,
+    "type": "setting",
+    "content": "The forward reaction rate constant $k_f$ for an elementary reaction typically follows a modified Arrhenius temperature dependence:\n$$ k_f(T) = A T^\\beta \\exp\\left(-\\frac{E_a}{R T}\\right) $$",
+    "prior": 1.0,
+    "keywords": [
+      "Arrhenius equation",
+      "Activation energy",
+      "Rate constant"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.dufour_effect_decoupling",
+    "version": 1,
+    "type": "setting",
+    "content": "The Dufour effect describes an energy flux induced by concentration gradients. Therefore, it appears as a term in the energy conservation equation and does not appear explicitly in the species mass conservation equation.",
+    "prior": 1.0,
+    "keywords": [
+      "Dufour effect",
+      "Cross-transport phenomena",
+      "Energy equation"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173.two-temperature_dissociation_rate_model",
+    "version": 1,
+    "type": "claim",
+    "content": "For a collision-limited dissociation reaction where the activation barrier is controlled by the vibrational mode in a thermal non-equilibrium gas, the reaction rate constant $k(T, T_v)$ is given by:\n$$ k(T, T_v) = A_0 \\, T^{1/2} \\, \\exp\\left(-\\frac{E_a}{R \\, T_v}\\right) $$\nwhere the $T^{1/2}$ term accounts for the translational collision frequency and the exponential term accounts for the probability of overcoming the vibrational energy barrier.",
+    "prior": 0.5,
+    "keywords": [
+      "Park two-temperature model",
+      "non-equilibrium kinetics",
+      "Arrhenius equation correction"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173.collision_theory_pre-factor_scaling",
+    "version": 1,
+    "type": "setting",
+    "content": "In the low-pressure limit, the pre-exponential factor of a bimolecular or termolecular reaction rate constant scales proportionally to the collision frequency, which depends on the mean relative speed of the colliding particles. Since the mean relative speed is determined by the translational kinetic energy distribution, it scales as $T^{1/2}$.",
+    "prior": 1.0,
+    "keywords": [
+      "collision theory",
+      "mean relative speed",
+      "translational temperature"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173.transition_state_theory_in_non-equilibrium",
+    "version": 1,
+    "type": "setting",
+    "content": "According to Transition State Theory, the exponential term (Arrhenius factor) in a rate constant represents the probability that a reactant molecule possesses energy equal to or greater than the activation barrier $E_a$ in the specific internal mode coupled to the reaction coordinate. If the barrier crossing is primarily driven by vibrational energy, this probability is determined by the vibrational temperature $T_v$, scaling as $\\exp(-E_a / (R T_v))$.",
+    "prior": 1.0,
+    "keywords": [
+      "transition state theory",
+      "Boltzmann factor",
+      "vibrational energy",
+      "mode specificity"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.wigner_tunneling_correction_and_activation_energy_reduction",
+    "version": 1,
+    "type": "claim",
+    "content": "Under the assumption of an inverted harmonic barrier treated within the semiclassical Wigner approximation, the reaction rate is given by $k(T) = \\kappa_{W}(T) \\, k_{\\text{TST}}(T)$ with $\\kappa_{W}(T) = 1 + \\frac{1}{24} \\left( \\frac{\\hbar \\omega_{b}}{k_{B} T} \\right)^{2}$. The resulting effective activation energy is $E_{a}^{\\text{eff}}(T) = E_{a}^{\\text{TST}}(T) - R \\frac{d \\ln \\kappa_{W}(T)}{d(1/T)}$, which is strictly lower than the classical activation energy $E_{a}^{\\text{TST}}(T)$ because the tunneling correction enhances the rate more significantly at lower temperatures (higher $1/T$).",
+    "prior": 0.5,
+    "keywords": [
+      "Wigner approximation",
+      "activation energy lowering",
+      "semiclassical tunneling",
+      "rate enhancement"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.definition_of_effective_activation_energy",
+    "version": 1,
+    "type": "setting",
+    "content": "For a temperature-dependent rate constant $k(T)$, the effective activation energy $E_{a}^{\\text{eff}}(T)$ is defined by the local slope of the Arrhenius plot:\n$$ E_{a}^{\\text{eff}}(T) \\equiv - R \\frac{d \\ln k(T)}{d(1/T)} $$",
+    "prior": 1.0,
+    "keywords": [
+      "Arrhenius plot",
+      "activation energy",
+      "differential definition"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.multiplicative_decomposition_of_tunneling_rates",
+    "version": 1,
+    "type": "setting",
+    "content": "In semiclassical kinetics, the total thermal rate constant $k(T)$ is modeled as the product of the classical Transition State Theory rate $k_{\\text{TST}}(T)$ and a dimensionless transmission coefficient $\\kappa(T)$ that accounts for quantum dynamical effects like tunneling:\n$$ k(T) = \\kappa(T) k_{\\text{TST}}(T) $$",
+    "prior": 1.0,
+    "keywords": [
+      "TST",
+      "transmission coefficient",
+      "rate factorization"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.wigner_tunneling_correction",
+    "version": 1,
+    "type": "setting",
+    "content": "For a reaction coordinate moving through a barrier approximated by an inverted harmonic potential with imaginary frequency $i\\omega_b$, the lowest-order semiclassical correction to the transmission coefficient (valid when $\\hbar \\omega_b \\ll k_B T$) is given by the Wigner formula:\n$$ \\kappa_{W}(T) = 1 + \\frac{1}{24} \\left( \\frac{\\hbar \\omega_{b}}{k_{B} T} \\right)^{2} $$",
+    "prior": 1.0,
+    "keywords": [
+      "Wigner correction",
+      "inverted parabola",
+      "semiclassical expansion",
+      "harmonic barrier"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.physical_nature_of_tunneling",
+    "version": 1,
+    "type": "setting",
+    "content": "Quantum tunneling is a mechanism that allows probability flux through a potential barrier where classical mechanics would forbid it. Consequently, the tunneling correction factor $\\kappa(T)$ must be strictly greater than 1 ($\\kappa(T) > 1$), representing a rate enhancement relative to the classical prediction.",
+    "prior": 1.0,
+    "keywords": [
+      "rate enhancement",
+      "barrier penetration",
+      "quantum flux"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.dominant_reaction_pathway_and_sensitivity",
+    "version": 1,
+    "type": "claim",
+    "content": "For the specified hydrogen-air mixture at $T=2500\\,\\mathrm{K}$ and $P=0.3\\,\\mathrm{atm}$, the formation of hydroxyl radicals ($\\mathrm{OH}$) is dominated by the reaction $\\mathrm{H}+\\mathrm{O_2}\\rightarrow \\mathrm{OH}+\\mathrm{O}$ with a branching fraction of approximately $0.83$; functionally, increasing temperature increases the relative importance of the reaction $\\mathrm{O}+\\mathrm{H_2}\\rightarrow \\mathrm{OH}+\\mathrm{H}$ due to its lower activation energy and higher temperature exponent, whereas increasing pressure increases the relative importance of $\\mathrm{H}+\\mathrm{O}+\\mathrm{M}\\rightarrow \\mathrm{OH}+\\mathrm{M}$ due to its third-body concentration dependence.",
+    "prior": 0.5,
+    "keywords": [
+      "Reaction dominance",
+      "Sensitivity analysis",
+      "Kinetic branching",
+      "Pressure dependence",
+      "Temperature dependence"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.ideal_gas_molar_concentration",
+    "version": 1,
+    "type": "setting",
+    "content": "For a mixture behaving as an ideal gas at pressure $P$ and temperature $T$, the total molar concentration is given by $C_{\\mathrm{tot}} = P / (R T)$. The molar concentration of a specific species $s$ is related to its mole fraction $y_s$ by $[s] = y_s C_{\\mathrm{tot}}$.",
+    "prior": 1.0,
+    "keywords": [
+      "Ideal gas law",
+      "Molar concentration",
+      "Equation of state"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.arrhenius_rate_law",
+    "version": 1,
+    "type": "setting",
+    "content": "The rate constant $k(T)$ for an elementary chemical reaction as a function of temperature is described by the Arrhenius equation: $k(T) = A T^\\beta \\exp(-E_a / (R T))$, where $A$, $\\beta$, and $E_a$ are reaction-specific parameters.",
+    "prior": 1.0,
+    "keywords": [
+      "Arrhenius equation",
+      "Reaction rate constant",
+      "Temperature dependence"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.law_of_mass_action",
+    "version": 1,
+    "type": "setting",
+    "content": "For an elementary reaction $i$, the forward rate of progress $\\omega_i$ is proportional to the product of the concentrations of the reactants, each raised to the power of its stoichiometric coefficient in the reactant side: $\\omega_i = k_i(T) \\prod_{\\alpha \\in \\text{reactants}} [X_\\alpha]^{\\nu'_{i,\\alpha}}$.",
+    "prior": 1.0,
+    "keywords": [
+      "Law of mass action",
+      "Reaction rate",
+      "Stoichiometry"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.branching_fraction_definition",
+    "version": 1,
+    "type": "setting",
+    "content": "The branching fraction $f_i$ for a specific product species $s$ via reaction path $i$ is defined as the ratio of the formation flux from that reaction to the sum of formation fluxes from all contributing reactions: $f_i = J_{i,s} / \\sum_j J_{j,s}$, where $J_{i,s}$ is the stoichiometric formation rate of species $s$ in reaction $i$.",
+    "prior": 1.0,
+    "keywords": [
+      "Branching fraction",
+      "Reaction pathway analysis",
+      "Relative dominance"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.mechanism_characteristics_and_conservation_properties",
+    "version": 1,
+    "type": "claim",
+    "content": "The reaction mechanism exhibits the following properties:\n1.  **Molecularity**: S1, S2, and S5 are elementary termolecular reactions (due to third-body $\\mathrm{M}$ participation); S3 and S4 are elementary bimolecular reactions.\n2.  **Radical Pool Dynamics**: The rate of change of the radical pool $R$ is governed by the coefficients $c_1=+2, c_2=0, c_3=+1, c_4=0, c_5=-2$.\n3.  **Conservation**: The total hydrogen atom count $N_{\\mathrm{H}} = 2[\\mathrm{H_2}] + [\\mathrm{H}] + [\\mathrm{OH}] + [\\mathrm{HO_2}] + 2[\\mathrm{H_2O}]$ constitutes a valid invariant of the system.",
+    "prior": 0.5,
+    "keywords": [
+      "elementary reaction molecularity",
+      "radical pool coefficients",
+      "hydrogen atom conservation"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.molecularity_of_third-body_reactions",
+    "version": 1,
+    "type": "setting",
+    "content": "In the context of elementary kinetics, a reaction step involving a generic third body $\\mathrm{M}$ (either for dissociation energy supply or recombination energy removal) involves the collision of the reacting species with $\\mathrm{M}$. Such reactions, including third-body assisted dissociation ($\\mathrm{AB} + \\mathrm{M} \\to \\mathrm{A} + \\mathrm{B} + \\mathrm{M}$) and recombination ($\\mathrm{A} + \\mathrm{B} + \\mathrm{M} \\to \\mathrm{AB} + \\mathrm{M}$), are classified as termolecular.",
+    "prior": 1.0,
+    "keywords": [
+      "reaction molecularity",
+      "third-body reaction",
+      "collision theory"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.net_production_coefficient_of_a_scalar_pool",
+    "version": 1,
+    "type": "setting",
+    "content": "For a scalar variable $R$ defined as the sum of concentrations of a subset of species $\\mathcal{R}$, the net change coefficient $c_i$ for a reaction step $i$ is the difference between the total stoichiometric coefficients of species in $\\mathcal{R}$ on the product side and the reactant side:\n$$ c_i = \\sum_{\\mathrm{X} \\in \\mathcal{R}} \\nu''_{i,\\mathrm{X}} - \\sum_{\\mathrm{X} \\in \\mathcal{R}} \\nu'_{i,\\mathrm{X}} $$",
+    "prior": 1.0,
+    "keywords": [
+      "stoichiometry",
+      "species conservation",
+      "production rate"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.atom_conservation_principle",
+    "version": 1,
+    "type": "setting",
+    "content": "In a closed chemical system, the total molar concentration of atoms of a specific element $E$ is invariant under chemical reactions. If $a_{\\mathrm{X}}$ is the number of atoms of element $E$ in species $\\mathrm{X}$, the linear combination $N_E = \\sum_{\\mathrm{X}} a_{\\mathrm{X}} [\\mathrm{X}]$ is constant ($\\dot{N}_E = 0$).",
+    "prior": 1.0,
+    "keywords": [
+      "mass conservation",
+      "atom balance",
+      "invariant"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.valid_sensitivity_analysis_formulas_for_chemical_kinetics",
+    "version": 1,
+    "type": "claim",
+    "content": "For the chemically reacting flow governed by $\\frac{d\\mathbf{z}}{dt}=\\mathbf{F}(\\mathbf{z}, \\mathbf{k})$, the following scientific claims hold true:\n\n1.  **Forward Method (Fixed Time):** For $q=\\phi(\\mathbf{z}(t_f))$, the normalized sensitivity is $S_{k_i}^q = \\frac{k_i}{q} \\frac{\\partial \\phi}{\\partial \\mathbf{z}}|_{t_f} \\cdot \\mathbf{s}_i(t_f)$, where $\\mathbf{s}_i$ is the solution to $\\frac{d\\mathbf{s}_i}{dt} = \\frac{\\partial \\mathbf{F}}{\\partial \\mathbf{z}}\\mathbf{s}_i + \\frac{\\partial \\mathbf{F}}{\\partial k_i}$.\n2.  **Adjoint Method (Fixed Time):** For $q=\\phi(\\mathbf{z}(t_f))$, the sensitivity is determined by $S_{k_i}^q = \\frac{k_i}{q} \\int_0^{t_f} \\boldsymbol{\\lambda}(t)^\\top \\frac{\\partial \\mathbf{F}}{\\partial k_i} dt$, where $\\boldsymbol{\\lambda}$ solves the backward adjoint ODE.\n3.  **Forward Method (Ignition Delay):** For $q=\\tau$ defined by $h(\\mathbf{z}(\\tau))=0$, the sensitivity is:\n    $$\n    S_{k_i}^\\tau = -\\frac{k_i}{\\tau} \\frac{\\frac{\\partial h}{\\partial \\mathbf{z}}|_{\\tau} \\cdot \\mathbf{s}_i(\\tau)}{\\frac{\\partial h}{\\partial \\mathbf{z}}|_{\\tau} \\cdot \\mathbf{F}(\\mathbf{z}(\\tau), \\mathbf{k})}\n    $$\n4.  **Parameter Equivalence:** The normalized sensitivity with respect to the pre-exponential factor $A_i$ is identical to that of the rate constant $k_i$: $S_{A_i}^q = S_{k_i}^q$.",
+    "prior": 0.5,
+    "keywords": [
+      "Sensitivity analysis",
+      "Adjoint method",
+      "Forward method",
+      "Arrhenius kinetics",
+      "Ignition delay"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.chain_rule_for_logarithmic_derivatives",
+    "version": 1,
+    "type": "setting",
+    "content": "For any differentiable scalar quantities $y$ and $x$, the derivative of the natural logarithm satisfies $\\frac{\\partial \\ln y}{\\partial \\ln x} = \\frac{x}{y} \\frac{\\partial y}{\\partial x}$.",
+    "prior": 1.0,
+    "keywords": [
+      "Logarithmic differentiation",
+      "Normalized sensitivity"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.forward_sensitivity_equation",
+    "version": 1,
+    "type": "setting",
+    "content": "For a dynamical system $\\frac{d\\mathbf{z}}{dt} = \\mathbf{F}(\\mathbf{z}, \\mathbf{p})$ with parameter vector $\\mathbf{p}$, the sensitivity vector $\\mathbf{s}_p(t) = \\frac{\\partial \\mathbf{z}}{\\partial p}$ evolves according to the linear non-homogeneous ODE:\n$$\n\\frac{d\\mathbf{s}_p}{dt} = \\frac{\\partial \\mathbf{F}}{\\partial \\mathbf{z}} \\mathbf{s}_p + \\frac{\\partial \\mathbf{F}}{\\partial p}\n$$\nsubject to initial conditions derived from $\\mathbf{z}(0)$.",
+    "prior": 1.0,
+    "keywords": [
+      "Tangent linear model",
+      "Sensitivity ODE",
+      "Jacobian matrix"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.adjoint_sensitivity_method_for_fixed-time_functionals",
+    "version": 1,
+    "type": "setting",
+    "content": "For a QoI $q = \\phi(\\mathbf{z}(t_f))$ constrained by $\\frac{d\\mathbf{z}}{dt} = \\mathbf{F}(\\mathbf{z}, \\mathbf{p})$, the gradient $\\frac{\\partial q}{\\partial p}$ can be computed via the adjoint variable $\\boldsymbol{\\lambda}(t)$ which satisfies:\n$$\n\\frac{d\\boldsymbol{\\lambda}}{dt} = -\\left(\\frac{\\partial \\mathbf{F}}{\\partial \\mathbf{z}}\\right)^\\top \\boldsymbol{\\lambda}, \\quad \\boldsymbol{\\lambda}(t_f) = \\left(\\frac{\\partial \\phi}{\\partial \\mathbf{z}}\\bigg|_{t_f}\\right)^\\top\n$$\nThe sensitivity is given by the integral:\n$$\n\\frac{\\partial q}{\\partial p} = \\int_0^{t_f} \\boldsymbol{\\lambda}(t)^\\top \\frac{\\partial \\mathbf{F}}{\\partial p} \\, dt\n$$",
+    "prior": 1.0,
+    "keywords": [
+      "Adjoint method",
+      "Dual system",
+      "Lagrangian multiplier"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.implicit_differentiation_of_event_times",
+    "version": 1,
+    "type": "setting",
+    "content": "If an event time $\\tau$ is defined by the condition $h(\\mathbf{z}(\\tau)) = 0$, the sensitivity of $\\tau$ with respect to a parameter $p$ is derived by differentiating the condition:\n$$\n\\frac{\\partial h}{\\partial \\mathbf{z}}\\bigg|_{\\tau} \\cdot \\left( \\frac{\\partial \\mathbf{z}}{\\partial p}\\bigg|_{\\tau} + \\frac{d\\mathbf{z}}{dt}\\bigg|_{\\tau} \\frac{\\partial \\tau}{\\partial p} \\right) = 0\n$$\nSolving for the scalar $\\frac{\\partial \\tau}{\\partial p}$ yields:\n$$\n\\frac{\\partial \\tau}{\\partial p} = - \\frac{\\frac{\\partial h}{\\partial \\mathbf{z}}|_{\\tau} \\cdot \\frac{\\partial \\mathbf{z}}{\\partial p}|_{\\tau}}{\\frac{\\partial h}{\\partial \\mathbf{z}}|_{\\tau} \\cdot \\frac{d\\mathbf{z}}{dt}|_{\\tau}}\n$$",
+    "prior": 1.0,
+    "keywords": [
+      "Implicit function theorem",
+      "Event detection",
+      "Transversality"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.chemical_heat_release_source_term",
+    "version": 1,
+    "type": "claim",
+    "content": "The volumetric chemical heat-release source term in the energy equation is given by:\n$$ \\dot{q} = - \\sum_k h_k(T) \\dot{\\omega}_k $$\nThis term is modulated by temperature through two coupled mechanisms: the temperature dependence of species enthalpies $h_k(T)$ (via specific heats) and the strong temperature sensitivity of the reaction rates $\\dot{\\omega}_k$ determined by Arrhenius kinetics.",
+    "prior": 0.5,
+    "keywords": [
+      "Chemical heat release",
+      "Arrhenius kinetics",
+      "Enthalpy of reaction"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.mixture_enthalpy_definition",
+    "version": 1,
+    "type": "setting",
+    "content": "The specific enthalpy of a multi-species mixture, denoted as $h$, is defined as the mass-weighted sum of the specific enthalpies of its constituent species:\n$$ h(T) = \\sum_k Y_k h_k(T) $$\nwhere $Y_k$ is the mass fraction and $h_k(T)$ is the specific enthalpy of species $k$.",
+    "prior": 1.0,
+    "keywords": [
+      "Mixture thermodynamics",
+      "Specific enthalpy",
+      "Mass fraction"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.species_conservation_equation",
+    "version": 1,
+    "type": "setting",
+    "content": "The conservation of mass for species $k$ in a reacting flow is governed by the transport equation:\n$$ \\rho \\frac{DY_k}{Dt} = -\\nabla \\cdot \\mathbf{J}_k + \\dot{\\omega}_k $$\nwhere $\\dot{\\omega}_k$ represents the net rate of production or consumption of species $k$ due to chemical reactions.",
+    "prior": 1.0,
+    "keywords": [
+      "Species conservation",
+      "Reaction rate",
+      "Diffusion flux"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.energy_equation_formulation",
+    "version": 1,
+    "type": "setting",
+    "content": "The sensible energy equation for temperature $T$, derived from the conservation of total enthalpy, relates the material derivative of temperature to pressure work, transport phenomena, and a chemical source term $\\dot{q}_{\\text{chem}}$:\n$$ \\rho c_p \\frac{DT}{Dt} = \\frac{Dp}{Dt} - \\nabla \\cdot \\mathbf{q}_{\\text{cond}} - \\sum_k \\mathbf{J}_k \\cdot \\nabla h_k + \\dot{q}_{\\text{chem}} + \\Phi $$\nwhere $\\dot{q}_{\\text{chem}}$ represents the volumetric heat release due to chemical reactions.",
+    "prior": 1.0,
+    "keywords": [
+      "Energy equation",
+      "Heat release",
+      "Thermodynamics"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.arrhenius_law",
+    "version": 1,
+    "type": "setting",
+    "content": "The reaction rate constant $k_j(T)$ follows the Arrhenius equation:\n$$ k_j(T) = A_j T^{n_j} \\exp\\left(-\\frac{E_{a,j}}{RT}\\right) $$\nwhich implies that for a reaction with positive activation energy ($E_{a,j} > 0$), the rate constant increases non-linearly with temperature.",
+    "prior": 1.0,
+    "keywords": [
+      "Chemical kinetics",
+      "Arrhenius equation",
+      "Activation energy"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.product_formation_rate_analysis",
+    "version": 1,
+    "type": "claim",
+    "content": "For the irreversible two-step mechanism $A + B \\xrightarrow{k_1} I$ and $I + C \\xrightarrow{k_2} P$, the exact product formation rate is $r_P = k_2(T)[I][C]$, which depends on the intermediate $I$. However, under the Quasi-Steady-State Approximation (QSSA) where $\\frac{d[I]}{dt} \\approx 0$, the rate simplifies to $r_P \\approx k_1(T)[A][B]$, becoming independent of the concentration of reactant $C$.",
+    "prior": 0.5,
+    "keywords": [
+      "rate law derivation",
+      "rate-limiting step",
+      "concentration independence"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.law_of_mass_action_for_elementary_reactions",
+    "version": 1,
+    "type": "setting",
+    "content": "For an elementary reaction step of the form $a\\text{R}_1 + b\\text{R}_2 \\xrightarrow{k} \\text{Products}$, the reaction rate $r$ is proportional to the product of the concentrations of the reactants raised to their stoichiometric coefficients: $r = k [\\text{R}_1]^a [\\text{R}_2]^b$.",
+    "prior": 1.0,
+    "keywords": [
+      "chemical kinetics",
+      "reaction rate",
+      "concentration dependence"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.rate_of_change_of_species_concentration",
+    "version": 1,
+    "type": "setting",
+    "content": "In a closed, constant-volume system, the time derivative of the concentration of a species $X$, $\\frac{d[X]}{dt}$, is the sum of the rates of all elementary steps producing $X$ minus the sum of the rates of all elementary steps consuming $X$, each weighted by the species' stoichiometric coefficient in that step.",
+    "prior": 1.0,
+    "keywords": [
+      "differential equations",
+      "conservation of mass",
+      "species balance"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.arrhenius_equation",
+    "version": 1,
+    "type": "setting",
+    "content": "The temperature dependence of a reaction rate constant $k(T)$ is described by $k(T) = A \\exp(-E / (RT))$, where $A$ is the pre-exponential factor and $E$ is the activation energy.",
+    "prior": 1.0,
+    "keywords": [
+      "temperature dependence",
+      "activation energy"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.quasi-steady-state_approximation_(qssa)",
+    "version": 1,
+    "type": "setting",
+    "content": "For a highly reactive intermediate species $I$ in a reaction mechanism, the QSSA assumes that the rate of change of its concentration is negligible compared to the rates of its formation and consumption, allowing the approximation $\\frac{d[I]}{dt} \\approx 0$.",
+    "prior": 1.0,
+    "keywords": [
+      "approximation method",
+      "intermediate species",
+      "steady state"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.characterization_of_lindemann_fall-off_kinetics",
+    "version": 1,
+    "type": "claim",
+    "content": "For a unimolecular decomposition following the Lindemann mechanism, the effective first-order rate coefficient is given by $k_{\\text{eff}} = k_{\\infty}(T) \\frac{Pr}{1+Pr}$, where the reduced pressure $Pr \\equiv \\frac{k_0(T)[M]}{k_{\\infty}(T)}$ scales linearly with the system pressure $p$ at fixed temperature. This system exhibits \"fall-off\" behavior where the reaction order with respect to the bath gas concentration $[M]$ transitions smoothly from $1$ in the low-pressure limit ($Pr \\ll 1$, where $k_{\\text{eff}} \\approx k_0(T)[M]$) to $0$ in the high-pressure limit ($Pr \\gg 1$, where $k_{\\text{eff}} \\approx k_{\\infty}(T)$), with these asymptotic limits preserved even when applying the Troe broadening correction.",
+    "prior": 0.5,
+    "keywords": [
+      "Lindemann mechanism",
+      "fall-off curve",
+      "reduced pressure",
+      "reaction order transition",
+      "asymptotic limits"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.law_of_mass_action",
+    "version": 1,
+    "type": "setting",
+    "content": "For an elementary reaction step $aA + bB \\xrightarrow{k} P$, the reaction rate $r$ is proportional to the product of the concentrations of the reactants raised to their stoichiometric coefficients: $r = k [A]^a [B]^b$.",
+    "prior": 1.0,
+    "keywords": [
+      "chemical kinetics",
+      "elementary reaction",
+      "reaction rate"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.steady-state_approximation_(ssa)",
+    "version": 1,
+    "type": "setting",
+    "content": "For a highly reactive intermediate species occurring in a reaction mechanism, the rate of change of its concentration is negligible compared to its rates of formation and consumption. Thus, $\\frac{d[\\text{intermediate}]}{dt} \\approx 0$.",
+    "prior": 1.0,
+    "keywords": [
+      "approximation method",
+      "reactive intermediate",
+      "time-scale separation"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.definition_of_effective_rate_coefficient",
+    "version": 1,
+    "type": "setting",
+    "content": "For a unimolecular decomposition reaction $A \\to \\text{products}$, the overall reaction rate $\\omega$ is expressed phenomenologically as $\\omega = k_{\\text{eff}} [A]$.",
+    "prior": 1.0,
+    "keywords": [
+      "phenomenology",
+      "overall kinetics"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.definition_of_reaction_order",
+    "version": 1,
+    "type": "setting",
+    "content": "The effective order of reaction $n_S$ with respect to a species concentration $[S]$ is defined as the logarithmic derivative of the rate (or rate coefficient) with respect to that concentration: $n_S = \\frac{\\partial \\ln \\omega}{\\partial \\ln [S]}$.",
+    "prior": 1.0,
+    "keywords": [
+      "sensitivity analysis",
+      "scaling law"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.ideal_gas_law_for_concentration",
+    "version": 1,
+    "type": "setting",
+    "content": "The molar concentration $[M]$ of an ideal gas is related to its partial pressure $p_M$ (or total pressure $p$ in a bath gas dominated system) and temperature $T$ by $[M] = \\frac{p}{RT}$.",
+    "prior": 1.0,
+    "keywords": [
+      "thermodynamics",
+      "equation of state"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.properties_of_the_troe_broadening_factor",
+    "version": 1,
+    "type": "setting",
+    "content": "The Troe broadening factor $F(Pr)$ is a multiplicative correction to the Lindemann rate expression that accounts for energy dependence and weak collisions. It satisfies the asymptotic conditions $\\lim_{Pr \\to 0} F(Pr) = 1$ and $\\lim_{Pr \\to \\infty} F(Pr) = 1$.",
+    "prior": 1.0,
+    "keywords": [
+      "asymptotic behavior",
+      "correction factor"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214.activation_energy_value",
+    "version": 1,
+    "type": "claim",
+    "content": "For the reaction characterized by the provided temperature and rate coefficient data, assuming the generalized Arrhenius model and $R=8.314\\,\\mathrm{J}\\,\\mathrm{mol}^{-1}\\,\\mathrm{K}^{-1}$, the activation energy is $E_{a} = 83.14\\,\\mathrm{kJ}\\,\\mathrm{mol}^{-1}$.",
+    "prior": 0.5,
+    "keywords": [
+      "Activation energy",
+      "Numerical result",
+      "Parameter identification"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214.generalized_arrhenius_law",
+    "version": 1,
+    "type": "setting",
+    "content": "The rate coefficient $k(T)$ of a gas-phase elementary reaction is modeled by the generalized Arrhenius equation:\n$k(T) = A\\,T^{n}\\,\\exp\\!\\left(-\\frac{E_{a}}{R\\,T}\\right)$.",
+    "prior": 1.0,
+    "keywords": [
+      "Arrhenius equation",
+      "Chemical kinetics",
+      "Rate coefficient"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214.linearization_of_the_arrhenius_model",
+    "version": 1,
+    "type": "setting",
+    "content": "Taking the natural logarithm of the generalized Arrhenius equation transforms it into a model linear in the parameters $\\ln A$, $n$, and $E_a/R$:\n$\\ln k(T) = \\ln A + n \\ln T - \\frac{E_{a}}{R} \\left(\\frac{1}{T}\\right)$.\nThis form allows parameters to be estimated via linear regression or linear systems solution using regressors $1$, $\\ln T$, and $-1/T$.",
+    "prior": 1.0,
+    "keywords": [
+      "Linearization",
+      "Logarithmic transformation",
+      "Regression model"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.inability_of_flame-tuned_global_mechanisms_to_predict_igniti",
+    "version": 1,
+    "type": "claim",
+    "content": "A single-step global Arrhenius mechanism tuned to match laminar flame speed $S_L$ at specific unburned conditions will generally fail to accurately predict ignition delay $\\tau_{\\mathrm{ign}}$ and its pressure dependence for the same mixture. This failure occurs because ignition is governed by low-to-intermediate temperature radical chain-branching and pressure-dependent third-body pathways (e.g., $\\mathrm{H}+\\mathrm{O}_2+\\mathrm{M}$), which are structurally absent in a global formulation calibrated for high-temperature diffusive-reactive balance.",
+    "prior": 0.5,
+    "keywords": [
+      "structural inadequacy",
+      "kinetic regime separation",
+      "missing physics",
+      "pressure dependence error"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.scaling_of_laminar_flame_speed",
+    "version": 1,
+    "type": "setting",
+    "content": "For a premixed laminar flame controlled by a balance of thermal diffusion and reaction, the flame speed $S_L$ scales primarily with the square root of the reaction rate at the high-temperature reaction zone (near the adiabatic flame temperature):\n$$ S_L \\sim \\sqrt{\\frac{\\alpha \\, \\overline{\\dot{\\omega}}_T}{\\rho \\, c_p \\, \\Delta T}} $$\nwhere $\\overline{\\dot{\\omega}}_T$ is the characteristic heat release rate in the reaction zone.",
+    "prior": 1.0,
+    "keywords": [
+      "laminar flame theory",
+      "reaction-diffusion balance",
+      "flame speed scaling"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.arrhenius_rate_calibration_for_flame_speed",
+    "version": 1,
+    "type": "setting",
+    "content": "Calibrating a single-step global reaction rate $k(T) = A T^n \\exp(-E_a/RT)$ to match a target laminar flame speed $S_L$ effectively fixes the magnitude of the reaction rate $k(T)$ at the high temperatures characteristic of the flame front ($T \\approx T_{\\mathrm{ad}}$).",
+    "prior": 1.0,
+    "keywords": [
+      "model calibration",
+      "global reaction mechanism",
+      "high-temperature kinetics"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.governing_equation_for_homogeneous_ignition",
+    "version": 1,
+    "type": "setting",
+    "content": "In a homogeneous, adiabatic, constant-pressure reactor, transport terms (diffusion/conduction) are zero, and the system evolves solely due to chemical kinetics. The ignition delay $\\tau_{\\mathrm{ign}}$ is determined by the integration of species and energy conservation equations:\n$$ \\frac{dY_i}{dt} = \\frac{\\dot{\\omega}_i}{\\rho}, \\quad \\frac{dT}{dt} = -\\frac{1}{\\rho c_p} \\sum_i h_i \\dot{\\omega}_i $$\nstarting from initial conditions ($T_0, p_0, Y_{i,0}$).",
+    "prior": 1.0,
+    "keywords": [
+      "0D reactor model",
+      "chemical kinetics",
+      "ignition delay"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.physics_of_ignition_in_hydrogen-air_mixtures",
+    "version": 1,
+    "type": "setting",
+    "content": "Ignition delay in hydrogen-air mixtures, especially at intermediate temperatures and varying pressures, is governed by a distinct set of detailed kinetic processes compared to high-temperature heat release. It depends critically on:\n1. Radical pool growth (induction phase).\n2. Competition between chain-branching (e.g., $\\mathrm{H} + \\mathrm{O}_2 \\rightarrow \\mathrm{OH} + \\mathrm{O}$) and chain-terminating/propagating pathways.\n3. Pressure-dependent third-body reactions (e.g., $\\mathrm{H} + \\mathrm{O}_2 + \\mathrm{M} \\rightarrow \\mathrm{HO}_2 + \\mathrm{M}$) and subsequent chemistry (e.g., $\\mathrm{H}_2\\mathrm{O}_2$ formation and decomposition).",
+    "prior": 1.0,
+    "keywords": [
+      "radical explosion",
+      "chain branching",
+      "third-body effects",
+      "intermediate temperature kinetics"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.limitations_of_single-step_global_mechanisms",
+    "version": 1,
+    "type": "setting",
+    "content": "A single-step global reaction $\\nu_F F + \\nu_O O \\rightarrow P$ lacks explicit radical species ($\\mathrm{H}, \\mathrm{O}, \\mathrm{OH}, \\mathrm{HO}_2$) and third-body collision terms ($\\mathrm{M}$). Its reaction rate depends only on reactant concentrations and temperature, following a fixed Arrhenius form that cannot capture pressure-dependent mechanistic shifts or distinct activation energies for induction versus heat release.",
+    "prior": 1.0,
+    "keywords": [
+      "model reduction error",
+      "structural limitation",
+      "kinetic mechanism"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.fractional_error_in_equilibrium_constant_due_to_activation_e",
+    "version": 1,
+    "type": "claim",
+    "content": "Given a chemical kinetic system for the isomerization $\\mathrm{A} \\rightleftharpoons \\mathrm{B}$ where the reverse activation energy contains a constant additive error $\\Delta E$, the fractional error in the predicted equilibrium constant $\\varepsilon_K(T)$, defined relative to the true thermodynamic equilibrium constant, is solely a function of the error magnitude, the temperature $T$, and the gas constant $R$:\n$$\n\\varepsilon_{K}(T) = \\exp\\!\\left(\\frac{\\Delta E}{R T}\\right) - 1\n$$\nThis result assumes ideal gas behavior and Arrhenius kinetics.",
+    "prior": 0.5,
+    "keywords": [
+      "Fractional error",
+      "Activation energy bias",
+      "Equilibrium constant"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.ideal_gas_chemical_potential",
+    "version": 1,
+    "type": "setting",
+    "content": "For an ideal gas mixture at temperature $T$ and pressure $p$, the chemical potential of species $i$ is given by $\\mu_{i}(T,p,y_{i}) = \\mu_{i}^{0}(T) + R T \\ln(y_{i} p / p^{0})$, where $y_i$ is the mole fraction, $p^0$ is the standard pressure, and $\\mu_i^0(T)$ is the standard chemical potential dependent only on temperature.",
+    "prior": 1.0,
+    "keywords": [
+      "Chemical potential",
+      "Ideal gas law"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.condition_for_thermodynamic_equilibrium",
+    "version": 1,
+    "type": "setting",
+    "content": "For a closed system at constant temperature $T$ and pressure $p$, thermodynamic equilibrium corresponds to the minimization of the Gibbs free energy $G$. For a single reaction $\\sum_i \\nu_i \\text{M}_i = 0$, this implies the stationarity condition $\\sum_i \\nu_i \\mu_i = 0$, where $\\nu_i$ are the stoichiometric coefficients.",
+    "prior": 1.0,
+    "keywords": [
+      "Gibbs free energy minimization",
+      "Chemical equilibrium"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.law_of_mass_action_for_elementary_kinetics",
+    "version": 1,
+    "type": "setting",
+    "content": "For an elementary reversible reaction defined by forward rate constant $k_f$ and reverse rate constant $k_r$, the net reaction rate is given by $\\omega_{net} = k_f \\prod_{reactants} c_j^{|\\nu_j|} - k_r \\prod_{products} c_k^{\\nu_k}$. A kinetic stationary state occurs when the net rate is zero.",
+    "prior": 1.0,
+    "keywords": [
+      "Law of mass action",
+      "Chemical kinetics",
+      "Stationary state"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.arrhenius_rate_law",
+    "version": 1,
+    "type": "setting",
+    "content": "The reaction rate constant $k(T)$ is modeled by the Arrhenius equation (or modified Arrhenius form) $k(T) = A T^n \\exp(-E_a / RT)$, where $A$, $n$, and $E_a$ are temperature-independent parameters.",
+    "prior": 1.0,
+    "keywords": [
+      "Arrhenius equation",
+      "Activation energy"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.definition_of_equilibrium_constant",
+    "version": 1,
+    "type": "setting",
+    "content": "The thermodynamic equilibrium constant $K(T)$ for a reaction is defined as the ratio of activities (or partial pressures/concentrations depending on convention) at equilibrium. For ideal gases where activity is proportional to mole fraction or concentration, it is related to the standard Gibbs free energy change by $K(T) = \\exp(-\\Delta G^0(T) / RT)$.",
+    "prior": 1.0,
+    "keywords": [
+      "Equilibrium constant",
+      "Standard Gibbs free energy"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  },
+  {
+    "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.principle_of_detailed_balance_(thermodynamic_consistency)",
+    "version": 1,
+    "type": "setting",
+    "content": "For a kinetic model to be thermodynamically consistent, the ratio of forward to reverse rate constants must equal the thermodynamic equilibrium constant: $k_f(T) / k_r(T) = K_{eq}(T)$.",
+    "prior": 1.0,
+    "keywords": [
+      "Detailed balance",
+      "Thermodynamic consistency"
+    ],
+    "source_package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "source_package_version": "1.0.0",
+    "source_module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225",
+    "created_at": "2026-03-12T00:00:00+00:00",
+    "embedding": null
+  }
+]

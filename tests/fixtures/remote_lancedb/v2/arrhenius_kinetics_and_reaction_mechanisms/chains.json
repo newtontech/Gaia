@@ -1,0 +1,651 @@
+[
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.chain_499304",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.law_of_mass_action_for_elementary_reactions",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.species_conservation_in_homogeneous_systems",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.first_law_of_thermodynamics_for_isochoric_adiabatic_processe",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Determine Net Stoichiometric Coefficients**: Using the defined reaction $A + B \\rightleftharpoons C$, we calculate the net stoichiometric coefficients $\\nu_i = \\nu_i'' - \\nu_i'$:\n$$ \\nu_A = 0 - 1 = -1 $$\n$$ \\nu_B = 0 - 1 = -1 $$\n$$ \\nu_C = 1 - 0 = +1 $$\n\n**Formulate the Reaction Rate q**: Applying the **Law of Mass Action** (Premise 1) to the elementary reaction $A + B \\rightleftharpoons C$:\nThe forward rate depends on reactants $A$ and $B$: term is $k_f(T) \\, c_A^1 \\, c_B^1$.\nThe reverse rate depends on product $C$: term is $k_r(T) \\, c_C^1$.\nThus, the net rate is:\n$$ q = k_f(T)\\,c_A\\,c_B - k_r(T)\\,c_C $$\n\n**Formulate Species Evolution Equations**: Using the **Species Conservation** principle (Premise 2) and the calculated net coefficients:\n$$ \\dot{c}_A = \\nu_A \\, q = -q $$\n$$ \\dot{c}_B = \\nu_B \\, q = -q $$\n$$ \\dot{c}_C = \\nu_C \\, q = +q $$\n\n**Formulate the Temperature Evolution Equation**: The problem specifies a **constant volume, adiabatic** process. According to the **First Law of Thermodynamics** for these conditions (Premise 3), the governing energy equation relates the temperature change to the internal energy of reaction $\\Delta u(T)$, not the enthalpy of reaction $\\Delta h(T)$.\nThe equation is:\n$$ \\rho \\, c_v(\\mathbf{Y}, T) \\, \\dot{T} = - \\Delta u(T) \\, q $$\nwhere the internal energy of reaction is defined as products minus reactants:\n$$ \\Delta u(T) = \\sum_i \\nu_i u_i(T) = 1 \\cdot u_C(T) - 1 \\cdot u_A(T) - 1 \\cdot u_B(T) = u_C(T) - u_A(T) - u_B(T) $$",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944132.governing_ode_system_for_the_reaction_substep",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.chain_499305",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.arrhenius_law_and_temperature_sensitivity",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.saddle-node_bifurcation_in_1d_systems",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.optically_thin_radiative_loss",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Formulation of Steady States**: The steady states of the system are defined by setting the time derivative in the energy equation to zero, which implies equality between the heat generation and heat loss rates:\n$$ Q\\,\\rho\\,k(T)\\,g(Y) = 4\\kappa_p \\sigma (T^4 - T_\\infty^4) $$\nLet $G(T) = Q\\,\\rho\\,k(T)\\,g(Y)$ and $L(T) = 4\\kappa_p \\sigma (T^4 - T_\\infty^4)$.\n\n**Determination of Extinction Condition**: Extinction in this thermal system corresponds to the disappearance of the high-temperature burning branch of steady states. According to the premise on saddle-node bifurcations, the critical condition for this event is the tangency of the generation and loss curves. Therefore, the critical temperature $T_\\star$ must satisfy both the energy balance $G(T_\\star) = L(T_\\star)$ and the tangency condition:\n$$ \\left.\\frac{d (Q\\,\\rho\\,k(T)\\,g(Y))}{dT}\\right|_{T_\\star} = \\left.\\frac{d S_{\\text{rad}}}{dT}\\right|_{T_\\star} $$\nThis validates the slope-matching criterion for criticality.\n\n**Analysis of Rate Sensitivity**: We analyze the sensitivity of the reaction rate constant $k(T)$ to small temperature fluctuations $\\Delta T$. Using the logarithmic derivative defined in the premise:\n$$ \\frac{\\Delta k}{k} \\approx \\left( \\frac{d \\ln k}{d \\ln T} \\right) \\frac{\\Delta T}{T} = \\left( n + \\frac{E_a}{RT} \\right) \\frac{\\Delta T}{T} $$\n\n**High Activation Energy Limit**: Under the condition of large activation energy, where $E_a/(RT) \\gg 1$, the term $E_a/(RT)$ dominates the exponent $n$. Consequently, the fractional change in the reaction rate scales as:\n$$ \\frac{\\Delta k}{k} \\approx \\frac{E_a}{RT} \\frac{\\Delta T}{T} $$\nThis indicates that for large $E_a$, even a small fractional decrease in temperature (e.g., caused by radiative cooling) results in an amplified fractional decrease in the reaction rate, increasing susceptibility to extinction.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944135.criteria_for_extinction_and_sensitivity_in_radiative_arrheni",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136.chain_499306",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136.definition_of_mass-weighted_conditional_mean",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136.averaging_of_non-linear_functions",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Application of Conditional Mean Definition**: Using Premise 1, the conditional mean reaction rate $\\langle r \\mid Z=\\zeta \\rangle$ is formulated by substituting $r$ into the mass-weighted definition. Since $\\rho$ is variable in compressible flows, the density weighting must be preserved inside the averaging operator, yielding:\n$$ \\langle r \\mid Z=\\zeta \\rangle = \\frac{\\langle \\rho \\, r \\, \\delta(Z-\\zeta) \\rangle}{\\langle \\rho \\, \\delta(Z-\\zeta) \\rangle} $$\n\n**Analysis of Arrhenius Nonlinearity**: The reaction rate $r$ depends on temperature $T$ through the term $k(T) = A_0 \\exp(-E_a/RT)$. The exponential function $\\exp(-1/T)$ is highly non-linear with respect to $T$. In the context of turbulent combustion, temperature $T$ is a fluctuating random variable.\n\n**Evaluation of Commutativity**: Applying Premise 2 to the term $k(T)$, we determine that the operation of conditional averaging does not commute with the function $k$. That is:\n$$ \\langle k(T) \\mid Z=\\zeta \\rangle \\neq k(\\langle T \\mid Z=\\zeta \\rangle) $$\nReplacing the fluctuating temperature $T$ with its conditional mean $\\langle T \\mid Z=\\zeta \\rangle$ inside the Arrhenius exponential would neglect the higher-order moments (variance, etc.) of the temperature distribution.\n\n**Determination of Modeling Requirements**: Because $\\langle k(T) \\mid Z=\\zeta \\rangle \\neq k(\\langle T \\mid Z=\\zeta \\rangle)$, the calculation of the mean reaction rate requires explicit knowledge of the subgrid temperature distribution (e.g., via a Probability Density Function) to account for the impact of temperature fluctuations on the reaction rate.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944136.formulation_of_conditional_mean_reaction_rate",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.chain_499307",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.law_of_mass_action_for_bimolecular_reactions",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.arrhenius_law",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.linear_stability_criterion",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.instability_condition_for_a_2x2_matrix_with_negative_trace",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Jacobian Matrix Construction**: Using the rate equations defined in the Assumption, we compute the Jacobian matrix $\\mathbf{J}$ for the state vector $\\mathbf{x} = [[H], [O]]^T$ near zero concentrations. The partial derivatives yield:\n$$ \\mathbf{J} = \\begin{bmatrix} \\frac{\\partial \\dot{[H]}}{\\partial [H]} & \\frac{\\partial \\dot{[H]}}{\\partial [O]} \\\\ \\frac{\\partial \\dot{[O]}}{\\partial [H]} & \\frac{\\partial \\dot{[O]}}{\\partial [O]} \\end{bmatrix} = \\begin{bmatrix} -k_H & k_2(T)[H_2] \\\\ k_1(T)[O_2] & -k_O \\end{bmatrix} $$\n\n**Application of Stability Criteria**: We calculate the trace and determinant of $\\mathbf{J}$:\n$$ \\operatorname{tr}(\\mathbf{J}) = -k_H - k_O $$\n$$ \\det(\\mathbf{J}) = (-k_H)(-k_O) - (k_2(T)[H_2])(k_1(T)[O_2]) = k_H k_O - k_1(T) k_2(T) [O_2] [H_2] $$\nGiven that $k_H, k_O > 0$, the trace is strictly negative. Therefore, by Premise 4, the condition for instability (explosive growth) is $\\det(\\mathbf{J}) < 0$.\n\n**Ignition Condition Formulation**: Setting $\\det(\\mathbf{J}) < 0$ provides the inequality for ignition:\n$$ k_H k_O - k_1(T) k_2(T) [O_2] [H_2] < 0 \\implies k_1(T) k_2(T) [O_2] [H_2] > k_H k_O $$\nThe critical condition (the boundary of stability) occurs when:\n$$ k_1(T_c) k_2(T_c) [O_2] [H_2] = k_H k_O $$\n\n**Substitution of Arrhenius Law**: We substitute the Arrhenius forms from Premise 2 into the critical condition:\n$$ \\left( A_1 e^{-E_1 / R T_c} \\right) \\left( A_2 e^{-E_2 / R T_c} \\right) [O_2] [H_2] = k_H k_O $$\nCombining the exponential terms:\n$$ A_1 A_2 [O_2] [H_2] \\exp\\left( -\\frac{E_1 + E_2}{R T_c} \\right) = k_H k_O $$\n\n**Solving for Critical Temperature**: Solving the equation for $T_c$:\n$$ \\exp\\left( -\\frac{E_1 + E_2}{R T_c} \\right) = \\frac{k_H k_O}{A_1 A_2 [O_2] [H_2]} $$\nTaking the natural logarithm and rearranging:\n$$ -\\frac{E_1 + E_2}{R T_c} = \\ln\\left( \\frac{k_H k_O}{A_1 A_2 [O_2] [H_2]} \\right) $$\n$$ T_c = \\frac{E_1 + E_2}{R \\ln\\left( \\frac{A_1 A_2 [O_2] [H_2]}{k_H k_O} \\right)} $$",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944145.critical_ignition_temperature",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.chain_499308",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.law_of_mass_action",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.arrhenius_equation",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.exponential_growth_in_branched_chain_reactions",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Formulate the rate equation**: Using the Law of Mass Action and the Net Rate Balance assumption, the rate of change for H-atoms is expressed in terms of the rate coefficients and concentrations:\n$$\\frac{\\mathrm{d}[H]}{\\mathrm{d}t} = k_b(T)[H][O_2] - k_t(T)[H][O_2][M]$$\n\n**Define the net branching coefficient**: Factoring out $[H]$ and the constant species concentrations ($[O_2]$ and $[M]$), we define the net branching coefficient $\\lambda$:\n$$\\frac{\\mathrm{d}[H]}{\\mathrm{d}t} = [O_2] \\left( k_b(T) - k_t(T)[M] \\right) [H] = \\lambda [H]$$\nwhere $\\lambda \\equiv [O_2] (k_b(T) - k_t(T)[M])$.\n\n**Derive the time to ignition**: Assuming the branching step dominates ($\\lambda > 0$), the H-atom concentration grows exponentially: $[H](t) = [H]_0 e^{\\lambda t}$.\nSolving for the time $t = \\tau_{\\mathrm{ign}}$ when $[H](t) = [H]_{\\mathrm{ign}}$:\n$$\\tau_{\\mathrm{ign}} = \\frac{1}{\\lambda} \\ln\\left( \\frac{[H]_{\\mathrm{ign}}}{[H]_0} \\right)$$\n\n**Substitute kinetic parameters**: Substitute the expression for $\\lambda$ and the Arrhenius forms for $k_b(T)$ and $k_t(T)$ into the equation for $\\tau_{\\mathrm{ign}}$.\nThe Arrhenius forms are $k_b = A_b T^{n_b} e^{-E_b/RT}$ and $k_t = A_t T^{n_t} e^{-E_t/RT}$.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944154.analytical_expression_for_ignition_delay",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.chain_499309",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.definition_of_elementary_reaction",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.law_of_mass_action_for_elementary_steps",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.net_rate_of_progress",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.species_production_rate",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Identify Stoichiometric Coefficients**: By inspecting the specific reaction equation $\\mathrm{H} + \\mathrm{O_2} + \\mathrm{M} \\rightleftharpoons \\mathrm{HO_2} + \\mathrm{M}$, we identify the stoichiometric coefficients for reactants ($\\nu'$) and products ($\\nu''$):\nReactants: $\\nu_{\\mathrm{H}}' = 1$, $\\nu_{\\mathrm{O_2}}' = 1$, $\\nu_{\\mathrm{M}}' = 1$, $\\nu_{\\mathrm{HO_2}}' = 0$.\nProducts: $\\nu_{\\mathrm{H}}'' = 0$, $\\nu_{\\mathrm{O_2}}'' = 0$, $\\nu_{\\mathrm{M}}'' = 1$, $\\nu_{\\mathrm{HO_2}}'' = 1$.\nNote that the third body $\\mathrm{M}$ appears on both sides with a coefficient of 1.\n\n**Apply Law of Mass Action**: Using the Law of Mass Action (Premise 2) and the identified coefficients:\nThe forward rate depends on reactants $\\mathrm{H}$, $\\mathrm{O_2}$, and $\\mathrm{M}$:\n$$ r_f^s = k_f^s(T) \\, C_{\\mathrm{H}}^1 \\, C_{\\mathrm{O_2}}^1 \\, C_{\\mathrm{M}}^1 = k_f^s(T) \\, C_{\\mathrm{H}} \\, C_{\\mathrm{O_2}} \\, C_{\\mathrm{M}} $$\nThe reverse rate depends on \"reactants of the reverse step\" (products of forward step) $\\mathrm{HO_2}$ and $\\mathrm{M}$:\n$$ r_r^s = k_r^s(T) \\, C_{\\mathrm{HO_2}}^1 \\, C_{\\mathrm{M}}^1 \\, C_{\\mathrm{H}}^0 \\, C_{\\mathrm{O_2}}^0 = k_r^s(T) \\, C_{\\mathrm{HO_2}} \\, C_{\\mathrm{M}} $$\n\n**Formulate Net Rate of Progress**: Using Premise 3, the net rate of progress is the difference between the forward and reverse rates derived in the previous step:\n$$ R_s = r_f^s - r_r^s = k_f^s(T) C_{\\mathrm{H}} C_{\\mathrm{O_2}} C_{\\mathrm{M}} - k_r^s(T) C_{\\mathrm{HO_2}} C_{\\mathrm{M}} $$\n\n**Determine Species Production Rates**: Using Premise 4, the production rate for any species $i$ is $\\dot{\\omega}_i = (\\nu_i'' - \\nu_i') R_s$.\nSubstituting the expression for $R_s$:\n$$ \\dot{\\omega}_i = (\\nu_i'' - \\nu_i') (r_f^s - r_r^s) $$\nThis matches the general form required.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944158.kinetic_formulation_for_the_reaction_h_+_o2_+_m_=_ho2_+_m",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.chain_499310",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.definition_of_the_local_state_vector_and_jacobian_dimension",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.coupling_in_arrhenius_mass-action_kinetics",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.coupling_in_the_temperature_energy_equation",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.numerical_strategies_for_stiff_chemical_kinetics",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Calculate the Jacobian dimension**: From Premise 1, the dimension of the Jacobian matrix $n$ is the total number of variables in the state vector. With $N_s = 50$ species and 1 temperature variable, $n = 50 + 1 = 51$.\n\n**Estimate nonzero entries in species rows**: From Premise 2 and the Assumption, for each of the $N_s=50$ species equations, the source term depends on the species itself, approximately $d=10$ other species, and the temperature $T$.\nThus, the number of nonzeros per species row is approximately $d + 1 (\\text{for } T) = 11$.\nTotal nonzeros from species rows: $N_s \\times 11 = 50 \\times 11 = 550$.\n\n**Estimate nonzero entries in the temperature row**: From Premise 3 and the Assumption, the temperature equation depends on itself (via $T$) and approximately $N_s^{\\text{eff}} = 45$ species.\nThus, the number of nonzeros in the temperature row is $45 + 1 = 46$.\n\n**Calculate total sparsity**: The total number of nonzeros is $\\text{nnz} \\approx 550 + 46 = 596$.\nThe total number of matrix elements is $n^2 = 51^2 = 2601$.\nThe sparsity fraction is $\\sigma = 1 - \\frac{596}{2601} \\approx 1 - 0.229 = 0.771$.\nThis value indicates that the matrix is largely sparse ($\\sim 77\\%$ zeros).\n\n**Select appropriate numerical strategies**: Based on Premise 4 and the calculated sparsity, valid strategies must exploit this structure.\n- Since $\\sigma \\approx 0.77$, **sparse linear algebra** is more efficient than dense methods.\n- To handle the high cost of $N_s=50$ stiff equations, **mechanism reduction (DRGEP, QSSA)** and **manifold tabulation (ILDM, FGM)** are scientifically appropriate to reduce the computational burden without sacrificing essential physics like ignition.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944160.jacobian_structure_and_simulation_strategy_for_detailed_kine",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.chain_499311",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.conservation_of_species_mass",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.constitutive_model_for_diffusive_flux_with_soret_effect",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.law_of_mass_action_for_elementary_kinetics",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.modified_arrhenius_equation",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.dufour_effect_decoupling",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Formulate the Conservative Transport Equation**: Starting from the general principle of mass conservation (Premise 1), the evolution of species $k$ is governed by the balance of time rate of change, divergence of total flux, and chemical production. The total flux is the sum of convective flux $\\rho \\mathbf{u} Y_k$ and diffusive flux $\\mathbf{J}_k$. Thus, the base equation is:\n$$ \\partial_t(\\rho Y_k) + \\nabla \\cdot (\\rho \\mathbf{u} Y_k + \\mathbf{J}_k) = \\dot{\\omega}_k $$\n\n**Define the Diffusive Flux with Soret Effect**: Applying the specific constitutive model for diffusion (Premise 2) and the assumptions regarding the Soret effect, the diffusive flux $\\mathbf{J}_k$ must include both the concentration gradient term (Fickian) and the temperature gradient term (Soret). Following standard transport conventions where fluxes oppose gradients, both terms carry a negative sign relative to their respective gradients ($\\nabla Y_k$ and $\\nabla (\\ln T)$):\n$$ \\mathbf{J}_k = -\\rho D_k \\nabla Y_k - \\rho D_{T,k} \\nabla (\\ln T) $$\nThe Dufour effect is explicitly excluded from this equation as it belongs to the energy equation (Premise 5).\n\n**Formulate the Chemical Source Term**: Using the Law of Mass Action (Premise 3), the source term $\\dot{\\omega}_k$ is constructed. The reaction is reversible, requiring both forward and reverse components. The fundamental drivers of reaction probability are molar concentrations $c_i = \\rho Y_i / W_i$, not mass fractions.\n$$ \\dot{\\omega}_k = W_k (\\nu''_k - \\nu'_k) \\dot{\\omega}_r $$\n$$ \\dot{\\omega}_r = k_f \\prod_i c_i^{\\nu'_i} - k_b \\prod_i c_i^{\\nu''_i} $$\n\n**Define the Rate Constant**: The forward rate constant $k_f$ is defined via the modified Arrhenius equation (Premise 4):\n$$ k_f = A T^\\beta \\exp\\left(-\\frac{E_a}{R T}\\right) $$\n\n**Synthesize the Final Equation Set**: Combining the conservative transport equation, the expanded diffusive flux definition, and the detailed chemical source term yields the complete mathematical model.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944171.governing_species_transport_equation",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173.chain_499312",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173.collision_theory_pre-factor_scaling",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173.transition_state_theory_in_non-equilibrium",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Determination of the Pre-exponential Factor**: The reaction rate $k$ is composed of a pre-exponential factor and an exponential factor. From Premise 1, the pre-exponential factor reflects the frequency of collisions. Since collision frequency depends on the relative thermal motion of particles (translational modes), it must scale with the translational temperature $T$. Specifically, it follows the $\\sqrt{T}$ scaling of the mean molecular speed. Therefore, the pre-factor is proportional to $A_0 T^{1/2}$.\n\n**Determination of the Exponential Factor**: From Premise 2 and the Assumption, the activation barrier $E_a$ is overcome primarily through vibrational energy. In a non-equilibrium state where vibrational energy is characterized by $T_v$ distinct from $T$, the fraction of molecules possessing sufficient vibrational energy to react is governed by the Boltzmann distribution at $T_v$. Therefore, the exponential term must be $\\exp(-E_a / (R T_v))$.\n\n**Synthesis of the Rate Expression**: Combining the pre-exponential factor derived from translational collision frequency ($T^{1/2}$) and the exponential factor derived from the vibrational bottleneck ($T_v$), the corrected rate expression is the product of these terms: $k(T, T_v) \\propto T^{1/2} \\cdot \\exp(-E_a / (R T_v))$.\n\n**Verification against Overprediction**: Under the shock conditions defined in the Assumption ($T \\gg T_v$), a standard Arrhenius rate using $\\exp(-E_a / (RT))$ would compute the reaction probability based on the high translational temperature, leading to a large reaction rate. By using $\\exp(-E_a / (R T_v))$ where $T_v$ is low, the predicted rate is significantly smaller. This mechanism prevents the unphysical overprediction of dissociation immediately behind the shock, consistent with the requirement to reduce early-time overprediction.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944173.two-temperature_dissociation_rate_model",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.chain_499313",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.definition_of_effective_activation_energy",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.multiplicative_decomposition_of_tunneling_rates",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.wigner_tunneling_correction",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.physical_nature_of_tunneling",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Decomposition of Effective Activation Energy**: Using the definition $E_{a}^{\\text{eff}}(T) = - R \\frac{d \\ln k(T)}{d(1/T)}$ and the factorization $k(T) = \\kappa(T) k_{\\text{TST}}(T)$, we expand the logarithm:\n$$ \\ln k(T) = \\ln \\kappa(T) + \\ln k_{\\text{TST}}(T) $$\nDifferentiating with respect to $1/T$:\n$$ -R \\frac{d \\ln k(T)}{d(1/T)} = -R \\frac{d \\ln k_{\\text{TST}}(T)}{d(1/T)} - R \\frac{d \\ln \\kappa(T)}{d(1/T)} $$\nIdentifying the first term on the RHS as the classical activation energy $E_{a}^{\\text{TST}}(T)$, we obtain the relation:\n$$ E_{a}^{\\text{eff}}(T) = E_{a}^{\\text{TST}}(T) - R \\frac{d \\ln \\kappa(T)}{d(1/T)} $$\n\n**Determination of the Sign of the Wigner Correction Derivative**: We examine the Wigner correction $\\kappa_{W}(T) = 1 + \\frac{1}{24} (\\frac{\\hbar \\omega_{b}}{k_{B}})^2 \\frac{1}{T^2}$.\nLet $x = 1/T$. The function becomes $\\kappa_{W}(x) = 1 + C x^2$ where $C = \\frac{1}{24} (\\frac{\\hbar \\omega_{b}}{k_{B}})^2$ is a positive constant.\nWe compute the derivative of $\\ln \\kappa_{W}(x)$ with respect to $x$:\n$$ \\frac{d \\ln \\kappa_{W}}{dx} = \\frac{1}{\\kappa_{W}} \\frac{d \\kappa_{W}}{dx} = \\frac{1}{1 + C x^2} (2Cx) $$\nSince $C > 0$ and $x = 1/T > 0$ (for finite positive temperature), the derivative $\\frac{d \\ln \\kappa_{W}}{d(1/T)}$ is strictly positive.\n\n**Evaluation of Tunneling Effect on Activation Energy**: Substituting the sign of the derivative into the energy relation:\n$$ E_{a}^{\\text{eff}}(T) = E_{a}^{\\text{TST}}(T) - R \\times (\\text{positive quantity}) $$\nThis implies:\n$$ E_{a}^{\\text{eff}}(T) < E_{a}^{\\text{TST}}(T) $$\nThus, the inclusion of the tunneling correction leads to a reduction in the effective activation energy compared to the classical limit.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944179.wigner_tunneling_correction_and_activation_energy_reduction",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.chain_499314",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.ideal_gas_molar_concentration",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.arrhenius_rate_law",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.law_of_mass_action",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.branching_fraction_definition",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Calculation of Concentrations**: Using the Ideal Gas premise and the given conditions ($P=0.3\\,\\mathrm{atm}, T=2500\\,\\mathrm{K}$), the total concentration is $C_{\\mathrm{tot}} \\approx 1.462\\,\\mathrm{mol/m^3}$. Species concentrations are calculated as $[X_s] = y_s C_{\\mathrm{tot}}$, yielding $[\\mathrm{H}] \\approx 2.92\\times 10^{-4}$, $[\\mathrm{O}] \\approx 7.31\\times 10^{-5}$, $[\\mathrm{O_2}] \\approx 7.31\\times 10^{-2}$, $[\\mathrm{H_2}] \\approx 1.46\\times 10^{-3}$, and $[\\mathrm{M}] \\approx 1.462\\,\\mathrm{mol/m^3}$.\n\n**Evaluation of Rate Constants**: Using the Arrhenius premise:\n- $k_1(2500) \\approx 1.0\\times 10^8 \\times \\exp(-3.61) \\approx 2.73\\times 10^6\\,\\mathrm{m^3/(mol\\cdot s)}$.\n- $k_2(2500) \\approx 5.0\\times 10^7 \\times (2500)^{0.5} \\times \\exp(-3.13) \\approx 1.09\\times 10^8\\,\\mathrm{m^3/(mol\\cdot s)}$.\n- $k_3(2500) \\approx 2.0\\times 10^6 \\times (2500)^{-1} \\approx 800\\,\\mathrm{m^6/(mol^2\\cdot s)}$.\n\n**Computation of Reaction Fluxes**: Using the Law of Mass Action:\n- $J_1 = k_1 [\\mathrm{H}] [\\mathrm{O_2}] \\approx (2.73\\times 10^6) (2.92\\times 10^{-4}) (7.31\\times 10^{-2}) \\approx 58.3\\,\\mathrm{mol/(m^3\\cdot s)}$.\n- $J_2 = k_2 [\\mathrm{O}] [\\mathrm{H_2}] \\approx (1.09\\times 10^8) (7.31\\times 10^{-5}) (1.46\\times 10^{-3}) \\approx 11.6\\,\\mathrm{mol/(m^3\\cdot s)}$.\n- $J_3 = k_3 [\\mathrm{H}] [\\mathrm{O}] [\\mathrm{M}] \\approx 800 (2.92\\times 10^{-4}) (7.31\\times 10^{-5}) (1.462) \\approx 2.5\\times 10^{-5}\\,\\mathrm{mol/(m^3\\cdot s)}$.\n\n**Determination of Dominance**: Summing the fluxes, $J_{\\mathrm{total}} \\approx 58.3 + 11.6 + 0 \\approx 69.9$. The branching fraction for Reaction 1 is $f_1 \\approx 58.3/69.9 \\approx 0.83$. Reaction 1 is the dominant pathway.\n\n**Temperature Sensitivity Analysis**: To compare R1 and R2 sensitivities, consider the ratio $k_2/k_1 \\propto T^{\\beta_2-\\beta_1} \\exp(-(E_{a,2}-E_{a,1})/(RT))$. Given $\\beta_2=0.5 > \\beta_1=0$ and $E_{a,2}=65000 < E_{a,1}=75000$, both the pre-exponential factor and the exponential term cause $k_2$ to increase faster than $k_1$ as $T$ rises. Thus, increasing $T$ strengthens R2 relative to R1.\n\n**Pressure Sensitivity Analysis**: Reaction 3 is termolecular ($[\\mathrm{H}][\\mathrm{O}][\\mathrm{M}]$), so its rate scales with $[M]$ and thus linearly with total pressure $P$ (or more accurately $P^3$ if all concentrations scale, but relative to bimolecular rates which scale as $P^2$, the ratio $J_3/J_{bimolecular}$ scales linearly with $P$). Therefore, increasing pressure significantly boosts the relative contribution of Reaction 3 compared to the bimolecular reactions R1 and R2.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944188.dominant_reaction_pathway_and_sensitivity",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.chain_499315",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.molecularity_of_third-body_reactions",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.net_production_coefficient_of_a_scalar_pool",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.atom_conservation_principle",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Classification of Reaction Molecularity**: Applying the classification definition (Premise 1) to the reaction set:\n- $\\mathrm{S1}$ ($\\mathrm{H_2} + \\mathrm{M}$): Involves $\\mathrm{M}$ and $\\mathrm{H_2}$ in dissociation. Classified as termolecular.\n- $\\mathrm{S2}$ ($\\mathrm{H} + \\mathrm{O_2} + \\mathrm{M}$): Involves three colliding bodies ($\\mathrm{H}, \\mathrm{O_2}, \\mathrm{M}$). Classified as termolecular.\n- $\\mathrm{S3}$ ($\\mathrm{H} + \\mathrm{O_2}$): Involves two colliding bodies. Classified as elementary bimolecular.\n- $\\mathrm{S4}$ ($\\mathrm{OH} + \\mathrm{H_2}$): Involves two colliding bodies. Classified as elementary bimolecular.\n- $\\mathrm{S5}$ ($2\\mathrm{H} + \\mathrm{M}$): Involves three colliding bodies ($\\mathrm{H}, \\mathrm{H}, \\mathrm{M}$). Classified as termolecular.\n\n**Calculation of Radical Pool Coefficients**: Using the definition of $c_i$ (Premise 2) where $\\mathcal{R} = \\{\\mathrm{H}, \\mathrm{O}, \\mathrm{OH}, \\mathrm{HO_2}\\}$:\n- For $\\mathrm{S1}$ ($\\mathrm{H_2} \\to 2\\mathrm{H}$): Reactants have 0 radicals; Products have 2 H ($2$ radicals). $c_1 = 2 - 0 = +2$.\n- For $\\mathrm{S2}$ ($\\mathrm{H} + \\mathrm{O_2} \\to \\mathrm{HO_2}$): Reactants have 1 H ($1$ radical); Products have 1 $\\mathrm{HO_2}$ ($1$ radical). $c_2 = 1 - 1 = 0$.\n- For $\\mathrm{S3}$ ($\\mathrm{H} + \\mathrm{O_2} \\to \\mathrm{O} + \\mathrm{OH}$): Reactants have 1 H ($1$ radical); Products have 1 O and 1 OH ($2$ radicals). $c_3 = 2 - 1 = +1$.\n- For $\\mathrm{S4}$ ($\\mathrm{OH} + \\mathrm{H_2} \\to \\mathrm{H_2O} + \\mathrm{H}$): Reactants have 1 OH ($1$ radical); Products have 1 H ($1$ radical). $c_4 = 1 - 1 = 0$.\n- For $\\mathrm{S5}$ ($2\\mathrm{H} \\to \\mathrm{H_2}$): Reactants have 2 H ($2$ radicals); Products have 0 radicals. $c_5 = 0 - 2 = -2$.\n\n**Identification of Hydrogen Atom Invariant**: Applying the atom conservation principle (Premise 3) to the element Hydrogen:\nThe total hydrogen concentration is the sum of concentrations weighted by the hydrogen count in each species ($\\mathrm{H_2}: 2, \\mathrm{H}: 1, \\mathrm{OH}: 1, \\mathrm{HO_2}: 1, \\mathrm{H_2O}: 2$).\nThus, the invariant linear combination is:\n$$ N_{\\mathrm{H}} = 2[\\mathrm{H_2}] + [\\mathrm{H}] + [\\mathrm{OH}] + [\\mathrm{HO_2}] + 2[\\mathrm{H_2O}] $$\nThis quantity is conserved regardless of the reaction rates.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944192.mechanism_characteristics_and_conservation_properties",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.chain_499316",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.chain_rule_for_logarithmic_derivatives",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.forward_sensitivity_equation",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.adjoint_sensitivity_method_for_fixed-time_functionals",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.implicit_differentiation_of_event_times",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Expansion of Normalized Sensitivity**: Using the logarithmic derivative premise, the normalized sensitivity for any parameter $k_i$ is expressed in terms of the absolute sensitivity:\n$$\nS_{k_i}^q = \\frac{k_i}{q} \\frac{\\partial q}{\\partial k_i}\n$$\n\n**Derivation of Fixed-Time Forward Sensitivity**: For the fixed-time QoI $q=\\phi(\\mathbf{z}(t_f))$, applying the chain rule yields $\\frac{\\partial q}{\\partial k_i} = \\frac{\\partial \\phi}{\\partial \\mathbf{z}}|_{t_f} \\cdot \\mathbf{s}_i(t_f)$. The vector $\\mathbf{s}_i(t)$ is obtained by integrating the forward sensitivity ODE from Premise 2 with $\\mathbf{s}_i(0)=\\mathbf{0}$ (assuming $\\mathbf{z}(0)$ is independent of $k_i$). This confirms the formulation for the forward method.\n\n**Derivation of Fixed-Time Adjoint Sensitivity**: For the same fixed-time QoI, the adjoint method (Premise 3) provides an efficient route to compute gradients for all $k_i$ simultaneously. By solving the adjoint ODE backward from $t_f$ to $0$ with the terminal boundary condition $\\boldsymbol{\\lambda}(t_f) = (\\nabla_{\\mathbf{z}}\\phi|_{t_f})^\\top$, the sensitivity is obtained via the inner product integral involving $\\frac{\\partial \\mathbf{F}}{\\partial k_i}$.\n\n**Derivation of Event-Time Forward Sensitivity**: For the ignition delay $q=\\tau$, the condition $h(\\mathbf{z}(\\tau))=0$ is differentiated with respect to $k_i$. Substituting $\\frac{d\\mathbf{z}}{dt}|_{\\tau} = \\mathbf{F}(\\mathbf{z}(\\tau), \\mathbf{k})$ and $\\frac{\\partial \\mathbf{z}}{\\partial k_i}|_{\\tau} = \\mathbf{s}_i(\\tau)$ into the implicit differentiation formula (Premise 4), we obtain the explicit expression for $\\frac{\\partial \\tau}{\\partial k_i}$. This requires the denominator term $\\nabla_{\\mathbf{z}}h \\cdot \\mathbf{F}$, representing the time rate of change of the event function at the crossing.\n\n**Equivalence of Rate Constant and Pre-exponential Sensitivities**: The Arrhenius rate is $k_i = A_i \\Psi(T)$. The partial derivative with respect to the pre-exponential factor is $\\frac{\\partial k_i}{\\partial A_i} = \\frac{k_i}{A_i}$.\nApplying the definition of normalized sensitivity:\n$$\nS_{A_i}^q = \\frac{A_i}{q} \\frac{\\partial q}{\\partial A_i} = \\frac{A_i}{q} \\left( \\frac{\\partial q}{\\partial k_i} \\frac{\\partial k_i}{\\partial A_i} \\right) = \\frac{A_i}{q} \\frac{\\partial q}{\\partial k_i} \\frac{k_i}{A_i} = \\frac{k_i}{q} \\frac{\\partial q}{\\partial k_i} = S_{k_i}^q\n$$\nThus, sensitivity to $A_i$ is identical to sensitivity to $k_i$.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944195.valid_sensitivity_analysis_formulas_for_chemical_kinetics",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.chain_499317",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.mixture_enthalpy_definition",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.species_conservation_equation",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.energy_equation_formulation",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.arrhenius_law",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Expansion of Mixture Enthalpy Derivative**: Differentiate the mixture enthalpy definition $h = \\sum_k Y_k h_k$ with respect to time using the material derivative:\n$$ \\rho \\frac{Dh}{Dt} = \\rho \\sum_k \\left( Y_k \\frac{Dh_k}{Dt} + h_k \\frac{DY_k}{Dt} \\right) $$\nUsing the chain rule $\\frac{Dh_k}{Dt} = \\frac{dh_k}{dT} \\frac{DT}{Dt} = c_{p,k} \\frac{DT}{Dt}$:\n$$ \\rho \\frac{Dh}{Dt} = \\rho \\left( \\sum_k Y_k c_{p,k} \\right) \\frac{DT}{Dt} + \\rho \\sum_k h_k \\frac{DY_k}{Dt} $$\nDefining mixture specific heat $c_p = \\sum_k Y_k c_{p,k}$, the equation becomes:\n$$ \\rho \\frac{Dh}{Dt} = \\rho c_p \\frac{DT}{Dt} + \\sum_k h_k \\left( \\rho \\frac{DY_k}{Dt} \\right) $$\n\n**Substitution of Species Conservation**: Substitute the species conservation equation $\\rho \\frac{DY_k}{Dt} = -\\nabla \\cdot \\mathbf{J}_k + \\dot{\\omega}_k$ into the enthalpy derivative expression:\n$$ \\rho \\frac{Dh}{Dt} = \\rho c_p \\frac{DT}{Dt} + \\sum_k h_k (-\\nabla \\cdot \\mathbf{J}_k + \\dot{\\omega}_k) $$\nRearranging to isolate the temperature derivative term $\\rho c_p \\frac{DT}{Dt}$ (which corresponds to the standard form of the energy equation):\n$$ \\rho c_p \\frac{DT}{Dt} = \\rho \\frac{Dh}{Dt} - \\sum_k h_k \\dot{\\omega}_k + \\sum_k h_k (\\nabla \\cdot \\mathbf{J}_k) $$\n\n**Identification of Chemical Source Term**: By comparing the derived equation with the standard energy equation form (Premise 3), we isolate the terms specifically associated with chemical production. The term representing the energy contribution from chemical reactions in the temperature equation is identified as:\n$$ \\dot{q}_{\\text{chem}} = - \\sum_k h_k(T) \\dot{\\omega}_k $$\nThe negative sign arises because an exothermic reaction (heat release, $\\dot{q} > 0$) implies a decrease in the chemical enthalpy of the system ($\\sum h_k \\dot{\\omega}_k < 0$).\n\n**Analysis of Temperature Modulation**: The source term $\\dot{q}_{\\text{chem}}$ depends on temperature $T$ through two independent factors:\n1.  **Thermodynamic factor**: The specific enthalpies $h_k(T)$ vary with $T$ according to $c_{p,k}(T)$.\n2.  **Kinetic factor**: The production rates $\\dot{\\omega}_k$ depend on reaction rates $r_j$, which vary with $T$ primarily via the Arrhenius exponential term $\\exp(-E_{a,j}/RT)$.\nSince $E_{a,j} > 0$, increasing $T$ increases the reaction rate, thereby increasing the magnitude of $\\dot{\\omega}_k$ and the overall heat release.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944200.chemical_heat_release_source_term",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.chain_499318",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.law_of_mass_action_for_elementary_reactions",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.rate_of_change_of_species_concentration",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.arrhenius_equation",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.quasi-steady-state_approximation_(qssa)",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Formulation of Elementary Rates**: Applying the Law of Mass Action (Premise 1) to the specific mechanism (Assumption), the rate of step 1 is $v_1 = k_1(T)[A][B]$, and the rate of step 2 is $v_2 = k_2(T)[I][C]$.\n\n**Formulation of Product Formation Rate**: According to the definition of the rate of change (Premise 2) and the mechanism (Assumption), species $P$ is produced only in step 2. Therefore, the exact expression for the product formation rate is $r_P(t) = \\frac{d[P]}{dt} = v_2 = k_2(T)[I][C]$. This expression explicitly depends on the intermediate concentration $[I]$.\n\n**Formulation of Intermediate Rate of Change**: According to Premise 2, species $I$ is produced in step 1 and consumed in step 2. Thus, the rate of change of the intermediate concentration is $\\frac{d[I]}{dt} = v_1 - v_2 = k_1(T)[A][B] - k_2(T)[I][C]$.\n\n**Application of QSSA**: Invoking the Quasi-Steady-State Approximation (Premise 4) for the intermediate $I$, we set $\\frac{d[I]}{dt} \\approx 0$. Substituting the expression from the previous step yields $k_1(T)[A][B] - k_2(T)[I][C] \\approx 0$.\n\n**Derivation of Steady-State Intermediate Concentration**: Rearranging the equation from the QSSA step allows solving for the steady-state concentration of $I$: $[I] \\approx \\frac{k_1(T)[A][B]}{k_2(T)[C]}$.\n\n**Substitution into Product Rate Law**: Substituting the approximated expression for $[I]$ back into the exact product formation rate equation ($r_P(t) = k_2(T)[I][C]$) yields:\n$r_P(t) \\approx k_2(T) \\left( \\frac{k_1(T)[A][B]}{k_2(T)[C]} \\right) [C]$.\n\n**Simplification of Final Rate Law**: Simplifying the expression reveals that $k_2(T)$ and $[C]$ cancel out, leaving $r_P(t) \\approx k_1(T)[A][B]$. This result demonstrates that under QSSA, the rate depends only on the reactants of the first step.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944204.product_formation_rate_analysis",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.chain_499319",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.law_of_mass_action",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.steady-state_approximation_(ssa)",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.definition_of_effective_rate_coefficient",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.definition_of_reaction_order",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.ideal_gas_law_for_concentration",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.properties_of_the_troe_broadening_factor",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Derivation of Intermediate Concentration**: Applying the Law of Mass Action to the elementary steps, the rate of formation of $A^{*}$ is $k_1[A][M]$, and the rate of consumption is $k_{-1}[A^{*}][M] + k_2[A^{*}]$. Applying the Steady-State Approximation ($d[A^{*}]/dt = 0$), we solve for the steady-state concentration:\n$$[A^{*}]_{\\text{ss}} = \\frac{k_1[A][M]}{k_{-1}[M] + k_2}$$\n\n**Formulation of Effective Rate Coefficient**: The overall rate of product formation is $\\omega = k_2 [A^{*}]_{\\text{ss}}$. Substituting the expression for $[A^{*}]_{\\text{ss}}$ yields:\n$$\\omega = \\frac{k_1 k_2 [A][M]}{k_{-1}[M] + k_2}$$\nComparing this to the definition $\\omega = k_{\\text{eff}}[A]$, the effective rate coefficient is:\n$$k_{\\text{eff}}(T, [M]) = \\frac{k_1 k_2 [M]}{k_{-1}[M] + k_2}$$\n\n**Identification of Limiting Parameters and Reduced Pressure form**: Defining the low-pressure limit ($[M] \\to 0$) parameter as $k_0 \\equiv k_1$ (such that $\\omega \\to k_0[A][M]$) and the high-pressure limit ($[M] \\to \\infty$) parameter as $k_{\\infty} \\equiv \\frac{k_1 k_2}{k_{-1}}$ (such that $\\omega \\to k_{\\infty}[A]$), the expression for $k_{\\text{eff}}$ can be rewritten.\nUsing the definition $Pr \\equiv \\frac{k_0 [M]}{k_{\\infty}}$, we substitute $k_0$ and $k_{\\infty}$:\n$$Pr = \\frac{k_1 [M]}{k_1 k_2 / k_{-1}} = \\frac{k_{-1}[M]}{k_2}$$\nDividing the numerator and denominator of the $k_{\\text{eff}}$ expression by $k_2/k_{-1}$ (or equivalently manipulating using $Pr$), we obtain the standard fall-off form:\n$$k_{\\text{eff}} = \\frac{k_{\\infty} Pr}{1 + Pr}$$\n\n**Analysis of Asymptotic Behaviors**: In the low-pressure limit ($Pr \\ll 1$), the denominator $1+Pr \\approx 1$, yielding $k_{\\text{eff}} \\approx k_{\\infty} Pr = k_0 [M]$. The rate is linearly dependent on $[M]$.\nIn the high-pressure limit ($Pr \\gg 1$), the fraction $\\frac{Pr}{1+Pr} \\approx 1$, yielding $k_{\\text{eff}} \\approx k_{\\infty}$. The rate is independent of $[M]$.\nSince the Troe factor $F(Pr)$ approaches 1 in both limits, these asymptotic behaviors remain valid even under the Troe formalism.\n\n**Determination of Reaction Order with respect to Bath Gas**: The effective order with respect to $[M]$ is $n_M = \\frac{\\partial \\ln k_{\\text{eff}}}{\\partial \\ln [M]}$. Since $Pr$ is linear in $[M]$, this is equivalent to $\\frac{\\partial \\ln k_{\\text{eff}}}{\\partial \\ln Pr}$.\nFrom $\\ln k_{\\text{eff}} = \\ln k_{\\infty} + \\ln Pr - \\ln(1+Pr)$, the derivative is:\n$$n_M = 1 - \\frac{Pr}{1+Pr} = \\frac{1}{1+Pr}$$\nThus, $n_M$ transitions continuously from $1$ (at $Pr \\to 0$) to $0$ (at $Pr \\to \\infty$).\n\n**Relation to System Pressure**: Using the Ideal Gas Law relation $[M] = p/(RT)$, the reduced pressure is $Pr = \\frac{k_0}{k_{\\infty} R T} p$. Therefore, at constant temperature, $Pr$ is directly proportional to the system pressure $p$. A decrease in $p$ directly corresponds to a decrease in $Pr$, shifting the system toward the low-pressure limit.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944211.characterization_of_lindemann_fall-off_kinetics",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214.chain_499320",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214.generalized_arrhenius_law",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214.linearization_of_the_arrhenius_model",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Construct Linear System**: Using the linearization premise and the specific dataset, a system of three linear equations is established for the unknown parameter vector $[\\beta_1, \\beta_2, \\beta_3] = [\\ln A, n, E_a/R]$:\n1. $\\ln(\\exp(-5)) = \\beta_1 + \\beta_2 \\ln(1000) - \\beta_3 (1/1000) \\implies -5 = \\beta_1 + \\beta_2 \\ln(1000) - 0.001 \\beta_3$\n2. $\\ln(\\exp(-3)) = \\beta_1 + \\beta_2 \\ln(1250) - \\beta_3 (1/1250) \\implies -3 = \\beta_1 + \\beta_2 \\ln(1250) - 0.0008 \\beta_3$\n3. $\\ln(1) = \\beta_1 + \\beta_2 \\ln(2000) - \\beta_3 (1/2000) \\implies 0 = \\beta_1 + \\beta_2 \\ln(2000) - 0.0005 \\beta_3$\n\n**Solve for Parameters**: Subtracting the equations allows for the isolation of $\\beta_2$ and $\\beta_3$:\n- (Eq 2 - Eq 1): $2 = \\beta_2 \\ln(1.25) + \\beta_3 (0.0002)$\n- (Eq 3 - Eq 2): $3 = \\beta_2 \\ln(1.6) + \\beta_3 (0.0003)$\nMultiplying the first difference equation by 1.5 yields $3 = 1.5 \\beta_2 \\ln(1.25) + 0.0003 \\beta_3$. Comparing this to the second difference equation reveals that the coefficients for $\\beta_3$ and the constants match (both equal 3), while the coefficients for $\\beta_2$ differ ($\\ln(1.6) \\neq 1.5 \\ln(1.25)$). Therefore, consistency requires $\\beta_2 = n = 0$.\nSubstituting $n=0$ back into the first difference equation: $2 = 0 + \\beta_3(0.0002) \\implies \\beta_3 = 10000$.\nThus, $E_a/R = 10000\\,\\mathrm{K}$.\n\n**Calculate Activation Energy**: The activation energy is calculated using the definition $\\beta_3 = E_a/R$:\n$E_{a} = 10000\\,\\mathrm{K} \\times 8.314\\,\\mathrm{J}\\,\\mathrm{mol}^{-1}\\,\\mathrm{K}^{-1} = 83140\\,\\mathrm{J}\\,\\mathrm{mol}^{-1}$.\nConverting to kilojoules: $E_{a} = 83.14\\,\\mathrm{kJ}\\,\\mathrm{mol}^{-1}$.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944214.activation_energy_value",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.chain_499321",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.scaling_of_laminar_flame_speed",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.arrhenius_rate_calibration_for_flame_speed",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.governing_equation_for_homogeneous_ignition",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.physics_of_ignition_in_hydrogen-air_mixtures",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.limitations_of_single-step_global_mechanisms",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Characterize the tuning condition**: The mechanism parameters ($A, n, E_a$) are fixed to match $S_L$. According to Premise 1 and 2, this forces the global reaction rate $k(T)$ to be accurate only in the high-temperature regime ($T \\approx T_{\\mathrm{ad}}$) where the flame's reaction zone is located and heat release is dominant.\n\n**Characterize the testing condition**: The testing condition is homogeneous ignition starting at $T_0 = 900\\,\\mathrm{K}$. According to Premise 3 and 4, the ignition delay $\\tau_{\\mathrm{ign}}$ is determined by the kinetics at this initial intermediate temperature and the subsequent induction phase. This phase relies on radical accumulation and specific pressure-dependent pathways (like $\\mathrm{H} + \\mathrm{O}_2 + \\mathrm{M}$) which are physically distinct from the high-temperature binary reactions dominating the flame speed.\n\n**Identify the structural deficiency**: By Premise 5, the single-step global model lacks the structural components (explicit radicals, third-body terms) required to represent the physics described in Premise 4. It has only one kinetic barrier defined by $E_a$ and one pressure dependence defined implicitly by reactant order (usually 2nd order for binary).\n\n**Analyze the pressure dependence**: Real hydrogen-air ignition involves termolecular reactions ($\\dots + \\mathrm{M}$) whose rates scale linearly with pressure $p$ (and thus concentration $[\\mathrm{M}]$), creating complex non-linear pressure dependencies for $\\tau_{\\mathrm{ign}}$. A global binary reaction rate scales with $[Reactants]^m$, leading to a simple power-law pressure dependence that cannot reproduce the complex functional form of the real mechanism.\n\n**Determine the consequence of tuning**: Since the parameters are locked to match high-temperature behavior ($S_L$), the rate $k(T)$ at $T=900\\,\\mathrm{K}$ is extrapolated via the fixed Arrhenius form. There is no mathematical guarantee—and physically it is highly improbable—that this extrapolated rate matches the complex, radical-driven rate limiting the ignition process. Therefore, the ignition delay and its pressure response will be predicted incorrectly.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944222.inability_of_flame-tuned_global_mechanisms_to_predict_igniti",
+          "version": 1
+        }
+      }
+    ]
+  },
+  {
+    "chain_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.chain_499322",
+    "module_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225",
+    "package_id": "arrhenius_kinetics_and_reaction_mechanisms",
+    "package_version": "1.0.0",
+    "type": "deduction",
+    "steps": [
+      {
+        "step_index": 0,
+        "premises": [
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.ideal_gas_chemical_potential",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.condition_for_thermodynamic_equilibrium",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.law_of_mass_action_for_elementary_kinetics",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.arrhenius_rate_law",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.definition_of_equilibrium_constant",
+            "version": 1
+          },
+          {
+            "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.principle_of_detailed_balance_(thermodynamic_consistency)",
+            "version": 1
+          }
+        ],
+        "reasoning": "**Determine the form of the true equilibrium constant**: For the isomerization reaction $\\mathrm{A} \\rightleftharpoons \\mathrm{B}$, the stoichiometric coefficients are $\\nu_{\\mathrm{B}} = 1$ and $\\nu_{\\mathrm{A}} = -1$.\nUsing Premise 2 and Premise 1, the equilibrium condition is $\\mu_{\\mathrm{B}} = \\mu_{\\mathrm{A}}$, which leads to $\\mu_{\\mathrm{B}}^0 + RT \\ln(y_{\\mathrm{B}} p/p^0) = \\mu_{\\mathrm{A}}^0 + RT \\ln(y_{\\mathrm{A}} p/p^0)$.\nRearranging yields the ratio of mole fractions at equilibrium: $\\frac{y_{\\mathrm{B}}}{y_{\\mathrm{A}}} = \\exp\\left( \\frac{\\mu_{\\mathrm{A}}^0 - \\mu_{\\mathrm{B}}^0}{RT} \\right)$.\nDefining the true equilibrium constant $K_{\\text{true}}(T)$ as this ratio, we have $K_{\\text{true}}(T) = \\frac{k_f(T)}{k_r(T)}$, where $k_f$ and $k_r$ are the true rate constants (Premise 6).\n\n**Formulate the erroneous reverse rate constant**: The true reverse rate constant is $k_r(T) = A_r T^{n_r} \\exp(-E_r/RT)$ (Premise 4).\nThe erroneous reverse rate constant is given by substituting the incorrect activation energy $E_r + \\Delta E$:\n$k_r^{\\text{err}}(T) = A_r T^{n_r} \\exp\\left(-\\frac{E_r + \\Delta E}{RT}\\right)$.\n\n**Relate erroneous rate to true rate**: Expanding the exponential term in $k_r^{\\text{err}}(T)$:\n$k_r^{\\text{err}}(T) = A_r T^{n_r} \\exp\\left(-\\frac{E_r}{RT}\\right) \\exp\\left(-\\frac{\\Delta E}{RT}\\right) = k_r(T) \\exp\\left(-\\frac{\\Delta E}{RT}\\right)$.\n\n**Calculate the erroneous equilibrium constant**: The erroneous equilibrium constant $K_{\\text{err}}(T)$ is the ratio of the correct forward rate to the erroneous reverse rate (Premise 3 and Premise 6 applied to the model):\n$K_{\\text{err}}(T) = \\frac{k_f(T)}{k_r^{\\text{err}}(T)} = \\frac{k_f(T)}{k_r(T) \\exp\\left(-\\frac{\\Delta E}{RT}\\right)} = \\frac{k_f(T)}{k_r(T)} \\exp\\left(\\frac{\\Delta E}{RT}\\right)$.\nSince $K_{\\text{true}}(T) = \\frac{k_f(T)}{k_r(T)}$, this simplifies to $K_{\\text{err}}(T) = K_{\\text{true}}(T) \\exp\\left(\\frac{\\Delta E}{RT}\\right)$.\n\n**Calculate the fractional error**: The fractional error is defined as $\\varepsilon_K(T) = \\frac{K_{\\text{err}}(T) - K_{\\text{true}}(T)}{K_{\\text{true}}(T)}$.\nSubstituting the expression for $K_{\\text{err}}(T)$:\n$\\varepsilon_K(T) = \\frac{K_{\\text{true}}(T) \\exp\\left(\\frac{\\Delta E}{RT}\\right) - K_{\\text{true}}(T)}{K_{\\text{true}}(T)} = \\exp\\left(\\frac{\\Delta E}{RT}\\right) - 1$.",
+        "conclusion": {
+          "knowledge_id": "arrhenius_kinetics_and_reaction_mechanisms.problem_3944225.fractional_error_in_equilibrium_constant_due_to_activation_e",
+          "version": 1
+        }
+      }
+    ]
+  }
+]
