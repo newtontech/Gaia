@@ -14,7 +14,7 @@
 
 ## 1. Design Principles
 
-1. **Review is knowledge.** Review findings, rebuttals, and editorial verdicts are expressed in Gaia language and can participate in BP. The review process forms a fiber bundle over the package — meta-knowledge attached to each knowledge unit.
+1. **Review is structured knowledge.** Review findings, rebuttals, and editorial verdicts are expressed in Gaia language and can inform review and registry decisions. Direct BP participation of review artifacts is deferred; the review process forms a fiber bundle over the package — meta-knowledge attached to each knowledge unit.
 
 2. **CLI commands do data I/O; intelligence lives in agent skills.** CLI commands (`build`, `infer`, `publish`) are deterministic or mechanical. Judgment-heavy work (self-review, graph construction, rebuttal writing) is done by agent skills.
 
@@ -77,7 +77,7 @@ gaia publish       submit package → triggers peer review cycle
 
 ### Purpose
 
-Agent evaluates its own package's reasoning quality before submission. Produces weak point knowledge units and conditional priors for author-local use. Optional but recommended — a well-reviewed package is more likely to pass peer review.
+Agent evaluates its own package's reasoning quality before submission. Produces candidate weak-point knowledge units plus conditional priors for author-local use. Optional but recommended — a well-reviewed package is more likely to pass peer review.
 
 ### Two-Round LLM Protocol
 
@@ -86,22 +86,22 @@ Round 1 (LLM call 1):
   Input:  package.md
   Tasks:
     1. Evaluate conditional_prior_v1 for each chain
-    2. Extract weak points → write as knowledge units (claim or setting)
+    2. Extract weak points → write as candidate knowledge units (claim or setting)
     3. Mark unrelated refs (refs declared but not used by the reasoning)
-  Output: conditional_prior_v1 + weak_point knowledge units + unrelated_refs
+  Output: conditional_prior_v1 + weak_point candidates + unrelated_refs
 
-       ↓ Program: insert weak point knowledge units into document
-                  remove unrelated refs
-                  regenerate package.md_v2
+       ↓ Program: regenerate package.md_v2 for review
+                  remove unrelated refs from the rendered review document
                   DO NOT include conditional_prior_v1 (hidden from Round 2)
+                  DO NOT silently add weak-point candidates to submitted Graph IR
 
 Round 2 (LLM call 2):
   Input:  package.md_v2
   Tasks:
-    1. Classify each weak point knowledge unit: premise / context / unrelated
-    2. Assign prior to each weak point knowledge unit
+    1. Classify each weak point candidate: premise / context / irrelevant
+    2. Assign prior to each weak point candidate
     3. Re-evaluate conditional_prior_v2 (independent of v1)
-  Output: classified weak_points with priors + conditional_prior_v2
+  Output: classified weak-point candidates with priors + conditional_prior_v2
 ```
 
 ### Terminology
@@ -111,14 +111,14 @@ These definitions are included in every report header for self-containedness:
 | Term | Definition |
 |------|-----------|
 | `conditional_prior` | Probability that the reasoning step is correct, ASSUMING all premise-classified knowledge units are true. Isolates reasoning quality from input reliability |
-| `premise` | Knowledge that the reasoning necessarily depends on. If false, the conclusion fails |
-| `context` | Background knowledge that frames the reasoning. The conclusion can stand without it |
-| `unrelated` | Knowledge declared as a reference but not used by the reasoning process |
+| `premise` | Knowledge that the reasoning necessarily depends on. If false, the conclusion fails. In the current source surface this corresponds to `dependency: direct` |
+| `context` | Background knowledge that frames the reasoning. The conclusion can stand without it. In the current source surface this corresponds to `dependency: indirect` |
+| `irrelevant` | Knowledge declared or mentioned during review but not actually used by the reasoning process. It does not enter factor connectivity |
 
 ### Design Decisions
 
 - **v1 is hidden from v2.** Prevents anchoring bias. Two independent assessments; the delta is a diagnostic signal (large delta = significant hidden dependencies).
-- **Weak points are structured as knowledge units**, not free-text comments. They can be connected to the factor graph and participate in BP.
+- **Weak points are structured as candidate knowledge units**, not free-text comments. They are review artifacts first; if accepted, the agent writes them back into source and re-runs `gaia build`. They do not directly modify submitted Graph IR.
 - **Unrelated ref detection in Round 1**, not Round 2. Reduces Round 2's input size and cognitive load.
 - **Author-local probabilities are not submitted.** Self-review priors and conditional priors support local preview inference but are hidden from peer review engines, which must make independent judgments.
 
@@ -126,7 +126,7 @@ These definitions are included in every report header for self-containedness:
 
 ### Purpose
 
-Agent builds a package-local canonical graph from all available knowledge: original package content, self-review weak points, and optionally external candidates from the server. It may also derive a local preview parameterization, but that parameterization is not submitted.
+Agent builds a package-local canonical graph from the package-owned raw graph. Self-review findings and external search results may guide source edits or local authoring decisions, but submitted Graph IR remains package-local. The skill may also derive a local preview parameterization, but that parameterization is not submitted.
 
 ### Workflow
 
@@ -134,18 +134,16 @@ Agent builds a package-local canonical graph from all available knowledge: origi
 Inputs:
   - manifest.json (compiled package)
   - raw_graph.json (deterministic structural graph from `gaia build`)
-  - self-review report (weak points with classifications and priors)
+  - self-review report (candidate weak points with classifications and priors)
   - (optional) similar knowledge from server (via search API)
 
 Steps:
-  1. Collect all knowledge units (original + weak points)
-  2. Cluster semantically similar propositions → local canonical nodes
-  3. For each premise-classified weak point, connect to its chain's factor
-  4. (If external candidates available) User/agent marks relationships:
-     - equivalent    → merge nodes
-     - supporting    → add positive factor
-     - contradicting → add negative factor
-     - unrelated     → skip
+  1. Inspect the package-owned raw graph
+  2. Inspect self-review candidates and optional external search results
+  3. If a missing premise/context or external reference should become part of the package,
+     update source explicitly (for example by adding knowledge or a package-scoped `ref`)
+     and re-run `gaia build`
+  4. Cluster semantically similar package-owned propositions → local canonical nodes
   5. Produce local_canonical_graph.json
   6. Optionally derive local_parameterization.json for `gaia infer`
 
@@ -156,7 +154,7 @@ Output:
 
 ### Key Property
 
-This is an **agent skill, not a CLI command**. The agent can iterate: build graph → optionally parameterize locally → run `gaia infer` → inspect beliefs → adjust graph → re-run. Different agents may have different graph construction strategies. Only the structural graph is submitted.
+This is an **agent skill, not a CLI command**. The agent can iterate: inspect review/search results → edit source if needed → rebuild → canonicalize locally → optionally parameterize → run `gaia infer`. Different agents may have different graph construction strategies. Only the structural graph derived from source is submitted.
 
 ## 5. Publish & Peer Review Cycle
 
@@ -248,7 +246,7 @@ The review process is itself a Gaia knowledge structure:
 - Each rebuttal = a counter-chain responding to findings
 - Editor = final synthesis chain consuming all reviews + rebuttals
 
-All expressed in Gaia language. All can participate in BP. The review process forms a **fiber bundle** over the package — meta-knowledge attached to the base knowledge.
+All expressed in Gaia language. They form structured review metadata over the package and can inform registry-side judgments. Direct BP participation of review/rebuttal/editor artifacts is deferred. The review process forms a **fiber bundle** over the package — meta-knowledge attached to the base knowledge.
 
 ### 5.5 Per-Module Status & Visibility
 
@@ -285,12 +283,12 @@ pending_review → in_review → approved
 
 | Status | Exports searchable? | Can be referenced? |
 |--------|--------------------|--------------------|
-| approved | Yes | Yes |
+| approved | Yes | Yes — exported units may be used as premise or context; non-exported units only as context when explicitly named |
 | All others | No | No |
 
-Only `approved` packages' exported knowledge enters the global graph and becomes discoverable by other packages' graph construction or search.
+Only `approved` packages' exported knowledge enters the global graph as primary search targets. Other packages may still explicitly reference a named non-exported unit from an approved package, but only as context rather than as a premise-bearing public interface.
 
-**Note on peer review search:** Review engines perform high-recall global search and may return both exported and intermediate knowledge as candidates. Intermediate results are labeled as such in the response. This does not violate the visibility rule above — intermediate knowledge is not independently addressable or referenceable by other packages, but review engines can surface it as context for conflict/duplicate detection.
+**Note on peer review search:** Review engines perform high-recall global search and may return both exported and intermediate knowledge as candidates. Search results may be described using canonical identities server-side, but if an author accepts one into the package it must be written back as an explicit package-scoped reference and rebuilt. Intermediate results remain context-only across package boundaries unless the source package later promotes them to `export`.
 
 ## 6. Report Formats
 
@@ -314,7 +312,7 @@ peer_review_report:
   #   duplicate     — semantically overlapping with existing knowledge
   #   missing_ref   — relevant existing knowledge not referenced
   #   contradiction — conflicts with existing knowledge
-  #   graph         — factor graph structure issues
+  #   graph         — Graph IR / factor-connectivity issues
   #
   # severity:
   #   blocking  — must be resolved before merge
@@ -325,9 +323,9 @@ peer_review_report:
       category: structural
       severity: blocking
       target: "reasoning.synthesis_chain"
-      description: "chain step 2 references vacuum_env as direct dependency,
-                    should be indirect (settings are typically context)"
-      suggestion: "Change dependency to indirect"
+      description: "chain step 2 references vacuum_env as a premise,
+                    but settings are typically context in this chain"
+      suggestion: "Change dependency from direct to indirect (premise -> context)"
 
     - id: reasoning_001
       category: reasoning
@@ -387,7 +385,7 @@ rebuttal_report:
   responses:
     - finding_id: structural_001
       action: accept
-      revision: "Changed vacuum_env dependency from direct to indirect"
+      revision: "Changed vacuum_env dependency from direct to indirect (premise -> context)"
 
     - finding_id: reasoning_001
       action: accept
@@ -460,5 +458,5 @@ The following decisions from `architecture.md` v4.0 are replaced:
 1. **Review engine registration** — how are review engines registered and trusted? Domain-specific engines (physics, biology)?
 2. **Editor implementation** — single LLM call or multi-step? How does it weigh conflicting review engines?
 3. **Fiber bundle storage** — how are review/rebuttal chains stored relative to the base package in LanceDB + Kuzu?
-4. **Rebuttal BP integration** — how exactly do review findings and rebuttals connect to the factor graph? Factor weights?
+4. **Review artifact BP integration** — if review findings and rebuttals ever participate directly in BP, what is the exact lowering and weighting model?
 5. **`gaia sync`** — detailed design for dependency fetching and version resolution

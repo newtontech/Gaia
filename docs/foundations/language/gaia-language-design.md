@@ -148,10 +148,10 @@ Values are immutable and referentially transparent. A name always refers to the 
 | | Code (Rust) | Knowledge (Gaia) |
 |---|---|---|
 | Private | External cannot see | **Does not exist** — all knowledge is visible |
-| Non-exported | Crate-internal | In LKM, visible, referenceable, but **does not participate in BP** |
-| Exported | Globally available | Registered in LKM, **participates in BP** |
+| Non-exported | Crate-internal | Visible and referenceable, but not part of the package's premise-bearing public interface. Across package boundaries it may only be used as context |
+| Exported | Globally available | Package public interface. Primary search target and may be used cross-package as premise or context |
 
-Knowledge is objective — there is no reason to hide intermediate reasoning steps. The only distinction is whether knowledge enters the probabilistic inference layer.
+Knowledge is objective — there is no reason to hide intermediate reasoning steps. The main distinction is whether a knowledge unit is part of the package's public interface for cross-package reasoning.
 
 ### Naming and identity
 
@@ -300,12 +300,15 @@ ref premise := env_module.premise           -- reference to external knowledge
 ref context := background_module.setting    -- another reference
 ```
 
+Author-facing refs remain package-scoped. Search or server workflows may resolve a referenced package knowledge unit to a canonical identity later, but source syntax does not author canonical IDs directly in V1.
+
 ### Exports and BP participation
 
-Export determines whether knowledge enters the probabilistic inference layer:
+Export determines whether knowledge becomes part of the package's public cross-package interface:
 
-- Exported knowledge → participates in BP (enters the factor graph)
-- Non-exported knowledge → in LKM, visible, but does not participate in BP
+- All knowledge may participate in package-local Graph IR / BP when used inside the package's own reasoning structure
+- Exported knowledge → primary public interface; other packages may use it as premise or context
+- Non-exported knowledge → still visible and may be referenced when explicitly named, but across package boundaries it may only be used as context, not as an independent premise-bearing dependency
 
 ### Module types
 
@@ -555,7 +558,7 @@ steps:
 | `Application` | `apply: name`, `args: [...]` |
 | `Lambda` | `lambda: "text"` |
 | `ProbAnnot` | `prior: float` |
-| `Dependency` | `dependency: direct/indirect` |
+| `Dependency` | `dependency: direct/indirect` (`direct` = premise, `indirect` = context) |
 | `RefBody` | `target: module.name` |
 | `Params` | `params: [{name: x, type: y}, ...]` |
 | `ReturnType` | `return_type: type` |
@@ -575,12 +578,21 @@ steps:
 
 ### Dependency type as conditioning
 
-Dependency type (direct/indirect) is Gaia's analog of `observe` in probabilistic PLs. It is specified at the point of **use** (in Application args), not at the point of declaration (Ref):
+The semantic dependency roles are `premise`, `context`, and `irrelevant`.
 
-- `direct` — creates a BP edge. If the premise is wrong, the conclusion is almost certainly wrong too.
-- `indirect` — folded into prior. Contextual reference, conclusion can stand on its own.
+- Current authored YAML surface uses `dependency: direct/indirect`
+- `direct` means the ref is used as a `premise`
+- `indirect` means the ref is used as `context`
+- `irrelevant` is a self-review / peer-review classification for a mentioned ref that does not actually participate in the factor connectivity
 
-The same Ref can be used with different dependency types in different contexts:
+Dependency role is Gaia's analog of `observe` in probabilistic PLs. It is specified at the point of **use** (in Application args), not at the point of declaration (Ref):
+
+- `direct` / `premise` — creates a BP edge. If the premise is wrong, the conclusion is almost certainly wrong too.
+- `indirect` / `context` — folded into prior. Contextual reference, conclusion can stand on its own.
+
+Across package boundaries, only exported knowledge may be used with `direct` / `premise`. A non-exported external knowledge unit may still be named explicitly, but only as `indirect` / `context`.
+
+The same Ref can be used with different dependency roles in different contexts:
 
 ```yaml
 # Same ref, different dependency in different chains
@@ -625,7 +637,7 @@ The factor graph is derived from the ChainExpr structure:
 |-------|-------------|------------|
 | **V1 -- FP Core** | Knowledge types, Action, Expr, Ref, Module, unified Knowledge | Haskell values, functions, composition, modules |
 | **V2 -- Package Management** | Version, manifest, dependency resolution, registry, publish, global identity | Cargo, Cabal, npm |
-| **V3 -- Probabilistic Layer** | Prior, posterior, dependency type (direct/indirect), BP | Church's flip/observe, Pyro's sample/observe |
+| **V3 -- Probabilistic Layer** | Prior, posterior, dependency type (`direct`/`indirect` surface syntax; `premise`/`context` semantics), BP | Church's flip/observe, Pyro's sample/observe |
 | **Future** | Action type signatures, Module-as-callable-value, dependent types, formal verification | Lean, OCaml functors, Coq |
 
 ## Decided Questions
@@ -638,8 +650,8 @@ The following questions have been resolved:
 4. **Expression: structural element or type?** -> Type. Expr is a Knowledge base type, ChainExpr is a subtype of Expr under Action's sibling.
 5. **Import: separate syntax or Ref type?** -> Ref type. Imports are `ref` knowledge objects, not a separate syntactic construct.
 6. **Lambda: traditional or pipe-implicit?** -> Pipe-implicit single-parameter anonymous function.
-7. **Strong/weak: on Ref or on usage?** -> On usage. `dependency: direct/indirect` annotated at the point of use (in Application args).
-8. **Strong/weak naming?** -> `direct` / `indirect`. More descriptive than strong/weak.
+7. **Strong/weak: on Ref or on usage?** -> On usage. `dependency: direct/indirect` annotated at the point of use (in Application args), with semantic roles `premise/context`.
+8. **Strong/weak naming?** -> Surface syntax remains `direct` / `indirect`; semantic terminology is `premise` / `context`.
 9. **Subtype naming convention?** -> Subtypes carry parent type as suffix (InferAction, ChainExpr, ReasoningModule).
 10. **V1/V2/V3 BNF: unified or layered?** -> Layered. V1 defines base, V2/V3 extend productions.
 

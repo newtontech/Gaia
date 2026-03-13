@@ -220,9 +220,16 @@ FactorNode:
 
 - `premises` — knowledge nodes with strong (direct) dependency. If a premise is false, the conclusion's validity is undermined. Mapped from Gaia Language `dependency: direct`.
 - `contexts` — knowledge nodes with weak (indirect) dependency. Background knowledge that frames the reasoning but the conclusion can stand without it. Mapped from `dependency: indirect`. Contexts do not create BP edges; their influence is consumed later by either local parameterization or registry-side global inference-state updates when a reasoning-factor probability is assigned.
+- `irrelevant` is a valid review/self-review classification for a mentioned reference or candidate, but it does not appear in Graph IR factor connectivity. V1 Graph IR only stores `premises` and `contexts`.
 - `conclusion` — the single knowledge node produced or controlled by this factor. For reasoning and instantiation factors, this is the reasoning conclusion that receives BP messages normally. For constraint factors (`mutex_constraint`, `equiv_constraint`), this is the Relation knowledge node acting as a read-only gate — BP reads its runtime belief to determine constraint strength but does not send messages back to it (see [bp-on-graph-ir.md](bp-on-graph-ir.md) §4).
 
 In a raw graph these IDs are `raw_node_id`s. In a local canonical graph they are `local_canonical_id`s. In the global graph they are `global_canonical_id`s.
+
+**Cross-package reference lowering (V1):**
+
+- Author-facing source references remain package-scoped. Search and registry layers may surface server-side canonical identities, but submitted package source still records a reference to a concrete package knowledge unit rather than to a `global_canonical_id`.
+- Exported external knowledge may lower to either `premises` or `contexts`, depending on its authored dependency role.
+- Non-exported external knowledge may be referenced only as `context`. It does not provide an independent cross-package premise-bearing interface until the source package promotes it to `export`.
 
 ### 4.7 Factor Types
 
@@ -338,7 +345,7 @@ Only one case merges at build time: **content hash identity**. If two elaborated
 
 Equivalence declarations are NOT merged at build time. They become Equivalence RawKnowledgeNodes + equiv_constraint factors in the raw Graph IR. Whether to merge the equated nodes is a package-local or global canonicalization judgment.
 
-Question nodes may only appear as factor conclusions in V1. Action nodes may appear as either premises or conclusions.
+Question nodes may only appear as factor conclusions in V1. Action nodes may appear as either premises or conclusions. For cross-package references, only exported external nodes may appear in `premises`; non-exported external references must lower to `contexts`.
 
 ### 6.3 Build Output
 
@@ -383,8 +390,12 @@ What the agent does NOT do:
 
 - Modify the raw graph
 - Change raw-node content, IDs, or source refs
+- Inject new review-discovered knowledge directly into the submitted local graph
+- Attach external search candidates directly to the submitted local graph
 - Create new factor types
 - Attach submitted probability parameters to Graph IR
+
+If self-review or search discovers a missing premise, context, or external reference that should become part of the package, the agent must update source explicitly and re-run `gaia build`. Submitted `local_canonical_graph.json` stays package-local: it is a canonicalization of package-owned raw nodes, not a workspace scratch graph.
 
 Output:
 
@@ -476,6 +487,7 @@ Each layer handles only what it can reliably do, passing unresolved cases to the
 4. **Canonicalization log** — agent's local grouping decisions
 
 The package does **not** submit `CanonicalBinding`. Binding is created only by the review/registry side after identity assignment.
+The package also does **not** submit review-discovered weak-point candidates or ad hoc external search candidates as structural nodes. Those only enter submitted Graph IR after they are written back into source and rebuilt.
 
 ### 8.2 Review Engine Verification
 
