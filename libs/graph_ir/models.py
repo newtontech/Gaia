@@ -79,7 +79,9 @@ class RawGraph(BaseModel):
     factor_nodes: list[FactorNode] = Field(default_factory=list)
 
     def canonical_json(self) -> str:
-        return json.dumps(self.model_dump(mode="json"), ensure_ascii=False, sort_keys=True, indent=2)
+        return json.dumps(
+            self.model_dump(mode="json"), ensure_ascii=False, sort_keys=True, indent=2
+        )
 
     def graph_hash(self) -> str:
         return f"sha256:{sha256(self.canonical_json().encode('utf-8')).hexdigest()}"
@@ -93,7 +95,9 @@ class LocalCanonicalGraph(BaseModel):
     factor_nodes: list[FactorNode] = Field(default_factory=list)
 
     def canonical_json(self) -> str:
-        return json.dumps(self.model_dump(mode="json"), ensure_ascii=False, sort_keys=True, indent=2)
+        return json.dumps(
+            self.model_dump(mode="json"), ensure_ascii=False, sort_keys=True, indent=2
+        )
 
     def graph_hash(self) -> str:
         return f"sha256:{sha256(self.canonical_json().encode('utf-8')).hexdigest()}"

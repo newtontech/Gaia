@@ -74,7 +74,9 @@ def test_build_raw_graph_has_nodes_and_factors():
     assert raw_graph.package == "galileo_falling_bodies"
     assert raw_graph.knowledge_nodes
     assert raw_graph.factor_nodes
-    assert len({node.raw_node_id for node in raw_graph.knowledge_nodes}) == len(raw_graph.knowledge_nodes)
+    assert len({node.raw_node_id for node in raw_graph.knowledge_nodes}) == len(
+        raw_graph.knowledge_nodes
+    )
     assert any(factor.type == "reasoning" for factor in raw_graph.factor_nodes)
 
 
@@ -94,7 +96,10 @@ def test_singleton_local_graph_preserves_cardinality_and_logs():
     assert len(canonicalization.local_graph.knowledge_nodes) == len(raw_graph.knowledge_nodes)
     assert len(canonicalization.log) == len(raw_graph.knowledge_nodes)
     assert all(len(entry.members) == 1 for entry in canonicalization.log)
-    assert all(node.local_canonical_id.startswith("lcn_") for node in canonicalization.local_graph.knowledge_nodes)
+    assert all(
+        node.local_canonical_id.startswith("lcn_")
+        for node in canonicalization.local_graph.knowledge_nodes
+    )
 
 
 def test_local_parameterization_covers_nodes_and_reasoning_factors():
@@ -118,7 +123,9 @@ def test_local_parameterization_covers_nodes_and_reasoning_factors():
 def test_equivalence_nary_decomposes_to_pairwise_constraint_factors():
     raw_graph = build_raw_graph(_make_nary_equivalence_package())
 
-    pairwise_equiv_factors = [factor for factor in raw_graph.factor_nodes if factor.type == "equiv_constraint"]
+    pairwise_equiv_factors = [
+        factor for factor in raw_graph.factor_nodes if factor.type == "equiv_constraint"
+    ]
     assert len(pairwise_equiv_factors) == 3
     assert all(len(factor.premises) == 2 for factor in pairwise_equiv_factors)
 
@@ -145,7 +152,9 @@ def test_adapter_resolves_unambiguous_short_prefixes():
         },
     )
 
-    adapted = adapt_local_graph_to_factor_graph(canonicalization.local_graph, short_parameterization)
+    adapted = adapt_local_graph_to_factor_graph(
+        canonicalization.local_graph, short_parameterization
+    )
     assert len(adapted.factor_graph.variables) == len(canonicalization.local_graph.knowledge_nodes)
 
 

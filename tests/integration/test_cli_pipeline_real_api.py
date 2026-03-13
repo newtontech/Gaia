@@ -30,7 +30,9 @@ skip_no_openai = pytest.mark.skipif(
 )
 
 
-def _run_gaia(*args: str, env_override: dict[str, str] | None = None) -> subprocess.CompletedProcess:
+def _run_gaia(
+    *args: str, env_override: dict[str, str] | None = None
+) -> subprocess.CompletedProcess:
     env = os.environ.copy()
     if env_override:
         env.update(env_override)

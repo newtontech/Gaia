@@ -23,9 +23,7 @@ def adapt_local_graph_to_factor_graph(
     """Adapt a local canonical graph plus parameterization into FactorGraph."""
     parameterization = _resolve_local_parameterization(local_graph, parameterization)
     if parameterization.graph_hash != local_graph.graph_hash():
-        raise ValueError(
-            "Local parameterization graph_hash does not match local canonical graph"
-        )
+        raise ValueError("Local parameterization graph_hash does not match local canonical graph")
 
     factor_graph = FactorGraph()
     local_id_to_var_id: dict[str, int] = {}
@@ -67,7 +65,9 @@ def adapt_local_graph_to_factor_graph(
         factor_graph.add_factor(
             edge_id=factor_index,
             premises=premise_ids,
-            conclusions=[] if factor.type != "instantiation" else [local_id_to_var_id[factor.conclusion]],
+            conclusions=[]
+            if factor.type != "instantiation"
+            else [local_id_to_var_id[factor.conclusion]],
             probability=gate_prior if factor.type != "instantiation" else 1.0,
             edge_type=edge_type,
             gate_var=None if factor.type == "instantiation" else gate_var,

@@ -176,7 +176,9 @@ def derive_local_parameterization(
     )
 
 
-def _build_raw_node(pkg: Package, module_name: str, decl: Knowledge, version: str) -> RawKnowledgeNode:
+def _build_raw_node(
+    pkg: Package, module_name: str, decl: Knowledge, version: str
+) -> RawKnowledgeNode:
     knowledge_type, kind = _knowledge_identity(decl)
     content = getattr(decl, "content", "") or ""
     parameters = _extract_parameters(content)
@@ -278,7 +280,9 @@ def _build_relation_factors(
         for index, pair in enumerate(combinations(related_ids, 2), start=1):
             factors.append(
                 FactorNode(
-                    factor_id=_factor_id(factor_type, module_name, relation.name, suffix=str(index)),
+                    factor_id=_factor_id(
+                        factor_type, module_name, relation.name, suffix=str(index)
+                    ),
                     type=factor_type,
                     premises=list(pair),
                     contexts=[],
@@ -322,7 +326,9 @@ def _raw_node_id(
         "content": content,
         "parameters": [p.model_dump(mode="json") for p in parameters],
     }
-    digest = sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()
+    digest = sha256(
+        json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()
     return f"raw_{digest[:16]}"
 
 
