@@ -4,11 +4,17 @@
 |---------|---|
 | 版本 | 1.0 |
 | 日期 | 2026-03-11 |
-| 状态 | **Draft — foundation design** |
+| 状态 | **Target architecture — foundation baseline (not yet equal to shipped implementation)** |
 | Supersedes | `architecture.md` sections on build context / build align |
 | 关联文档 | [architecture.md](architecture.md), [../cli/command-lifecycle.md](../cli/command-lifecycle.md), [../server/architecture.md](../server/architecture.md) |
 
-> **Note:** This document redefines the pipeline originally described in `architecture.md` as `compile → context → align → review`. That four-stage build pipeline is replaced by a simpler model: 3 CLI commands + 3 agent skills, with an academic-publishing-style peer review cycle at publish time.
+> **Note:** This document defines the **target architecture** for Gaia's package pipeline. It redefines the older `compile → context → align → review` model from `architecture.md` as a simpler flow: 3 CLI commands + 3 agent skills, with an academic-publishing-style peer review cycle at publish time.
+>
+> On `main` today, parts of this target are still transitional:
+>
+> - `gaia review` still exists as a shipped command and acts as a local compatibility path for self-review sidecars
+> - `gaia publish --server` and the full peer-review / rebuttal / editor loop are not yet implemented end-to-end
+> - local `publish --local` does not yet realize the full registry-side `CanonicalBinding` / `GlobalInferenceState` flow described here
 
 ---
 

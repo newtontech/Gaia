@@ -227,7 +227,7 @@ Examples:
 
 - `prior`
 - posterior belief
-- dependency strength
+- dependency role (`direct` / `indirect`; semantics `premise` / `context`)
 - Graph IR lowering
 - belief propagation
 
@@ -404,7 +404,7 @@ Current practical rule on `main`:
 
 - V1 core covers the typed declaration system, modules, `ref`, and `chain_expr`
 - current optional package metadata (`version`, `manifest`, `dependencies`) live in `package.yaml`
-- current optional probabilistic annotations (`prior`, dependency strength, `edge_type`) extend the same YAML surface rather than a separate file format
+- current optional probabilistic annotations (`prior`, dependency role, `edge_type`) extend the same YAML surface rather than a separate file format
 
 Deferred items include:
 
@@ -590,7 +590,7 @@ V1 should stay intentionally narrow.
 Current status on `main`:
 
 - package-level control metadata is not yet standardized in source YAML
-- runtime command staging (`build -> review -> infer -> publish`) exists, but is not itself a language grammar
+- runtime command/skill staging (`build -> self-review -> graph-construction -> infer -> publish`) exists, but is not itself a language grammar
 - future fields such as `entry` or `depends_on` should not be treated as part of the current source surface until they are specified in concrete syntax and supported by the runtime
 
 ### What V1 should defer

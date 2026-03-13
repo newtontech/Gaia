@@ -51,8 +51,8 @@ The execution plan for that reset lives here:
 
 **Review:**
 
-- [Build, Alignment, and Review Architecture](review/architecture.md)
-- [Review Pipeline & Publish Workflow](review/publish-pipeline.md)
+- [Review Pipeline & Publish Workflow](review/publish-pipeline.md) — current self-review / peer review / publish contract
+- [Build, Alignment, and Review Architecture](review/architecture.md) — superseded historical reference
 
 **Server:**
 
@@ -68,7 +68,7 @@ The plan is to establish a small set of durable foundation docs before major cod
 4. `theory/inference-theory.md` (BP algorithm and inference theory)
 5. `language/gaia-language-spec.md` (Gaia Language spec)
 6. `cli/boundaries.md` (Gaia CLI runtime layering)
-7. `review/architecture.md` (shared build, alignment, and review architecture across CLI and server)
+7. `review/publish-pipeline.md` (self-review, peer review, and publish workflow)
 8. `server/architecture.md` (Server architecture)
 9. `graph-ir.md` (Graph IR — canonical factor graph layer)
 10. `server/graph-spec.md`
@@ -83,7 +83,7 @@ Those files do not all exist yet. This directory is the place where they should 
 - `theory/`: Theoretical foundations (Jaynes, BP algorithm) — shared mathematical basis
 - `language/`: Gaia formal language spec, design, and design rationale
 - `cli/`: Gaia CLI runtime boundaries and future CLI-specific docs
-- `review/`: Shared build, alignment, review, and package environment semantics
+- `review/`: Review and publish semantics; may also contain superseded historical design docs
 - `server/`: Server architecture, storage schema, API contracts
 
 ## Historical docs

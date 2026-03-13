@@ -20,13 +20,13 @@ For product positioning rationale, see [product-scope.md](product-scope.md).
 ├──────────────┴──────────────────────────────────────┤
 │  Gaia Server — Large Knowledge Model (LKM)          │
 │  Neo4j + LanceDB + ByteHouse + GPU BP               │
-│  知识整合 · 全局搜索 · Context/Align/Review · 大尺度 BP │
+│  知识整合 · 全局搜索 · Peer Review · Registry · 大尺度 BP │
 └─────────────────────────────────────────────────────┘
 ```
 
 ### Gaia CLI
 
-The primary product surface. AI agents and researchers use the CLI to create, validate, review, and publish knowledge packages.
+The primary product surface. AI agents and researchers use the CLI to create, build, preview, and publish knowledge packages.
 
 Key properties:
 
@@ -35,16 +35,16 @@ Key properties:
 - **1 package = 1 git repo** — can be hosted directly on GitHub
 - **Gaia does not wrap git** — version control is completely delegated to git
 
-Core commands:
+Target core pipeline:
 
-> **Note:** `gaia build` and `gaia review` are shipped today, but their target semantics are broader than the current implementation. On `main`, shipped `build` is still closer to deterministic parse/elaboration, and shipped `review` is still closer to package-internal chain audit. The target architecture expands `build` into `gaia build compile`, `gaia build context`, and `gaia build align`, then lets `review` become the final context-aware assessment step.
+> **Note:** The current foundations baseline follows [`review/publish-pipeline.md`](review/publish-pipeline.md): core CLI commands are `gaia build`, `gaia infer`, and `gaia publish`; self-review, graph construction, and rebuttal are agent skills. The shipped `gaia review` command on `main` is a local compatibility bridge for self-review sidecars, not the long-term core review boundary.
 
 | Command | Purpose |
 |---------|---------|
 | `gaia init [name]` | Initialize a knowledge package |
-| `gaia build` | Prepare the package for downstream review and inference; target shortcut over `compile + context + align` |
-| `gaia review [PATH]` | Review the package and emit YAML sidecar reports; target semantics expand to final context-aware assessment |
-| `gaia infer` | Compile factor graph + run local belief propagation |
+| `gaia build` | Deterministically validate/lower package source into `.gaia/build/` and `.gaia/graph/` artifacts |
+| `gaia review [PATH]` | Current shipped compatibility path for local self-review sidecars under `.gaia/reviews/` |
+| `gaia infer` | Derive local parameterization from local Graph IR + local review sidecars, then run local BP |
 | `gaia publish` | Publish to git or local databases (LanceDB + Kuzu) |
 | `gaia show <name>` | Display a declaration + connected chains |
 | `gaia search "query"` | Search published nodes in local LanceDB |
@@ -66,9 +66,9 @@ An optional registry and compute backend. Provides four enhancement services:
 
 | Service | Purpose |
 |---------|---------|
-| **Knowledge integration** | Merge packages into the global knowledge graph |
+| **Knowledge integration** | Merge approved package content into the global knowledge graph |
 | **Global search** | Cross-package vector + BM25 + topology search |
-| **Package preparation and review** | Server-side compile, package-environment construction, alignment, and review |
+| **Peer review and registry integration** | Server-side search, review, canonical binding, and editorial decisions |
 | **Large-scale BP** | Billion-node belief propagation on GPU cluster |
 
 The server is analogous to Julia's General Registry or crates.io — it consumes packages read-only and provides centralized services.
@@ -84,17 +84,18 @@ Agent (local)            Git / GitHub             Gaia Server
 gaia init
 (author YAML modules)
 gaia build
-gaia review
+agent self-review / graph construction
+gaia infer   (optional local preview)
 
 git add + commit
 git push ──────────→  PR to registry repo
-                      webhook notify ─────────→  auto compile + context + align + review
+                      webhook notify ─────────→  auto peer review + search + identity matching
                                                  │
                                                  ├─ pass → merge into LKM
                                                  │         PR comment: ✅
                                                  │
                                                  └─ fail → PR comment: ❌
-                                                           + alignment/review report
+                                                           + peer review / editor report
 
 Agent reads result ←── PR comments
 ├─ pass: done
@@ -105,8 +106,8 @@ Agent reads result ←── PR comments
 Key properties of this flow:
 
 - **Server never modifies the package** — it is a read-only consumer
-- **Alignment and review results appear as PR comments** — standard GitHub collaboration model
-- **Agent autonomy** — agents can read alignment/review reports and self-correct without human intervention
+- **Peer review results appear as PR comments** — standard GitHub collaboration model
+- **Agent autonomy** — agents can read peer review findings and self-correct without human intervention
 - **Fully async** — push triggers webhook, agent polls or watches for results
 
 ## Knowledge Package Format
@@ -120,11 +121,11 @@ galileo_tied_balls/              # = 1 git repo = 1 knowledge package
 ├── aristotle_physics.yaml       # per-module YAML — knowledge objects + chains
 ├── thought_experiment.yaml
 ├── ...
-└── .gaia/                       # build artifacts (git-ignored)
+└── .gaia/                       # local artifacts (git-ignored)
     ├── build/                   # per-module Markdown for LLM review
-    ├── context/                 # materialized package environment + retrieval metadata
-    ├── reviews/                 # YAML sidecar package-review reports
-    ├── alignment/               # YAML sidecar alignment reports
+    ├── graph/                   # raw/local-canonical Graph IR artifacts
+    ├── reviews/                 # local self-review sidecars (compat path on main)
+    ├── inference/               # local parameterization + belief preview artifacts
     └── ...
 ```
 
@@ -176,8 +177,8 @@ knowledge:
         ref: combined_slower
 ```
 
-- **Strong reference (`args[].dependency: direct`):** if this is wrong, the conclusion cannot stand. Modeled as a load-bearing BP dependency.
-- **Weak reference (`args[].dependency: indirect`):** provides background. Conclusion can stand without it. Used as context rather than a load-bearing BP edge.
+- **Direct dependency (`args[].dependency: direct`):** semantic role `premise`. If this is wrong, the conclusion cannot stand. Across package boundaries this requires exported knowledge.
+- **Indirect dependency (`args[].dependency: indirect`):** semantic role `context`. Provides background rather than a load-bearing BP edge. Across package boundaries, non-exported external knowledge is context-only.
 
 For the language spec, see [language/gaia-language-spec.md](language/gaia-language-spec.md).
 
@@ -189,7 +190,7 @@ For the language spec, see [language/gaia-language-spec.md](language/gaia-langua
 | Content store | LanceDB (embedded) | LanceDB (distributed) |
 | Vector search | LanceDB | ByteHouse (planned) |
 | BP engine | Local (single-machine) | GPU cluster |
-| LLM alignment/review | User-chosen model via API key | Server-managed model |
+| LLM review | User-chosen model via API key / agent skills | Server-managed peer review |
 
 Both CLI and server share the same core libraries (`libs/`) and inference engine (`libs/inference/`). The `GraphStore` ABC abstracts the graph backend difference.
 

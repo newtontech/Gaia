@@ -127,12 +127,12 @@ When the logical transition between two closures is trivial or locally obvious, 
 
 ### Cross-module dependencies
 
-Modules declare cross-module dependencies via `imports`, with dependency strength:
+Modules declare cross-module dependencies via `imports`, with dependency roles authored today as `dependency: direct/indirect`:
 
-- **strong** — if the imported closure is wrong, this module's conclusions are likely wrong too. This is a logical dependency that affects truth value.
-- **weak** — the imported closure is relevant context, but this module's conclusions can stand on their own.
+- **direct** — semantic role `premise`. If the imported closure is wrong, this module's conclusions are likely wrong too. Across package boundaries, only exported knowledge may be used this way.
+- **indirect** — semantic role `context`. The imported closure is relevant background, but this module's conclusions can stand on their own. A non-exported external closure may still be referenced explicitly, but only in this context role.
 
-These are local module relations, not global closure properties. The same closure can be a strong dependency in one module and a weak dependency in another.
+These are local module relations, not global closure properties. The same closure can be a direct dependency in one module and an indirect dependency in another.
 
 ## Module and Package Organization
 
