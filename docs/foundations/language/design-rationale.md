@@ -305,15 +305,15 @@ The Lean analogy clarifies why `run` is the wrong top-level verb for Gaia:
 
 - Nobody says "run a proof." They say "**check** a proof" or "**build** a project."
 - `lake build` in Lean means: parse, elaborate, type-check, export.
-- Similarly, `gaia build` should mean: load, resolve, ground, compile factor graph, run BP.
+- Similarly, `gaia build` should mean: load, resolve, ground, and lower to review/Graph IR artifacts. BP belongs to `gaia infer`, not to `gaia build`.
 
 | Stage | Lean equivalent | What happens |
 |-------|----------------|-------------|
 | Load + Resolve | Parse + Elaborate | Source to AST, name resolution |
 | Execute (LLM) | Tactic execution | Construct reasoning content (untrusted) |
-| Compile factor graph | Lower to kernel IR | Translate reasoning structure to verifiable form |
-| BP | Kernel type-check (structural) | Compute beliefs from formal structure |
-| Review | Kernel type-check (semantic) | Assess content quality and logical validity |
+| Lower Graph IR | Lower to kernel IR | Translate reasoning structure to verifiable form |
+| BP (`gaia infer`) | Kernel type-check (structural) | Compute beliefs from formal structure |
+| Review (self-review skill / peer review) | Kernel type-check (semantic) | Assess content quality and logical validity |
 | Publish | Export .olean | Share the verified artifact |
 
 ## Implications for Prior and Probability Annotations

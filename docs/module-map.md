@@ -35,6 +35,7 @@ For historical planning documents, see [archive/plans/README.md](archive/plans/R
 | `libs/storage/vector_search/` | Vector search abstraction and LanceDB-backed implementation |
 | `libs/storage/id_generator.py` | ID allocation |
 | `libs/lang/` | Gaia Language: models, loader, resolver, elaborator, compiler, runtime |
+| `libs/graph_ir/` | Graph IR lowering, local canonicalization artifacts, parameterization, and factor-graph adaptation |
 | `libs/inference/` | Factor graph construction and loopy belief propagation |
 
 `libs/` should not accumulate workflow-heavy logic. If a module coordinates search, review, inference, or commit workflows, it belongs in `services/`.
@@ -59,15 +60,15 @@ The Gaia CLI is a Typer-based command-line tool for the local knowledge-authorin
 | Command | Responsibility |
 |---------|----------------|
 | `init` | Scaffold a new knowledge package (package.yaml + starter module) |
-| `build` | Parse language source, resolve refs, elaborate prompts → `.gaia/build/` per-module Markdown |
-| `review` | LLM-review reasoning chains → `.gaia/reviews/` sidecar YAML |
-| `infer` | Compile factor graph from review + run loopy BP → per-variable beliefs |
+| `build` | Parse language source, resolve refs, lower Graph IR → `.gaia/build/` + `.gaia/graph/` artifacts |
+| `review` | Current shipped compatibility helper for local self-review sidecars in `.gaia/reviews/` |
+| `infer` | Derive local parameterization from local Graph IR + local review sidecars, run loopy BP → local belief preview |
 | `publish` | Triple-write to LanceDB + Kuzu (--local) or git commit (--git). Server mode deferred. |
 | `show` | Inspect a declaration and its connected chains |
 | `search` | Full-text search over published nodes in local LanceDB |
 | `clean` | Remove build artifacts (.gaia/) |
 
-CLI source lives in `cli/`, with language parsing and inference in `libs/lang/` and `libs/inference/`. Build output is per-module Markdown under `.gaia/build/`, and review output is YAML sidecars under `.gaia/reviews/`.
+CLI source lives in `cli/`, with language parsing in `libs/lang/`, Graph IR handling in `libs/graph_ir/`, and BP in `libs/inference/`. Build output includes per-module Markdown under `.gaia/build/` plus Graph IR artifacts under `.gaia/graph/`; the shipped `review` command writes local self-review sidecars under `.gaia/reviews/`; inference output lives under `.gaia/inference/`.
 
 ### `services/gateway/routes/`
 
@@ -108,7 +109,7 @@ libs/models + libs/storage + libs/embedding + libs/inference + libs/lang
     -> services/commit_engine
     -> services/gateway          (HTTP product surface)
 
-libs/models + libs/storage + libs/inference + libs/lang
+libs/models + libs/storage + libs/graph_ir + libs/inference + libs/lang
     -> cli/                      (CLI product surface)
 
 frontend -> services/gateway

@@ -1,399 +1,191 @@
 # Gaia CLI Command Lifecycle
 
-> **Status: Partially implemented.** `build`, `review`, `publish` are shipped (PR #63). `infer` was added during implementation and is also shipped. The target `build compile/context/align` subcommands are not yet implemented. Current shipped `build` is still closer to the old deterministic compile/elaboration step. This document defines the target lifecycle.
+> **Status: Current target semantics.** This document aligns to [`../review/publish-pipeline.md`](../review/publish-pipeline.md). The target pipeline has 3 core CLI commands (`build`, `infer`, `publish`) plus 3 agent skills (`self-review`, `graph-construction`, `rebuttal`). The shipped `gaia review` command on `main` is a compatibility bridge for the local self-review step, not part of the long-term minimal core.
 
 ## Purpose
 
-This document defines the intended semantic boundary of the core Gaia CLI lifecycle commands:
+This document defines the local-to-shared lifecycle of a Gaia package:
 
-- `gaia build` — shipped, target semantics expanding
-- `gaia review` — shipped, target semantics expanding
-- `gaia infer` — shipped
-- `gaia verify` — future
-- `gaia publish` — shipped
+- deterministic package lowering
+- optional local self-review and graph construction
+- optional local BP preview
+- publish-time peer review and registry integration
 
-It answers a product question rather than a grammar question:
+It answers one product question:
 
-> What is the lifecycle of a Gaia package from local research snapshot to published knowledge integrated into the Large Knowledge Model?
-
-This document assumes the higher-level language spec from
-[../language/gaia-language-spec.md](../language/gaia-language-spec.md)
-and the build/review architecture from
-[../review/architecture.md](../review/architecture.md).
+> What is the target package lifecycle from local authoring snapshot to publish-time peer review and global integration?
 
 ## Core Judgment
 
-Gaia's target local workflow should be:
+Gaia's target local workflow is:
 
 ```text
-workspace -> build -> review -> infer -> verify -> publish
+workspace -> build -> self-review skill -> graph-construction skill -> infer -> verify -> publish
 ```
 
-Where `build` is itself a shortcut over:
+In practice on `main`, the self-review step is often materialized via the shipped `gaia review` command, but the architectural boundary remains:
 
-```text
-compile -> context -> align
-```
-
-The advanced equivalent is:
-
-```text
-workspace -> build compile -> build context -> build align -> review -> infer -> verify -> publish
-```
+- CLI commands handle deterministic or mechanical data I/O
+- agent skills handle judgment-heavy review and graph-construction work
+- peer review, identity assignment, and global inference happen after publish
 
 Not:
 
 ```text
-workspace -> build -> run -> review -> publish
+workspace -> build -> run -> publish
 ```
 
-The reason is architectural:
+## Lifecycle Stages
 
-- Gaia's primary artifact is a reviewable knowledge package, not an executable script
-- local preparation should make package structure and context explicit before final judgment
-- model-based review should happen after context has been gathered and aligned
-- local execution that exists should serve reproducibility or inference, not become the central user model
+### Stage 0: Workspace
 
-## The Lifecycle
+Before Gaia commands act on a package, the author works in a private workspace:
 
-### Stage 0: Private Workspace
-
-Before Gaia CLI commands act on a package, the author works in a private local workspace.
-
-Typical workspace activity:
-
-- reading papers
-- collecting notes
-- running exploratory tools
-- testing hypotheses
-- drafting candidate claims
-- writing package snapshots or reports
+- read papers
+- collect notes
+- test hypotheses
+- draft candidate claims or refs
+- prepare supporting resources
 
 This workspace is intentionally broader and messier than the published Gaia artifact.
 
-### Stage 1: Draft Package Snapshot
+### Stage 1: Source Package
 
-At some point the author materializes a structured package snapshot.
+At some point the author materializes a structured package:
 
-That snapshot should already contain explicit package content:
-
-- claims
-- settings
-- questions
-- actions
+- knowledge objects
 - refs
-- reasoning structure
-- provenance or resource references
+- reasoning chains
+- module/package boundaries
+- provenance or resource links
 
-This draft package is the input to `gaia build`.
+This authored source is the input to `gaia build`.
 
 ### Stage 2: Built Package
 
-`gaia build` prepares the package for downstream judgment.
+`gaia build` is the deterministic lowering boundary.
 
-In the target architecture it is a shortcut for:
+It validates and lowers source into explicit local artifacts, including:
 
-1. `gaia build compile`
-2. `gaia build context`
-3. `gaia build align`
+- `.gaia/build/` rendered module Markdown for review
+- `.gaia/graph/raw_graph.json`
+- `.gaia/graph/local_canonical_graph.json`
+- `.gaia/graph/canonicalization_log.json`
 
-The result is a prepared package with:
+The build result is still package-local. It does not assign global identities, search the shared graph, or add review-discovered knowledge into submitted Graph IR.
 
-- compiled deterministic artifacts
-- a package environment
-- alignment sidecars
+### Stage 3: Local Review And Graph Construction
 
-### Stage 3: Reviewed Package
+After build, the agent may run two local skills:
 
-`gaia review` performs the final package assessment after build has already prepared:
+1. **self-review**
+   - assess reasoning quality
+   - identify candidate weak points and unrelated refs
+   - classify candidates as premise / context / irrelevant
+   - write local sidecar judgments
+2. **graph-construction**
+   - inspect the package-owned raw graph
+   - cluster package-owned propositions into a local canonical graph
+   - optionally derive local parameterization for preview inference
+   - require explicit source edits and rebuilds before any review-discovered knowledge becomes submitted structure
 
-- compiled artifacts
-- the package environment
-- alignment results
-
-This stage adds review artifacts rather than redefining the package's normative content.
+On `main`, the shipped `gaia review` command is the compatibility path that materializes local self-review output under `.gaia/reviews/`.
 
 ### Stage 4: Inferred Package
 
-`gaia infer` compiles the factor graph from build and review outputs and runs local belief propagation.
+`gaia infer` is the local belief-propagation boundary.
 
-If a package environment is available, inference may use it for a more accurate local preview.
+It consumes the package's local Graph IR plus available local review sidecars, derives a local parameterization as a runtime step, and runs local BP. Typical outputs live under `.gaia/inference/`, including local parameterization artifacts and belief previews.
 
 ### Stage 5: Verified Package
 
-> **Not yet implemented.** `gaia verify` remains a future command for external execution checks.
+> **Not yet implemented.** `gaia verify` remains a future command for execution-backed or reproducibility-backed claims.
 
-`gaia verify` checks reproducible or executable claims whose truth depends on external execution rather than textual reasoning or BP alone.
+`gaia verify` is reserved for claims whose trust depends on replay, execution, or independently checkable evidence rather than textual reasoning or BP alone.
 
 ### Stage 6: Published Package
 
-`gaia publish` sends the stable package to the shared collaboration path:
+`gaia publish` is the handoff boundary from local package lifecycle to shared package lifecycle.
 
-- git / GitHub
-- later server-side compile, context construction, alignment, and review
-- later ingestion into the LKM
+After publish, the shared system may:
 
-## The Core Commands
+- run peer review against the current registry state
+- search for related global knowledge
+- assign `CanonicalBinding` records
+- update registry-managed `GlobalInferenceState`
+- merge approved package content into the global graph
 
-## 1. `gaia build`
+That work is downstream of local CLI authority.
 
-### Role
+## Command And Skill Contracts
 
-`build` is the local preparation boundary.
+| Entry | Kind | Role | Determinism | Primary outputs |
+|---|---|---|---|---|
+| `build` | CLI command | deterministic package lowering | deterministic | `.gaia/build/` + `.gaia/graph/` artifacts |
+| `self-review` | agent skill | local reasoning assessment | model-dependent | local review sidecars / judgments |
+| `graph-construction` | agent skill | local canonicalization + optional local parameterization | mixed | local canonical graph + optional `.gaia/inference/local_parameterization.json` |
+| `infer` | CLI command | local BP preview | deterministic given local artifacts | `.gaia/inference/` artifacts + belief preview |
+| `verify` | CLI command | reproducibility / execution checks | execution-dependent | verification evidence sidecars |
+| `publish` | CLI command | submission handoff | protocol-driven | package submission to git / registry-facing pipeline |
+| `rebuttal` | agent skill | process peer review findings | model-dependent | revised package source or rebuttal artifacts |
 
-Its job is to turn package source into a prepared local artifact suitable for:
+## Current `main` Compatibility Note
 
-- structural inspection
-- context gathering
-- open-world alignment
-- later review
-- later inference
-- later publish
+The code on `main` still ships `gaia review`. Treat it as:
 
-### Build shortcut semantics
+- a local compatibility helper for the self-review phase
+- not the final architectural review boundary
+- not a replacement for publish-time peer review
 
-The target shortcut is:
+This distinction matters because `publish-pipeline.md` assigns peer review, canonical binding, and global probability judgments to the shared system after publish.
 
-```text
-gaia build == gaia build compile -> gaia build context -> gaia build align
-```
+## Per-Command Responsibilities
 
-### Build subcommands
-
-#### `gaia build compile`
-
-Deterministic, fast, and non-LLM.
-
-Responsibilities:
-
-- schema validation
-- elaboration
-- local ref resolution
-- deterministic lowering into explicit internal form
-
-#### `gaia build context`
-
-Retrieves candidate external context and materializes the package environment.
+### `gaia build`
 
 Responsibilities:
 
-- choose context source: `local`, `remote`, or `both`
-- retrieve semantic candidates
-- expand structural context
-- materialize the package environment
-- update environment lock metadata
+- validate package structure
+- resolve refs deterministically
+- elaborate review-facing rendered content
+- lower package source into package-local Graph IR
 
-Flag intent:
+`build` does not perform open-world search or author-server alignment.
 
-- `--frozen` reuses the currently locked package environment and fails if the required lock/runtime artifacts are missing
-- `--refresh` ignores the currently locked package environment and rebuilds context from the selected source
-
-#### `gaia build align`
-
-Runs open-world relation discovery over the compiled package plus package environment.
+### `gaia infer`
 
 Responsibilities:
 
-- cluster retrieved candidates
-- discover duplicate / equivalence / contradiction / subsumption candidates
-- verify and filter alignment findings
-- write alignment sidecars
+- read local canonical graph artifacts
+- consume locally produced review sidecars if present
+- derive local parameterization from authored structure plus local review judgments
+- run local belief propagation
+- emit local preview beliefs
 
-### What `build` should not do
+`infer` works on a package-local preview, not on the registry's global graph.
 
-- produce the final package judgment
-- compute belief propagation
-- silently rewrite scientific meaning
-- directly mutate the shared knowledge model
+### `gaia publish`
 
-## 2. `gaia review`
+Responsibilities:
 
-### Role
-
-`review` is the final package assessment boundary.
-
-Its job is to judge the package after build has already prepared:
-
-- deterministic compiled artifacts
-- package environment
-- alignment findings
-
-### Responsibilities
-
-- assess reasoning quality in context
-- judge whether discovered external relations are acceptable
-- identify unresolved conflicts, overlaps, or weak justifications
-- issue readiness judgments for infer/publish
-- write review sidecars
-
-### What `review` should not do
-
-- gather context itself
-- perform open-world candidate retrieval
-- perform alignment clustering itself
-- compute belief propagation
-- silently mutate package source
-
-### Review output
-
-Review output is an assessment of the package in context, not the package itself.
-
-## 3. `gaia infer`
-
-### Role
-
-`infer` is the belief-propagation boundary.
-
-Its job is to compute beliefs from the package's graph structure using available build and review artifacts.
-
-### Responsibilities
-
-- compile the local factor graph
-- consume build outputs and review outputs
-- optionally incorporate package-environment context
-- compute local beliefs
-
-### What `infer` should not do
-
-- gather external context
-- make the final package judgment
-- replace reproducibility checks
-
-## 4. `gaia verify`
-
-### Role
-
-`verify` is the reproducibility and execution boundary.
-
-Its job is to check claims whose trust depends on external execution, replay, or reproducible evidence.
-
-Typical responsibilities:
-
-- execute tool-backed or replayable steps when supported
-- rerun computations or deterministic procedures behind executable claims
-- capture verification evidence, outputs, and environment metadata as sidecars
-
-`verify` remains distinct from `review`:
-
-- `review` judges reasoning quality and package readiness
-- `verify` checks whether executable or reproducible claims actually hold
-
-## 5. `gaia publish`
-
-### Role
-
-`publish` is the handoff boundary from local package lifecycle to shared package lifecycle.
-
-Its job is to submit a stable package for independent server-side evaluation and possible integration into the LKM.
-
-### Server-side follow-up
-
-After publish, the server may:
-
-- recompile the package under managed policy
-- rebuild context against current shared state
-- realign the package against that context
-- review the package in aligned context
-- canonicalize identities
-- merge into the global LKM
-- run larger-scale BP
-
-That work is downstream of publish, not part of local CLI authority.
-
-## Why There Is No Core `gaia run`
-
-Gaia may still have internal execution steps, but `run` should not be the primary conceptual command.
-
-The intended model is:
-
-- structure and prepare the package
-- review it in context
-- infer beliefs
-- verify reproducible parts
-- publish the package
-
-## The Command Contract Table
-
-| Command | Main mode | Determinism | Primary output | Primary question | Status |
-|---|---|---|---|---|---|
-| `build` | preparation shortcut | mixed | compiled package + environment + alignment artifacts | "Is the package prepared for final review?" | shipped, target semantics expanding |
-| `review` | contextual package assessment | model-dependent | review sidecars and readiness judgments | "Given the prepared context, how credible and ready is this package?" | shipped, target semantics expanding |
-| `infer` | belief propagation | deterministic | belief scores on declarations | "What should we believe given the package plus available context?" | shipped |
-| `verify` | reproduction | execution-dependent | verification evidence | "Does the executable/reproducible claim actually hold?" | future |
-| `publish` | handoff | protocol-driven | shared package submission | "Is this package ready for independent shared evaluation?" | shipped |
+- submit the package and its deterministic artifacts
+- hand off to peer review and registry-side identity assignment
+- preserve the distinction between package-local Graph IR and global registry state
 
 ## Recommended Agent Workflow
 
-The target local workflow is:
+1. Author or revise package source.
+2. Run `gaia build`.
+3. Run self-review.
+   On `main`, `gaia review` is the current compatibility path for this step.
+4. If review finds a missing premise, context, or external reference that should become part of the package, update source explicitly and rebuild.
+5. Run graph construction / local canonicalization.
+6. Run `gaia infer` for a local belief preview if needed.
+7. Run `gaia publish`.
 
-1. work privately in local workspace
-2. author YAML modules
-3. run `gaia build`
-4. run `gaia review`
-5. run `gaia infer`
-6. revise the package based on the results
-7. repeat until stable
-8. run `gaia publish`
-9. let server-side compile/context/alignment/review/integration decide whether the package enters the LKM
+## Relationship To Other Docs
 
-Advanced equivalent:
-
-1. run `gaia build compile`
-2. run `gaia build context --source local|remote|both`
-3. run `gaia build align`
-4. run `gaia review`
-5. run `gaia infer`
-
-## Design Implications
-
-### 1. Build must own package preparation
-
-Deterministic compile, context gathering, and alignment belong to build, not to final review.
-
-### 2. Review must happen after build
-
-Final package judgment should consume the current environment and alignment findings, not run before they exist.
-
-### 3. Review output must remain a sidecar
-
-Review may influence local inference and agent iteration, but it should not silently overwrite package truth.
-
-### 4. Verification must be evidence-producing
-
-`verify` is not just another score. It should leave a reproducible trail.
-
-### 5. Publish must not trust local results blindly
-
-Local build, review, infer, and verify are preparation steps. The shared system still needs independent authority.
-
-## Relationship to Other Docs
-
-- [../review/architecture.md](../review/architecture.md) defines the target build/context/alignment/review architecture
-- [boundaries.md](boundaries.md) defines the CLI architectural layering
-- [../language/gaia-language-spec.md](../language/gaia-language-spec.md) defines Gaia Language's lifecycle and layer model
-
-## Summary
-
-Gaia CLI should center on five lifecycle commands:
-
-- `build`
-- `review`
-- `infer`
-- `verify`
-- `publish`
-
-And `build` should internally decompose into:
-
-- `build compile`
-- `build context`
-- `build align`
-
-That gives Gaia a package lifecycle oriented around:
-
-- deterministic preparation
-- context gathering
-- alignment
-- contextual review
-- local belief propagation
-- reproducibility
-- shared publication
+- [../language/gaia-language-spec.md](../language/gaia-language-spec.md) defines source-language boundaries.
+- [../graph-ir.md](../graph-ir.md) defines package-local and global Graph IR semantics.
+- [../review/publish-pipeline.md](../review/publish-pipeline.md) defines the target self-review / peer review / publish architecture.
+- [../server/architecture.md](../server/architecture.md) defines registry-side identity assignment and global inference.

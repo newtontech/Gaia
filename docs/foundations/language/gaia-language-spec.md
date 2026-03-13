@@ -227,8 +227,8 @@ Examples:
 
 - `prior`
 - posterior belief
-- dependency strength
-- factor graph compilation
+- dependency role (`direct` / `indirect`; semantics `premise` / `context`)
+- Graph IR lowering
 - belief propagation
 
 ### 5. Integration Layer
@@ -335,10 +335,10 @@ A package is ill-formed for the current runtime if any of the following hold:
 
 - `package.yaml` is missing
 - a module listed in `package.yaml.modules` does not have a matching `<module>.yaml` file
-- a `chain_expr` step is not one of `ref`, `apply`, or `lambda` (these are compiled into a factor graph for BP)
+- a `chain_expr` step is not one of `ref`, `apply`, or `lambda` (these are lowered into Graph IR factor structure for BP)
 - a `ref.target` cannot be resolved to a non-`ref` knowledge object using `module_name.knowledge_name`
 
-These are structural constraints — they block loading or factor-graph compilation and cannot be recovered by LLM interpretation.
+These are structural constraints — they block loading or Graph IR generation / inference preparation and cannot be recovered by LLM interpretation.
 
 ### Semantically permissive by design
 
@@ -374,6 +374,7 @@ It currently:
 - resolves refs
 - elaborates `chain_expr` steps into rendered prompts
 - writes per-module Markdown under `.gaia/build/`
+- writes Graph IR runtime artifacts under `.gaia/graph/` (for example `raw_graph.json`, `local_canonical_graph.json`, and `canonicalization_log.json`)
 
 It does not make `.gaia/build/` part of the language surface, and it does not define the package's long-term canonical representation.
 
@@ -385,7 +386,7 @@ Review outputs are runtime artifacts, not source syntax. They must not silently 
 
 ### `infer`
 
-`infer` compiles a factor graph from the source package plus review sidecars and then runs local belief propagation.
+`infer` consumes the package's local Graph IR artifacts plus review sidecars, derives local parameterization as a runtime step, and then runs local belief propagation.
 
 Belief scores are derived runtime outputs. They are semantically downstream of the language, not part of the authored source syntax.
 
@@ -403,7 +404,7 @@ Current practical rule on `main`:
 
 - V1 core covers the typed declaration system, modules, `ref`, and `chain_expr`
 - current optional package metadata (`version`, `manifest`, `dependencies`) live in `package.yaml`
-- current optional probabilistic annotations (`prior`, dependency strength, `edge_type`) extend the same YAML surface rather than a separate file format
+- current optional probabilistic annotations (`prior`, dependency role, `edge_type`) extend the same YAML surface rather than a separate file format
 
 Deferred items include:
 
@@ -589,7 +590,7 @@ V1 should stay intentionally narrow.
 Current status on `main`:
 
 - package-level control metadata is not yet standardized in source YAML
-- runtime command staging (`build -> review -> infer -> publish`) exists, but is not itself a language grammar
+- runtime command/skill staging (`build -> self-review -> graph-construction -> infer -> publish`) exists, but is not itself a language grammar
 - future fields such as `entry` or `depends_on` should not be treated as part of the current source surface until they are specified in concrete syntax and supported by the runtime
 
 ### What V1 should defer
@@ -658,6 +659,13 @@ Source YAML is the normative package artifact. `.gaia/` build products, review s
 ### 3. Package-to-LKM integration
 
 Local names and refs are authoring conveniences. Canonical IDs, cross-package merge policy, and global provenance remain integration-layer concerns.
+
+Current V1/V2 boundary on `main`:
+
+- author-facing refs remain package-scoped references to concrete package knowledge units
+- search and server workflows may surface matching canonical identities, but those are not authored directly in source syntax
+- exported external knowledge may be used as premise or context
+- non-exported external knowledge may still be referenced when explicitly named, but only as context rather than as an independent premise-bearing interface
 
 ### 4. Review and publish lifecycle
 

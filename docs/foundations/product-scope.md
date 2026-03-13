@@ -35,7 +35,7 @@ It follows the standard architecture of probabilistic PLs: a **deterministic hos
 | Layer | What it provides | PL analogy |
 |-------|-----------------|------------|
 | **V1 — Deterministic FP core** | Knowledge (values), inferences (lambdas), chains (composition), modules (with imports/exports), packages | Haskell, OCaml |
-| **V3 — Probabilistic layer** | Priors, dependency strength (conditioning), belief propagation (inference) | Church's `flip`/`observe`, Hakaru's `measure` monad, Pyro's `sample`/`observe` |
+| **V3 — Probabilistic layer** | Priors, dependency roles (`direct`/`indirect` surface syntax; `premise`/`context` semantics), belief propagation (inference) | Church's `flip`/`observe`, Hakaru's `measure` monad, Pyro's `sample`/`observe` |
 
 The theoretical positioning:
 
@@ -55,7 +55,7 @@ These languages model **statistical probability** — distributions over random 
 |---|---|---|
 | Probability of what | Random variables (numerical) | Propositions (knowledge objects) |
 | Probability means | Frequency / measure over outcomes | Degree of belief in truth |
-| Conditioning on | Observed data | Dependency strength (strong/weak) |
+| Conditioning on | Observed data | Dependency role (`direct` / `indirect`; semantics `premise` / `context`) |
 | Graph model | DAG (Bayesian network) | Hypergraph (multi-premise → multi-conclusion) |
 | Inference computes | Posterior distribution | Belief scores on propositions |
 | Inference algorithm | MCMC, variational inference | Loopy BP on hypergraphs |
@@ -75,7 +75,7 @@ These provide graph storage and deterministic querying, but have no probabilisti
 Gaia combines three capabilities that no existing tool provides together:
 
 1. **Functional knowledge structure** (V1) — knowledge objects, inferences, chains, modules, packages — a typed, composable knowledge representation inspired by Haskell/OCaml module systems
-2. **Epistemic probabilistic reasoning** (V3) — priors, beliefs, dependency strength, contradiction/retraction semantics — grounded in Jaynes' probability-as-logic tradition
+2. **Epistemic probabilistic reasoning** (V3) — priors, beliefs, dependency roles, contradiction/retraction semantics — grounded in Jaynes' probability-as-logic tradition
 3. **Hypergraph belief propagation** — loopy BP on factor graphs derived from the knowledge package structure, computing self-consistent beliefs across the entire LKM
 
 This combination enables the core product: **AI agents write knowledge packages (probabilistic programs), the cloud runs belief propagation (posterior inference), and the result is a Large Knowledge Model where every proposition carries a calibrated degree of belief.**
@@ -85,13 +85,14 @@ This combination enables the core product: **AI agents write knowledge packages 
 Gaia is **CLI-first, Server-enhanced**.
 
 - **CLI is the primary product** — AI agents and researchers interact with Gaia through the CLI, working locally with zero server dependency
+- **The target local pipeline** is `build -> self-review skill -> graph-construction skill -> infer -> publish`
 - **Server provides four optional enhancement services:**
-  1. Knowledge integration — merge packages into the global Large Knowledge Model
+  1. Knowledge integration — merge approved packages into the global Large Knowledge Model
   2. Global search — cross-package vector + BM25 + topology search
-  3. Package preparation and review — server-side compile, package-environment construction, alignment, and review
+  3. Peer review and registry integration — independent review, editorial decisions, identity assignment
   4. Large-scale BP — billion-node belief propagation on GPU cluster
 
-The primary interaction path is: **CLI → git push → PR → Server webhook → auto compile/context/alignment/review → merge/reject** (similar to Julia Pkg Registry).
+The target shared interaction path is: **CLI → git push / publish → peer review → rebuttal / editor cycle → merge or reject** (similar to an academic publishing workflow).
 
 Users can work entirely offline with the CLI. The server is an optional registry and compute backend, not a prerequisite.
 
@@ -104,15 +105,17 @@ What is currently shipped on `main`:
 - GraphStore ABC with Neo4j and Kuzu implementations
 - type-aware belief propagation (contradiction, retraction edges)
 - **CLI with 8 commands** (`init`, `build`, `review`, `infer`, `publish`, `show`, `search`, `clean`) — shipped in PR #63
-- **Gaia Language** — per-module YAML with knowledge objects, chains, and strong/weak references
+- **Target architecture docs now treat only `build`, `infer`, and `publish` as core CLI pipeline commands**. The shipped `gaia review` command remains a compatibility path for local self-review sidecars.
+- **Gaia Language** — per-module YAML with knowledge objects, chains, and `dependency: direct/indirect` references
 - **Inference engine moved to `libs/inference/`** — local belief propagation decoupled from server
 - **Build output** — per-module Markdown for LLM review
 
 What is not yet shipped but is on the roadmap:
 
-- target build pipeline expansion (`gaia build compile|context|align`)
 - `gaia publish --server` (direct server publish without git)
-- GitHub webhook integration for server-side compile/context/alignment/review
+- GitHub webhook integration for publish-time peer review
+- rebuttal / editor publish cycle
+- registry-side `CanonicalBinding` + `GlobalInferenceState` end-to-end flow
 - cross-package dependency resolution and `gaia.lock`
 - shared knowledge-package contracts (being standardized in this foundation work)
 
@@ -188,21 +191,21 @@ The CLI is shipped on `main` with 8 commands:
 | Command | Purpose |
 |---------|---------|
 | `gaia init` | Initialize a knowledge package |
-| `gaia build` | Parse YAML, resolve refs, elaborate templates → per-module Markdown |
-| `gaia review` | LLM review of chains → YAML sidecar reports |
-| `gaia infer` | Compile factor graph + run local belief propagation |
+| `gaia build` | Parse YAML, resolve refs, lower package-local Graph IR → `.gaia/build/` + `.gaia/graph/` artifacts |
+| `gaia review` | Shipped compatibility helper for local self-review sidecars |
+| `gaia infer` | Derive local parameterization from local Graph IR + local review sidecars, then run local belief propagation |
 | `gaia publish` | Publish to git or local databases (LanceDB + Kuzu) |
 | `gaia show` | Display knowledge object details + connected chains |
 | `gaia search` | Search published nodes in local LanceDB |
 | `gaia clean` | Remove build artifacts (`.gaia/` directory) |
 
-Note: the original RFC included `gaia claim` — this was replaced by declarative YAML authoring (per-module YAML files with knowledge objects and chains). `gaia.lock` and cross-package dependency resolution remain deferred.
+Note: target pipeline semantics no longer treat `gaia review` as one of the minimal core commands. In the target architecture, self-review is an agent skill; the shipped command is a bridge on current `main`. The original RFC also included `gaia claim` — this was replaced by declarative YAML authoring (per-module YAML files with knowledge objects and chains). `gaia.lock` and cross-package dependency resolution remain deferred.
 
 Still not shipped:
 
-- target build pipeline expansion (`gaia build compile|context|align`)
 - `gaia publish --server` (direct server publish)
 - GitHub webhook integration
+- publish-time peer review / rebuttal / editor loop
 - `gaia.lock` / cross-package dependency resolution
 
 ### 2. Production ByteHouse-backed deployment
@@ -233,7 +236,7 @@ These remain design directions, not current baseline capability.
 Gaia is a **CLI-first, Server-enhanced** Large Knowledge Model platform.
 
 - **CLI** — the primary product surface for creating, building, reviewing, and publishing knowledge packages
-- **Server** — an optional registry that provides knowledge integration, global search, package preparation/alignment/review, and large-scale BP
+- **Server** — an optional registry that provides knowledge integration, global search, peer review / identity assignment, and large-scale BP
 - **Dashboard** — a browser UI for exploring the server-side knowledge graph
 
 The current `main` ships the server, dashboard, and CLI.
@@ -266,7 +269,7 @@ When writing docs or reviewing PRs:
 These have been resolved and should not be reopened:
 
 1. **CLI-first or server-first?** → CLI-first, Server-enhanced.
-2. **Primary interaction path?** → CLI → git push → PR → Server webhook → auto compile/context/alignment/review → merge/reject.
+2. **Primary interaction path?** → CLI local pipeline (`build -> self-review -> graph-construction -> infer -> publish`) → shared peer review / editor cycle → merge or reject.
 3. **Kuzu role?** → CLI's embedded graph backend (local, zero-config). Neo4j is the server-side backend.
 
 ## Open Product Decisions

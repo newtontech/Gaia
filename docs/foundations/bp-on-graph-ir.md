@@ -130,7 +130,7 @@ When any premise is false, the factor imposes no constraint — the conclusion i
 
 Retraction inverts the potential — it weakens the conclusion rather than supporting it.
 
-**ChainExpr-level granularity:** Each ChainExpr compiles to one reasoning factor, not one per step. Intermediate steps within the chain are internal to the factor. This is correct because intermediate nodes are either deterministic transformations or not independently meaningful knowledge units — only the premises (self-review–identified weak points with direct dependency) and the conclusion are semantically meaningful inputs/outputs of the factor.
+**ChainExpr-level granularity:** Each ChainExpr compiles to one reasoning factor, not one per step. Intermediate steps within the chain are internal to the factor. This is correct because intermediate nodes are either deterministic transformations or not independently meaningful knowledge units — only the authored/load-bearing premises and the conclusion are semantically meaningful factor inputs/outputs. If review later discovers a missing premise or context, it must be written back into source and rebuilt before it becomes Graph IR structure.
 
 ### 3.2 Instantiation Factor
 
