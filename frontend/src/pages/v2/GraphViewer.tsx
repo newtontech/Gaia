@@ -22,10 +22,6 @@ export function GraphViewer() {
     const nodeDs = new DataSet(nodes);
     const edgeDs = new DataSet(edges);
 
-    if (networkRef.current) {
-      networkRef.current.destroy();
-    }
-
     const net = new Network(
       containerRef.current,
       { nodes: nodeDs, edges: edgeDs },
@@ -70,20 +66,31 @@ export function GraphViewer() {
           {graphData ? `${graphData.nodes.length} nodes · ${graphData.edges.length} edges` : ""}
         </Typography.Text>
       </Card>
-      {isLoading ? (
-        <Spin style={{ display: "block", marginTop: 80 }} />
-      ) : (
+      <div style={{ position: "relative", width: "100%", height: "70vh" }}>
         <div
           ref={containerRef}
           style={{
             width: "100%",
-            height: "70vh",
+            height: "100%",
             border: "1px solid #e8e8e8",
             borderRadius: 6,
             background: "#fafafa",
           }}
         />
-      )}
+        {isLoading && (
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+            }}
+          >
+            <Spin size="large" />
+          </div>
+        )}
+      </div>
       <Drawer
         title={
           selectedKnowledgeId ? (
