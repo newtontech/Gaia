@@ -4,8 +4,8 @@
     "type": "reasoning",
     "premises": [
       "paper_363056a0/structural_analogy_with_tl_based_copper_oxides",
-      "paper_363056a0/tc_scaling_in_tl_based_systems",
-      "paper_363056a0/previous_record_transition_temperature"
+      "paper_363056a0/previous_record_transition_temperature",
+      "paper_363056a0/tc_scaling_in_tl_based_systems"
     ],
     "contexts": [],
     "conclusion": "paper_363056a0/discovery_of_superconductivity_with_record_transition_temperature_in_hg_ba_ca_cu",
@@ -39,8 +39,7 @@
     "factor_id": "f_bc04fea739ff61c5",
     "type": "reasoning",
     "premises": [
-      "paper_363056a0/empirical_trend_in_tl_and_bi_copper_oxides",
-      "paper_363056a0/superconducting_properties_of_hg_1201"
+      "paper_363056a0/empirical_trend_in_tl_and_bi_copper_oxides"
     ],
     "contexts": [],
     "conclusion": "paper_363056a0/attribution_of_highest_tc_to_the_three_layer_hg_1223_phase",

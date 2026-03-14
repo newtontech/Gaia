@@ -4,7 +4,6 @@
     "type": "reasoning",
     "premises": [
       "paper_10_1038s41467_021_25372_2/vinet_equation_of_state",
-      "paper_10_1038s41467_021_25372_2/theoretical_prediction_of_yh9_structure",
       "paper_10_1038s41467_021_25372_2/isotope_effect_coefficient",
       "paper_10_1038s41467_021_25372_2/ginzburglandau_and_whh_models",
       "paper_10_1038s41467_021_25372_2/theoretical_prediction_of_yh10"
@@ -41,7 +40,6 @@
     "type": "reasoning",
     "premises": [
       "paper_10_1038s41467_021_25372_2/predicted_stability_of_fcc_yh10_at_high_pressure",
-      "paper_10_1038s41467_021_25372_2/predicted_high_temperature_stability_of_fcc_yh10",
       "paper_10_1038s41467_021_25372_2/identification_of_crystal_phases_via_diffraction",
       "paper_10_1038s41467_021_25372_2/criterion_for_excess_hydrogen_availability"
     ],
@@ -76,7 +74,6 @@
     "type": "reasoning",
     "premises": [
       "paper_10_1038s41467_021_25372_2/ginzburg_landau_equation_validity",
-      "paper_10_1038s41467_021_25372_2/werthamer_helfand_hohenberg_model_validity",
       "paper_10_1038s41467_021_25372_2/definition_of_coherence_length",
       "paper_10_1038s41467_021_25372_2/scaling_relation_for_upper_critical_field"
     ],

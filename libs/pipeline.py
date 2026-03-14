@@ -21,6 +21,7 @@ from libs.storage import models as storage_models
 
 if TYPE_CHECKING:
     from libs.storage.config import StorageConfig
+    from libs.storage.manager import StorageManager
 
 
 # ── Dataclasses ──────────────────────────────────────────
@@ -212,6 +213,7 @@ async def pipeline_publish(
     review: ReviewResult,
     infer: InferResult,
     *,
+    storage_manager: "StorageManager | None" = None,
     storage_config: "StorageConfig | None" = None,
     db_path: str | None = None,
     embed_dim: int = 512,
@@ -222,8 +224,9 @@ async def pipeline_publish(
         build: Result from pipeline_build.
         review: Result from pipeline_review.
         infer: Result from pipeline_infer.
-        storage_config: Optional StorageConfig. If None, one is built from db_path.
-        db_path: LanceDB path (used if storage_config is None).
+        storage_manager: Pre-initialized StorageManager (server/batch use — not closed after).
+        storage_config: StorageConfig to create a new manager (CLI use — closed after).
+        db_path: LanceDB path shortcut (used if storage_config is None).
         embed_dim: Embedding dimension for stub embeddings.
     """
     from cli.lang_to_storage import convert_to_storage
@@ -264,18 +267,21 @@ async def pipeline_publish(
         for k, vec in zip(data.knowledge_items, vectors)
     ]
 
-    # 5. Initialize storage
-    if storage_config is None:
-        if db_path is None:
-            raise ValueError("Either storage_config or db_path must be provided")
-        storage_config = StorageConfig(
-            lancedb_path=db_path,
-            graph_backend="kuzu",
-            kuzu_path=f"{db_path}/kuzu",
-        )
-
-    mgr = StorageManager(storage_config)
-    await mgr.initialize()
+    # 5. Resolve StorageManager — external (batch/server) or self-managed (CLI)
+    _owns_mgr = storage_manager is None
+    if _owns_mgr:
+        if storage_config is None:
+            if db_path is None:
+                raise ValueError("Provide storage_manager, storage_config, or db_path")
+            storage_config = StorageConfig(
+                lancedb_path=db_path,
+                graph_backend="kuzu",
+                kuzu_path=f"{db_path}/kuzu",
+            )
+        mgr = StorageManager(storage_config)
+        await mgr.initialize()
+    else:
+        mgr = storage_manager
 
     try:
         # 6. Ingest
@@ -295,7 +301,8 @@ async def pipeline_publish(
         if data.belief_snapshots:
             await mgr.write_beliefs(data.belief_snapshots)
     finally:
-        await mgr.close()
+        if _owns_mgr:
+            await mgr.close()
 
     stats = {
         "knowledge_items": len(data.knowledge_items),
