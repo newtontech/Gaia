@@ -11,7 +11,7 @@ from fastapi import APIRouter, HTTPException
 router = APIRouter(prefix="/papers", tags=["papers"])
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-XML_DIR = _REPO_ROOT / "tests/fixtures/papers_xml"
+XML_DIR = _REPO_ROOT / "tests/fixtures/inputs/papers_xml"
 YAML_DIR = _REPO_ROOT / "tests/fixtures/gaia_language_packages"
 
 
