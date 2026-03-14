@@ -10,6 +10,10 @@ import { CommitPanel } from "./pages/CommitPanel";
 import { PaperViewer } from "./pages/PaperViewer";
 import { PackageList } from "./pages/v2/PackageList";
 import { KnowledgeList } from "./pages/v2/KnowledgeList";
+import { PackageDetail } from "./pages/v2/PackageDetail";
+import { ModuleDetail } from "./pages/v2/ModuleDetail";
+import { KnowledgeDetail } from "./pages/v2/KnowledgeDetail";
+import { ChainDetail } from "./pages/v2/ChainDetail";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -36,7 +40,11 @@ export default function App() {
             <Route path="commits" element={<CommitPanel />} />
             <Route path="papers" element={<PaperViewer />} />
             <Route path="v2/packages" element={<PackageList />} />
+            <Route path="v2/packages/:id" element={<PackageDetail />} />
             <Route path="v2/knowledge" element={<KnowledgeList />} />
+            <Route path="v2/knowledge/:id" element={<KnowledgeDetail />} />
+            <Route path="v2/modules/:id" element={<ModuleDetail />} />
+            <Route path="v2/chains/:id" element={<ChainDetail />} />
           </Route>
         </Routes>
       </BrowserRouter>
