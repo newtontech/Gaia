@@ -910,7 +910,7 @@ class LanceContentStore(ContentStore):
         # Only return merged packages — consistent with get_package visibility model
         items = [_row_to_package(r) for r in results if r.get("status") == "merged"]
         total = len(items)
-        offset = (page - 1) * page_size
+        offset = max(0, (page - 1) * page_size)
         return items[offset : offset + page_size], total
 
     async def list_knowledge(self) -> list[Knowledge]:

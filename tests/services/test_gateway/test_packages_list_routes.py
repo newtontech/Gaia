@@ -4,7 +4,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from libs.storage.models import Package, Module, Knowledge, Chain
+from libs.storage.models import Knowledge, Package, Module
 from services.gateway.app import create_app
 from services.gateway.deps import deps
 
@@ -19,7 +19,6 @@ class MockStorage:
         return [pkg], 1
 
     async def list_knowledge_paged(self, page: int = 1, page_size: int = 20, type_filter: str | None = None):
-        from libs.storage.models import Knowledge
         k = Knowledge(
             knowledge_id="k1", version=1, type="claim", content="test content",
             prior=0.5, keywords=[], source_package_id="pkg1",

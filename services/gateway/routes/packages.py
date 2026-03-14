@@ -1,6 +1,6 @@
 """Package API routes — ingest + read endpoints."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from libs.storage.models import (
@@ -89,7 +89,10 @@ async def ingest_package(request: IngestRequest):
 
 
 @router.get("/packages", response_model=PaginatedPackages)
-async def list_packages(page: int = 1, page_size: int = 20):
+async def list_packages(
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=20, ge=1, le=100),
+):
     """List all packages with pagination."""
     mgr = _require_storage()
     items, total = await mgr.list_packages(page=page, page_size=page_size)
