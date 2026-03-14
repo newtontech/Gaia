@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from libs.storage.models import Knowledge, Package, Module
+from libs.storage.models import Chain, ChainStep, Knowledge, KnowledgeRef, Module, Package
 from services.gateway.app import create_app
 from services.gateway.deps import deps
 
@@ -65,6 +65,22 @@ class MockStorage:
         return [], 0
 
     async def get_chain(self, chain_id: str):
+        if chain_id == "chain1":
+            return Chain(
+                chain_id="chain1",
+                package_id="pkg1",
+                package_version="1.0.0",
+                module_id="pkg1.mod1",
+                type="deduction",
+                steps=[
+                    ChainStep(
+                        step_index=0,
+                        premises=[KnowledgeRef(knowledge_id="k1", version=1)],
+                        reasoning="k1 implies k2",
+                        conclusion=KnowledgeRef(knowledge_id="k2", version=1),
+                    )
+                ],
+            )
         return None
 
     async def get_graph_data(self, package_id: str | None = None):
@@ -137,6 +153,15 @@ def test_list_chains(client):
     body = r.json()
     assert body["total"] == 0
     assert body["items"] == []
+
+
+def test_get_chain_found(client):
+    r = client.get("/chains/chain1")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["chain_id"] == "chain1"
+    assert body["type"] == "deduction"
+    assert len(body["steps"]) == 1
 
 
 def test_get_chain_not_found(client):
