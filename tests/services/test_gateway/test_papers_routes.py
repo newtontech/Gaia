@@ -66,18 +66,25 @@ def _make_paper_xml(xml_dir: Path, xml_slug: str) -> Path:
 def _make_paper_yaml(yaml_dir: Path, yaml_slug: str) -> Path:
     pkg_dir = yaml_dir / yaml_slug
     pkg_dir.mkdir(parents=True)
-    setting = {"type": "setting_module", "name": "setting", "knowledge": [
-        {"type": "setting", "name": "prem_one", "content": "Content.", "prior": 0.7}
-    ]}
-    reasoning = {"type": "reasoning_module", "name": "reasoning", "knowledge": [
-        {"type": "claim", "name": "conclusion", "content": "Conclusion.", "prior": 0.5}
-    ]}
+    setting = {
+        "type": "setting_module",
+        "name": "setting",
+        "knowledge": [{"type": "setting", "name": "prem_one", "content": "Content.", "prior": 0.7}],
+    }
+    reasoning = {
+        "type": "reasoning_module",
+        "name": "reasoning",
+        "knowledge": [
+            {"type": "claim", "name": "conclusion", "content": "Conclusion.", "prior": 0.5}
+        ],
+    }
     (pkg_dir / "setting.yaml").write_text(yaml.dump(setting))
     (pkg_dir / "reasoning.yaml").write_text(yaml.dump(reasoning))
     return pkg_dir
 
 
 # ── GET /papers ───────────────────────────────────────────────────────────────
+
 
 class TestListPapers:
     def test_empty_dirs(self, client: TestClient):
@@ -125,6 +132,7 @@ class TestListPapers:
 
 
 # ── GET /papers/{slug}/xml ────────────────────────────────────────────────────
+
 
 class TestGetPaperXml:
     def test_returns_chains(self, client: TestClient, xml_dir: Path):
@@ -176,6 +184,7 @@ class TestGetPaperXml:
 
 # ── GET /papers/{slug}/yaml ───────────────────────────────────────────────────
 
+
 class TestGetPaperYaml:
     def test_returns_modules(self, client: TestClient, yaml_dir: Path):
         _make_paper_yaml(yaml_dir, "my_paper")
@@ -199,12 +208,17 @@ class TestGetPaperYaml:
 
 # ── slug conversion helpers ───────────────────────────────────────────────────
 
+
 class TestSlugConversion:
     def test_xml_to_yaml_slug(self):
-        assert papers_mod._xml_slug_to_yaml_slug("10.1038332139a0_1988_Natu") == \
-            "paper_10_1038332139a0_1988_natu"
-        assert papers_mod._xml_slug_to_yaml_slug("10.1038s41467-021-25372-2") == \
-            "paper_10_1038s41467_021_25372_2"
+        assert (
+            papers_mod._xml_slug_to_yaml_slug("10.1038332139a0_1988_Natu")
+            == "paper_10_1038332139a0_1988_natu"
+        )
+        assert (
+            papers_mod._xml_slug_to_yaml_slug("10.1038s41467-021-25372-2")
+            == "paper_10_1038s41467_021_25372_2"
+        )
 
     def test_yaml_to_xml_slug_not_found(self, xml_dir: Path, monkeypatch):
         monkeypatch.setattr(papers_mod, "XML_DIR", xml_dir)
