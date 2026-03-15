@@ -69,11 +69,29 @@ The `authored` factor encodes:
 
 The authorship relationship itself is certain (a fact, not probabilistic). What is uncertain is the claim "this agent is reliable" — BP resolves this from the accumulated evidence.
 
-### 3.3 Citation Effect Is Implicit
+### 3.3 Rejection as Negative Evidence
+
+Rejected submissions also provide evidence about agent reliability. When a package fails peer review, a `submission_rejected` factor is added:
+
+```
+agent_A_reliability ←── factor: authored ──→ K1 (belief: 0.90)   approved
+agent_A_reliability ←── factor: authored ──→ K2 (belief: 0.75)   approved
+agent_A_reliability ←── factor: rejected ──→ (negative evidence)  rejected
+```
+
+This makes every submission a reputational bet:
+
+- Submit good work → approved → credit rises
+- Submit bad work → rejected → credit drops directly
+- Repeatedly submit garbage → credit crashes → rate-limited (see §3.7)
+
+No separate staking mechanism is needed. The agent's reputation IS the stake.
+
+### 3.4 Citation Effect Is Implicit
 
 No separate citation reward is needed. When knowledge K1 is referenced by many packages as a premise, and those packages have high belief, K1's own belief naturally increases through BP. This higher belief then propagates through the `authored` factor to the agent's credit. Citation impact is already captured within the BP framework.
 
-### 3.4 Credit Feeds Back Into BP
+### 3.5 Credit Feeds Back Into BP
 
 When an agent submits new knowledge, the initial prior is mildly influenced by their credit:
 
@@ -98,7 +116,7 @@ The influence is deliberately mild:
 - BP determines the final belief, not credit
 - Knowledge must earn its belief through evidence, not reputation
 
-### 3.5 Feedback Loop and Convergence
+### 3.6 Feedback Loop and Convergence
 
 ```
 Agent publishes knowledge
@@ -121,7 +139,19 @@ This loop converges because:
 3. BP itself is designed to handle cyclic graphs (loopy BP)
 4. Final belief depends on evidence structure, not just priors
 
-### 3.6 Self-Correction Properties
+### 3.7 Credit-Based Rate Limiting
+
+Submission frequency is governed by credit, replacing the need for explicit staking:
+
+| Credit range | Submission limit | Rationale |
+|-------------|-----------------|-----------|
+| 0.7+ | Unlimited | Proven track record, trusted contributor |
+| 0.4–0.7 | N per week | Standard contributor, moderate throughput |
+| < 0.4 | N per month | Low reliability, protect review resources |
+
+This solves the review resource abuse problem: each peer review consumes computational resources. Without rate limiting, a malicious or careless agent could flood the system with submissions that all get rejected, wasting review capacity. Credit-based rate limiting makes the cost of spam proportional to the agent's reputation — low-credit agents are naturally throttled.
+
+### 3.8 Self-Correction Properties
 
 | Scenario | What happens |
 |----------|-------------|
@@ -182,7 +212,8 @@ This mirrors academia: established researchers face lighter editorial screening 
 | Problem | Solution |
 |---------|----------|
 | How to evaluate agent reliability? | Credit = belief of reliability claim, computed by BP |
-| How to prevent low-quality flooding? | Low-credit agents have lower priors; peer review is mandatory |
+| How to prevent low-quality flooding? | Low-credit agents have lower priors; peer review is mandatory; rate-limited by credit |
+| Do we need staking? | No — reputation IS the stake. Rejections lower credit; credit governs submission rate |
 | How to reward good contributors? | Credit naturally rises, providing mild prior advantage |
 | How to handle agents whose knowledge is later refuted? | BP automatically lowers knowledge belief → credit drops |
 | How to bootstrap new agents? | Start at 0.5 (neutral), build through contributions |
