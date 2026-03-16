@@ -42,8 +42,22 @@ def _load_with_deps(pkg_path: Path):
 @app.command()
 def build(
     path: str = typer.Argument(".", help="Path to knowledge package directory"),
+    format: str = typer.Option("md", "--format", help="Output format: md, json, all"),
 ) -> None:
-    """Elaborate: parse + resolve + instantiate params."""
+    """Build a knowledge package."""
+    pkg_path = Path(path)
+
+    # Detect Typst package
+    if (pkg_path / "typst.toml").exists():
+        _build_typst(pkg_path, format)
+        return
+
+    # Existing YAML pipeline
+    _build_yaml(pkg_path)
+
+
+def _build_yaml(pkg_path: Path) -> None:
+    """Build a YAML-based knowledge package."""
     from cli.manifest import save_manifest
     from libs.graph_ir import (
         save_canonicalization_log,
@@ -53,7 +67,6 @@ def build(
     from libs.lang.build_store import save_build
     from libs.pipeline import pipeline_build
 
-    pkg_path = Path(path)
     try:
         result = asyncio.run(pipeline_build(pkg_path))
     except FileNotFoundError as e:
@@ -72,6 +85,31 @@ def build(
     n_prompts = len(result.elaborated.prompts)
     typer.echo(f"Built {result.package.name}: {n_mods} modules, {n_prompts} elaborated prompts")
     typer.echo(f"Artifacts: {build_dir}/")
+
+
+def _build_typst(pkg_path: Path, format: str) -> None:
+    """Build a Typst-based knowledge package."""
+    import json as json_mod
+
+    from libs.lang.typst_loader import load_typst_package
+    from libs.lang.typst_renderer import render_typst_to_markdown
+
+    build_dir = pkg_path / ".gaia" / "build"
+    build_dir.mkdir(parents=True, exist_ok=True)
+
+    if format in ("md", "all"):
+        md = render_typst_to_markdown(pkg_path)
+        md_path = build_dir / "package.md"
+        md_path.write_text(md)
+        typer.echo(f"Markdown: {md_path}")
+
+    if format in ("json", "all"):
+        graph = load_typst_package(pkg_path)
+        json_path = build_dir / "graph.json"
+        json_path.write_text(json_mod.dumps(graph, ensure_ascii=False, indent=2))
+        typer.echo(f"Graph JSON: {json_path}")
+
+    typer.echo("Build complete.")
 
 
 @app.command()
