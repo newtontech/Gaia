@@ -1,22 +1,105 @@
+# Inference-Theory.md Rewrite Implementation Plan
+
+> **For agentic workers:** REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (`- [ ]`) syntax for tracking.
+
+**Goal:** Rewrite `docs/foundations/theory/inference-theory.md` into a **v2.0 target-design** theory reference: lead with Jaynes first principles, introduce the noisy-AND + leak unified factor model, remove gate semantics for contradiction/equivalence at the theory level, and relocate BP algorithm details to a later section.
+
+**Architecture:** Full document restructure from "BP basics → lattice → edge types" to "Jaynes first principles → unified factor model → lattice → factor types → BP algorithm". The document remains a single Markdown file. Content is a mix of new theoretical sections (§1, §2) and relocated/adapted existing sections (§3, §5). Because `bp-on-graph-ir.md` remains the current runtime/BP reference until a follow-up PR lands, this rewrite must explicitly present itself as target theory rather than already-shipped runtime semantics.
+
+**Tech Stack:** Markdown, ruff (for any format checks), git
+
+**Spec:** `docs/superpowers/specs/2026-03-16-noisy-and-leak-unified-factor-design.md`
+
+---
+
+## Chunk 1: Document scaffold and §1 Jaynes first principles
+
+### Task 1: Create document scaffold with all section headers
+
+**Files:**
+- Modify: `docs/foundations/theory/inference-theory.md`
+
+This task replaces the entire file with the new structure. All sections start as placeholders (with `TODO` markers) so the document shape is established before content is filled in.
+
+- [ ] **Step 1: Write scaffold**
+
+Replace the full content of `docs/foundations/theory/inference-theory.md` with:
+
+```markdown
 # 推理引擎理论
 
 | 文档属性 | 值 |
 |---------|---|
 | 版本 | 2.0 |
 | 日期 | 2026-03-16 |
-| 状态 | Target design for the next BP / Graph IR theory revision |
 | 关联文档 | [theoretical-foundation.md](theoretical-foundation.md) — Jaynes 纲领与 Gaia 定位, [../bp-on-graph-ir.md](../bp-on-graph-ir.md) — BP 在 Graph IR 上的运行 |
 
 ---
 
-本文档定义 Gaia 推理引擎 **v2.0 目标模型** 的理论参考。组织顺序为：先从 Jaynes 第一性原理推导设计约束（§1），再给出满足这些约束的统一势函数模型（§2），然后分析推理方向的格论性质（§3），定义五种 factor 类型（§4），最后描述信念传播算法的计算细节（§5）。
-
-当前 `main` 上已实现/已成文的本地 BP 语义仍以 [../bp-on-graph-ir.md](../bp-on-graph-ir.md) 为准；本文档描述的是下一轮 BP / Graph IR 理论收敛后的目标设计，因此其中关于 noisy-AND + leak、constraint factor 去 gate 的内容不应被理解为当前运行时已经完成同步。
+本文档是 Gaia 推理引擎的完整理论参考。组织顺序为：先从 Jaynes 第一性原理推导设计约束（§1），再给出满足这些约束的统一势函数模型（§2），然后分析推理方向的格论性质（§3），定义五种 factor 类型（§4），最后描述信念传播算法的计算细节（§5）。
 
 关于 Jaynes 的认识论纲领和 Gaia 的整体定位，参见 [theoretical-foundation.md](theoretical-foundation.md)。
 
 ---
 
+## 1. Jaynes 第一性原理
+
+TODO
+
+## 2. 统一势函数模型
+
+TODO
+
+## 3. 蕴含格中的 Abstraction 与 Induction
+
+TODO
+
+## 4. 五种 Factor 类型
+
+TODO
+
+## 5. 信念传播算法
+
+TODO
+
+## 6. 已知局限与演进方向
+
+TODO
+
+## 7. 逻辑编程技术启发
+
+TODO
+
+## 附录 A：术语对照
+
+TODO
+
+## 附录 B：与相关系统的概率机制对比
+
+TODO
+```
+
+- [ ] **Step 2: Commit scaffold**
+
+```bash
+git add docs/foundations/theory/inference-theory.md
+git commit -m "docs: scaffold restructured inference-theory.md (v2.0)"
+```
+
+---
+
+### Task 2: Write §1 Jaynes 第一性原理
+
+**Files:**
+- Modify: `docs/foundations/theory/inference-theory.md` — replace `## 1.` TODO block
+
+§1 has three subsections. This is entirely new content derived from the design spec's theoretical analysis.
+
+- [ ] **Step 1: Write §1.1 Cox 定理与三条规则**
+
+Replace the `## 1.` TODO with the full §1. Start with §1.1:
+
+```markdown
 ## 1. Jaynes 第一性原理
 
 本节从 Cox 定理出发，推导出任何合规推理引擎必须满足的设计约束。这些约束直接决定了 §2 中势函数的形式。
@@ -36,7 +119,13 @@ Cox (1946) 证明：任何满足以下三个公理的合理推理系统，必须
 - **贝叶斯定理**: P(H|DX) = P(D|HX)·P(H|X) / P(D|X)
 
 概率论不是众多推理方案中的一种——它是唯一满足一致性的方案。完整论证参见 [theoretical-foundation.md](theoretical-foundation.md) §2。
+```
 
+- [ ] **Step 2: Write §1.2 四个三段论**
+
+Append §1.2 after §1.1. This is the core new derivation. Use a unified example (P₁∧P₂ → C) with concrete numbers (π₁=0.9, π₂=0.8, p=0.9, ε=0.001).
+
+```markdown
 ### 1.2 四个三段论
 
 Jaynes 在 *Probability Theory* 第一章从三条规则推导了四个量化三段论。给定推理关系 P₁∧P₂ → C（条件概率 p）：
@@ -77,8 +166,12 @@ P(C=1 | P₁=0) = ?
 
 这个值取决于 **factor 如何编码 P(C | P₁=0)**。这是关键：前三个三段论对任何合理的 factor 都成立，但第四个三段论的成立需要 factor 在前提为假时主动压低结论——而非沉默。
 
-具体验证（π₁=0.9, π₂=0.8, p=0.9）在 §2.2 给出。
+具体验证（π₁=0.9, π₂=0.8, p=0.9）将在 §2.2 给出。
+```
 
+- [ ] **Step 3: Write §1.3 对推理引擎的要求**
+
+```markdown
 ### 1.3 对推理引擎的要求
 
 从四个三段论推导出推理引擎的设计约束：
@@ -93,9 +186,31 @@ P(C=1 | P₁=0) = ?
 C1–C3 在任何使用乘法/加法规则的消息传递系统中自动满足。**C4 是对 factor potential 形式的额外约束**——它禁止在前提为假时将 potential 设为均匀值（如 1.0），因为均匀 potential 使 factor 沉默，结论回到 prior 而非下降。
 
 §2 将给出满足全部四条约束的势函数设计。
+```
+
+- [ ] **Step 4: Commit §1**
+
+```bash
+git add docs/foundations/theory/inference-theory.md
+git commit -m "docs: write §1 Jaynes first principles and four syllogisms"
+```
 
 ---
 
+## Chunk 2: §2 unified factor potential model
+
+### Task 3: Write §2 统一势函数模型
+
+**Files:**
+- Modify: `docs/foundations/theory/inference-theory.md` — replace `## 2.` TODO block
+
+This is the most important new section. Four subsections.
+
+- [ ] **Step 1: Write §2.1 从条件概率到 Factor Potential**
+
+Replace the `## 2.` TODO:
+
+```markdown
 ## 2. 统一势函数模型
 
 ### 2.1 从条件概率到 Factor Potential
@@ -115,7 +230,11 @@ P(x₁, ..., xₙ | I) ∝ ∏ⱼ φⱼ(xⱼ) · ∏ₐ ψₐ(xSₐ)
 - **Potential 不是概率**——不需要归一化。只有比值有意义。
 - **Potential = 1.0 意味着沉默**——对变量的两个状态给出相同权重，factor 不施加任何影响。
 - **多个 factor 的影响通过乘积合并**——归一化由 BP 的消息传递自动保证。
+```
 
+- [ ] **Step 2: Write §2.2 Noisy-AND + Leak**
+
+```markdown
 ### 2.2 Noisy-AND + Leak：推理 factor 的势函数
 
 #### 作者提供的信息
@@ -125,9 +244,7 @@ P(x₁, ..., xₙ | I) ∝ ∏ⱼ φⱼ(xⱼ) · ∏ₐ ψₐ(xSₐ)
 - 各前提 P₁, ..., Pₙ 的 prior：π₁, ..., πₙ
 - 条件概率 P(C=1 | P₁=1 ∧ ... ∧ Pₙ=1) = p
 
-在这个 **v2.0 目标理论模型** 中，作者为一条 reasoning factor 显式提供的是前提 prior 和条件概率 `p`。结论 C 的支持主要由这些量决定。
-
-这不等于“当前 runtime 不再为结论维护 prior”。当前 `main` 的本地 BP overlay 仍要求为每个 belief-bearing node 提供 prior；这里讨论的是目标理论里的 factor 语义，而不是当前参数化工件的最小字段集合。
+**结论 C 没有独立的 prior。** C 的可信度完全由前提和条件概率决定。
 
 #### 旧模型的问题
 
@@ -199,14 +316,18 @@ P(C=1 | P₁=0) = ε = 0.001 ✓
 Noisy-AND 是 noisy-OR（Pearl 1988, Henrion 1989）的对偶形式。Noisy-OR 用于析取因果模型（任意一个原因可导致结果），noisy-AND 用于合取因果模型（所有条件都必须满足）。Leak probability 是两者共享的标准参数，编码未建模原因的背景概率。
 
 完整 CPT 需要 2ⁿ 个参数（n 个前提），noisy-AND + leak 只需要 2 个：p 和 ε。这与 Gaia 的创作模型完全匹配——作者只需指定一个条件概率。
+```
 
+- [ ] **Step 3: Write §2.3 约束 factor 的势函数**
+
+```markdown
 ### 2.3 约束 factor 的势函数
 
-Contradiction 和 equivalence 是**关系**（Relation），表达命题之间的结构性约束。当前 `main` 上成文的 BP / Graph IR 语义仍使用 gate 设计；本节定义的是 v2.0 目标模型，其中关系节点不再被当作只读 gate。
+Contradiction 和 equivalence 是**关系**（Relation），表达命题之间的结构性约束。旧设计使用 gate 语义——关系节点的 belief 只读，BP 不向其发送消息。
 
 Gate 语义违反了 Jaynes 的核心原则：**所有命题的可信度都应随证据更新。** 如果 A 和 B 都有压倒性证据为真，而有人声称它们矛盾，合理的推理应该质疑矛盾本身——而非永远以固定强度压制 A 和 B。
 
-在该目标模型中，关系节点作为普通 factor 参与者。
+新设计将关系节点作为普通 factor 参与者。
 
 #### Contradiction（互斥约束）
 
@@ -257,7 +378,11 @@ LR(C_contra) = msg(C_contra=1) / msg(C_contra=0)
 这个担忧在 loopy BP + damping 下不成立。BP 在有环图上通过 damping 收敛到稳定的均衡点（§5.3）。关系节点参与 BP 产生的环与任何其他环没有本质区别。
 
 gate 语义的代价是：阻止了双向信息流，使系统无法质疑关系本身。这比 feedback loop 风险更严重——它违反了 Jaynes 的一致性要求。
+```
 
+- [ ] **Step 4: Write §2.4 合规性验证**
+
+```markdown
 ### 2.4 各 factor 类型的合规性验证
 
 五种 factor 类型对 §1.3 四条约束的满足情况：
@@ -273,146 +398,59 @@ gate 语义的代价是：阻止了双向信息流，使系统无法质疑关系
 **Instantiation 的 C4 为什么正确：** Schema=0 时 potential=1.0 是正确的。¬∀x.P(x) ⊬ ¬P(a)——全称命题为假不代表每个实例都假。单个反例强力否证全称（C3），但全称为假对实例无约束（C4）。这是 Popper/Jaynes 对归纳的标准观点。
 
 **Retraction 的 C4 为什么正确：** 撤回证据 E 不成立时 potential=1.0 是正确的。E 是反对 C 的一条论据，E 不成立意味着这条论据消失——C 由其他 factor 决定。"没有找到反对的理由"≠"找到了支持的理由"。
+```
+
+- [ ] **Step 5: Commit §2**
+
+```bash
+git add docs/foundations/theory/inference-theory.md
+git commit -m "docs: write §2 unified factor potential model (noisy-AND + leak)"
+```
 
 ---
 
-## 3. 蕴含格中的 Abstraction 与 Induction
+## Chunk 3: §3 lattice theory (adapted) and §4 factor types
 
-这一节从格论 (lattice theory) 的角度阐明 Gaia 两种核心推理操作的数学本质，以及为什么 abstraction 保真而 induction 不保真。
+### Task 4: Write §3 蕴含格（adapted from old §2）
 
-### 3.1 蕴含格 (Lindenbaum-Tarski Algebra)
+**Files:**
+- Modify: `docs/foundations/theory/inference-theory.md` — replace `## 3.` TODO block
 
-所有命题按蕴含强度可以排成一个格 (lattice)。定义偏序：
+Copy old §2 (lines 175-307) almost verbatim. Only changes: renumber from §2.x to §3.x, and add a bridging paragraph at the end of §3.5 (old §2.5).
 
-```
-P ≤ Q  当且仅当  P ⊨ Q  (P 蕴含 Q，即 P 比 Q 更强)
-```
+- [ ] **Step 1: Copy old §2 content as new §3, renumber subsections**
 
-在这个格中：
+Replace the `## 3.` TODO with the old §2 content (§2.1–§2.6), changing all `### 2.x` to `### 3.x`. Keep all content, diagrams, and tables intact.
 
-- **向上** = 越来越弱（信息越来越少）
-- **向下** = 越来越强（声称越来越多）
-- **最小上界 (LUB / join)** = 析取 A ∨ B — 最弱的、被 A 和 B 各自蕴含的命题
-- **最大下界 (GLB / meet)** = 合取 A ∧ B — 最强的、蕴含 A 和 B 各自的命题
+- [ ] **Step 2: Add bridging paragraph at end of §3.5**
 
-```
-            弱 (上方)
-               ↑
-        ... C_abs ...        ← abstraction 的结果
-           A ∨ B             ← 析取 = LUB (最紧上界)
-          /     \
-         A       B           ← 原始命题
-          \     /
-           A ∧ B             ← 合取 = GLB (最紧下界)
-        ... C_ind ...        ← induction 的结果
-               ↓
-            强 (下方)
-```
+After the existing table in §3.5 (old §2.5), append:
 
-### 3.2 Abstraction 与析取 (OR)
-
-Gaia 的 abstraction 操作：给定命题 A 和 B，找到 C 满足 A ⊨ C 且 B ⊨ C（C 是它们共同的、更弱的概括）。
-
-析取 A ∨ B 也满足这个条件：A ⊨ (A ∨ B) 且 B ⊨ (A ∨ B)。区别在于：
-
-| | 析取 (A ∨ B) | Abstraction |
-|---|---|---|
-| **定义** | 逻辑连接词 | 推理操作 |
-| **在格中的位置** | 最小上界 (最紧) | 通常在 LUB 之上 (更松) |
-| **结果** | "A 或 B" (精确但啰嗦) | 语义概括 (自然但更弱) |
-
-以超导为例：
-
-```
-A: "MgB₂ 在 T<39K 时超导"
-B: "MgB₂ 在 H<Hc 时超导"
-
-A ∨ B: "MgB₂ 在 T<39K 时超导，或在 H<Hc 时超导"    ← 精确，最紧上界
-C_abs: "MgB₂ 存在超导态"                              ← 更弱，但语义上更有意义
-
-蕴含链：A ⊨ (A ∨ B) ⊨ C_abs
-```
-
-**关键性质：** 两者都是上界，因此从 A（或 B）出发到达它们都是保真的。不管 C 在 A ∨ B 之上多远，只要 A ⊨ C，那么 A 真时 C 一定真。
-
-### 3.3 Induction 与合取 (AND)
-
-Gaia 的 induction 操作：给定命题 A 和 B，找到 C 满足 C ⊨ A 且 C ⊨ B（C 是它们共同的、更强的概括）。
-
-合取 A ∧ B 也满足这个条件：(A ∧ B) ⊨ A 且 (A ∧ B) ⊨ B。区别在于：
-
-| | 合取 (A ∧ B) | Induction |
-|---|---|---|
-| **定义** | 逻辑连接词 | 推理操作 |
-| **在格中的位置** | 最大下界 (最紧) | 通常在 GLB 之下 (更松) |
-| **结果** | "A 且 B" (只说了已知的) | 泛化概括 (声称超出证据) |
-
-以金属膨胀为例：
-
-```
-A: "铁加热膨胀"
-B: "铜加热膨胀"
-
-A ∧ B: "铁加热膨胀，且铜加热膨胀"    ← 精确，最紧下界，只说了铁和铜
-C_ind: "金属加热膨胀"                 ← 更强！声称了金、银、铝、锌……
-
-蕴含链：C_ind ⊨ (A ∧ B) ⊨ A
-```
-
-**关键性质：** C_ind 比 A ∧ B 更强（在格中更低），这意味着 (A ∧ B) ⊭ C_ind。从 A、B 出发无法保真地到达 C_ind。
-
-### 3.4 根本性的不对称
-
-这是本节最核心的 insight：
-
-```
-向上 (弱化)：可以无限远离 A ∨ B，每一步都保真
-               A ⊨ (A∨B) ⊨ C₁ ⊨ C₂ ⊨ ...  ✓ 全部保真
-
-向下 (强化)：A ∧ B 是保真的极限，再往下一步就不保真了
-               ... C₂ ⊨ C₁ ⊨ (A∧B) ⊨ A
-                   ✗       ✗     ✓ 只有最后一步保真
-```
-
-原因很简单：
-
-- **弱化** = 丢掉信息。真命题蕴含的任何更弱命题必然为真。丢信息永远安全。
-- **强化** = 添加信息。添加的信息可能是错的。A ∧ B 是"零添加"的极限（只重述已知事实），再往下就是在声称证据没有支持的东西。
-
-这就是哲学中**归纳问题 (problem of induction)** 的格论表述：归纳是唯一能产生 genuinely new knowledge 的推理形式，但它的代价是不保真。
-
-### 3.5 对 Gaia 设计的直接推论
-
-这个不对称性直接决定了 Gaia 的概率设计：
-
-| 操作 | 格中方向 | 保真性 | probability 约束 | 理由 |
-|------|---------|--------|-----------------|------|
-| **Abstraction** | 向上 (弱化) | 保真 | 可以 = 1.0 | 结论已被前提蕴含 |
-| **Induction** | 向下 (强化) | 不保真 | 必须 < 1.0 | 结论超出了证据范围 |
-| **合取引入** | 到 GLB (不动) | 保真 | = 1.0 | 但不产生新知识，Gaia 中不需要专门边类型 |
-
+```markdown
 格论决定了 probability 的**取值约束**（abstraction 可以 = 1.0，induction 必须 < 1.0）。§2 的 noisy-AND + leak 模型决定了势函数的**结构形式**（前提为假时 potential = ε 而非 1.0）。两者互补：格论约束 p 的值域，noisy-AND + leak 约束 φ 在各状态组合下的形状。
-
-### 3.6 四种操作的完整对称
-
-```
-                    保真 (deductive)         不保真 (inductive)
-                   ──────────────────    ──────────────────────
-向上 (弱化)     │  Abstraction           │  (不存在：弱化不可能
-                │  A,B → C (C 更弱)      │   不保真，因为真命题
-                │  prob 可以 = 1.0        │   蕴含一切更弱命题)
-                │                         │
-向下 (强化)     │  合取引入               │  Induction
-                │  A,B → A∧B (精确下界)  │  A,B → C (C 更强)
-                │  prob = 1.0 但平凡      │  prob 必须 < 1.0
 ```
 
-右上角为空不是偶然——弱化在逻辑上不可能不保真（如果你只是丢掉信息，不可能出错）。左下角存在但平凡——合取引入保真但不产生洞见。
+- [ ] **Step 3: Commit §3**
 
-Gaia 真正有意义的两种操作占据了对角线：**abstraction (保真弱化)** 和 **induction (不保真强化)**，它们分别是知识浓缩和知识创造的引擎。
+```bash
+git add docs/foundations/theory/inference-theory.md
+git commit -m "docs: adapt §3 lattice theory from old §2, add factor model bridge"
+```
 
 ---
 
+### Task 5: Write §4 五种 Factor 类型
+
+**Files:**
+- Modify: `docs/foundations/theory/inference-theory.md` — replace `## 4.` TODO block
+
+This section gives concrete definitions for each factor type using a uniform format: structure, potential table, Jaynes compliance, design rationale.
+
+- [ ] **Step 1: Write §4.1 Reasoning**
+
+Replace the `## 4.` TODO with:
+
+```markdown
 ## 4. 五种 Factor 类型
 
 每种 factor 使用统一格式：结构、势函数表、Jaynes 合规性、设计理由。
@@ -461,7 +499,11 @@ Retraction 表示"撤回证据 E 成立时，结论 C 被削弱"：
 Retraction 的 E=0 行保持 1.0 是正确的（§2.4）：撤回证据不成立时，这条反对论据消失，C 由其他 factor 决定。这与 reasoning factor 不同——reasoning 的前提是结论存在的根据（前提倒 → 结论失去基础），retraction 的前提是反对结论的论据（论据消失 → 结论不受影响）。
 
 **合规性：** 满足 C1–C4（§2.4）。
+```
 
+- [ ] **Step 2: Write §4.2 Instantiation**
+
+```markdown
 ### 4.2 Instantiation Factor
 
 **结构：** 二元 factor，连接一个 schema 节点（全称命题）到一个 ground 节点（实例）。
@@ -495,10 +537,14 @@ V_schema ─── F_inst_1 ─── V_ground_1 (belief=0.9)
 - Schema belief 下降 → forward 消息削弱所有实例（全称被质疑 → 所有实例失去全称支持）
 
 **合规性：** 满足 C1–C4（§2.4）。Schema=0 时 potential=1.0 是正确的：¬∀x.P(x) ⊬ ¬P(a)。
+```
 
+- [ ] **Step 3: Write §4.3 Contradiction**
+
+```markdown
 ### 4.3 Contradiction Factor
 
-**结构：** 多变量约束 factor，连接矛盾关系节点和被约束的命题节点。
+**结构：** 三变量（或多变量）约束 factor，连接矛盾关系节点和被约束的命题节点。
 
 ```
 participants: [C_contra, A₁, A₂, ..., Aₙ]
@@ -531,7 +577,11 @@ BP 收敛后：
 **Jaynes 的解释：** 发现矛盾 = 学到新信息 P(A∧B|I) ≈ 0。这不是系统错误，而是证据冲突。BP 自动处理：弱证据先让步（从 odds 乘法自然涌现），强反证可质疑矛盾本身（从双向消息自然涌现）。
 
 **合规性：** 满足 C1–C4（§2.4）。
+```
 
+- [ ] **Step 4: Write §4.4 Equivalence**
+
+```markdown
 ### 4.4 Equivalence Factor
 
 **结构：** 三变量约束 factor，连接等价关系节点和被等价的命题节点。
@@ -559,107 +609,38 @@ n-ary equivalence（3+ 成员）分解为 pairwise：equiv(A, B, C) → factors 
 - 等价成立 + A 和 B 分歧 → C_equiv 被压低（质疑等价关系）
 
 **合规性：** 满足 C1–C4（§2.4）。
+```
+
+- [ ] **Step 5: Commit §4**
+
+```bash
+git add docs/foundations/theory/inference-theory.md
+git commit -m "docs: write §4 five factor types with unified format"
+```
 
 ---
 
-## 5. 信念传播算法
+## Chunk 4: §5 BP algorithm (relocated), §6-§7, appendices, final review
 
-### 5.1 因子图
+### Task 6: Write §5 信念传播算法（relocated from old §1）
 
-因子图 (factor graph) 是一种二部图，包含两种节点：
+**Files:**
+- Modify: `docs/foundations/theory/inference-theory.md` — replace `## 5.` TODO block
 
-- **变量节点 (variable node)**：表示一个未知量，带有先验分布
-- **因子节点 (factor node)**：表示变量之间的约束或关联
+Relocate old §1.1, §1.3, §1.4, §1.5 content here with minor adaptations. Add §5.4 Cromwell's Rule (collected from scattered mentions) and §5.5 BP-Jaynes correspondence (adapted from old §1.6).
 
-Gaia 的推理超图**天然就是一个因子图**：
+- [ ] **Step 1: Write §5.1–§5.3 (relocated from old §1)**
 
-```
-变量节点 = Knowledge (命题)
-  ├── 先验值 = prior
-  └── 后验值 = belief (BP 计算结果)
+Replace the `## 5.` TODO. Adapt old §1.1 (什么是因子图), §1.3 (Loopy), §1.4 (Damping), §1.5 (Sum-Product) as §5.1–§5.3. The content of §1.2 (BP 的直觉) can be folded into §5.1 as an introductory paragraph. Remove the old "关键改进" list (it was relative to a previous implementation — no longer relevant in a theory document versioned at 2.0).
 
-因子节点 = Factor (推理关系或约束)
-  ├── 连接 = premises[] + conclusion (或 participants[])
-  └── 势函数 = §4 定义的各类型 potential
-```
+Key adaptations:
+- §5.1: combine old §1.1 + §1.2 into a concise "what is a factor graph + intuition" section
+- §5.2: old §1.5 (the full sum-product flow diagram) verbatim
+- §5.3: merge old §1.3 + §1.4 into one subsection
 
-直觉：信念传播就是在因子图上反复传递消息，更新每个节点的"信念"。
+- [ ] **Step 2: Write §5.4 Cromwell's Rule**
 
-```
-前提可信度 × 推理可靠性 = 结论可信度
-
-beliefs[1] × beliefs[2] × edge.probability = factor_message
-     0.8    ×    0.7     ×      0.9        =    0.504
-
-"前提1我信80%，前提2我信70%，推理过程可靠性90%，
- 所以结论我信50.4%"
-```
-
-### 5.2 Sum-Product 消息传递
-
-消息为 2-vector `[p(x=0), p(x=1)]`，始终归一化。
-
-```
-初始化: 所有消息 = [0.5, 0.5]（均匀，MaxEnt）
-        priors = {var_id: [1-prior, prior]}
-         │
-         ▼
-    ┌─── 循环 (最多 max_iterations 轮) ────────────────┐
-    │                                                    │
-    │  1. 计算所有 var→factor 消息 (exclude-self rule):  │
-    │     msg(v→f) = prior(v) × ∏ msg(f'→v), f'≠f      │
-    │                                                    │
-    │  2. 计算所有 factor→var 消息 (marginalize):        │
-    │     msg(f→v) = Σ_{其他变量} φ(assignment) × ∏ msg  │
-    │                                                    │
-    │  3. Damping + 归一化:                              │
-    │     msg = α × new + (1-α) × old, 然后归一化        │
-    │                                                    │
-    │  4. 计算 beliefs:                                  │
-    │     b(v) = normalize(prior(v) × ∏ msg(f→v))       │
-    │                                                    │
-    │  5. 检查收敛:                                      │
-    │     max(|new_belief - old_belief|) < threshold?    │
-    │     是 → 停止                                      │
-    │     否 → 继续下一轮                                │
-    └────────────────────────────────────────────────────┘
-         │
-         ▼
-输出: 每个节点的后验 belief = b(v)[1] ∈ [0, 1]
-```
-
-关键设计：
-- **双向消息**：var→factor + factor→var，backward 抑制自然涌现
-- **Exclude-self rule**：避免循环放大
-- **同步更新**：所有新消息从旧消息计算，然后一次性替换（因子顺序无关）
-- **2-vector 归一化**：消息始终求和为 1，长链不衰减
-
-### 5.3 Loopy BP 与 Damping
-
-如果因子图是一棵树（没有环），BP 一轮就能精确收敛。
-
-但真实的知识图谱几乎一定有环：
-
-```
-Node A: "高温超导存在"
-    ↓ [edge 1]
-Node B: "材料X是高温超导体"
-    ↓ [edge 2]
-Node C: "材料X的晶体结构支持超导"
-    ↓ [edge 3]
-Node A: "高温超导存在" ← 回到了 A，形成环
-```
-
-有环时，消息会循环传播。Loopy BP 的做法是：不管有没有环，直接迭代传递消息，跑多轮直到信念值稳定。理论上不保证收敛，但在实践中对大多数图效果很好。
-
-**Damping（阻尼）** 防止有环图上的振荡：
-
-```python
-msg_new = damping * computed_msg + (1 - damping) * msg_old
-```
-
-默认 `damping=0.5`，每次只更新一半。`damping=1.0` 表示完全用新值（无阻尼），`damping=0.0` 表示完全不更新。
-
+```markdown
 ### 5.4 Cromwell's Rule
 
 永远不对经验命题赋予 P=0 或 P=1（Cromwell's Rule）。如果 P(H)=0，则无论多少证据都无法更新 belief（贝叶斯定理的分子为零）。
@@ -670,7 +651,13 @@ Gaia 在两处执行 Cromwell's Rule：
 2. **势函数中**：noisy-AND + leak 的 leak 参数 ε 本身就是 Cromwell 下界，确保没有状态组合的 potential 为零
 
 实现位于 `libs/inference/factor_graph.py` 的 `_cromwell_clamp()` 函数。
+```
 
+- [ ] **Step 3: Write §5.5 BP 与 Jaynes 的闭环对应**
+
+Adapted from old §1.6 table, enriched with the syllogism mapping:
+
+```markdown
 ### 5.5 BP 与 Jaynes 的闭环对应
 
 BP 的每一步操作都对应 Jaynes 的一条规则：
@@ -686,100 +673,112 @@ BP 的每一步操作都对应 Jaynes 的一条规则：
 | 同步 schedule | 证据可交换性 | 消息顺序不影响结果 |
 
 **在树结构图上，BP 精确实现 Jaynes 的规则。在有环图上，BP 通过 Bethe 自由能近似实现——这是计算上的必然，且在稀疏知识图谱上近似质量通常很好。**
+```
+
+- [ ] **Step 4: Commit §5**
+
+```bash
+git add docs/foundations/theory/inference-theory.md
+git commit -m "docs: write §5 BP algorithm (relocated from old §1, added Cromwell and Jaynes correspondence)"
+```
 
 ---
 
+### Task 7: Write §6, §7, and appendices
+
+**Files:**
+- Modify: `docs/foundations/theory/inference-theory.md` — replace remaining TODO blocks
+
+- [ ] **Step 1: Write §6 (adapted from old §4)**
+
+Replace `## 6.` TODO. Copy old §4 content (已知局限与演进方向). Changes:
+- §6.1 "已解决的局限" add item 6: `~~Gate 语义阻止双向信息流~~：现已统一为普通 factor 参与者，关系节点的 belief 可被证据更新`
+- §6.2–§6.4: keep as-is from old §4.2–§4.4
+
+- [ ] **Step 2: Write §7 (verbatim from old §5)**
+
+Replace `## 7.` TODO with old §5 content (逻辑编程技术启发 + §5.1 不动点计算) verbatim.
+
+- [ ] **Step 3: Write Appendix A (updated terminology)**
+
+Replace `## 附录 A` TODO. Copy old appendix A and add new entries:
+
+| 术语 | Gaia 中的对应 | 代码位置 |
+|------|-------------|---------|
+| Noisy-AND | Reasoning factor 的势函数模型 | `libs/inference/bp.py:_evaluate_potential()` |
+| Leak probability (ε) | Cromwell 下界，前提为假时的 potential | `libs/inference/factor_graph.py:_cromwell_clamp()` |
+| Gate (已移除) | 旧设计中关系节点的只读机制，已统一为普通参与者 | — |
+
+- [ ] **Step 4: Write Appendix B (verbatim from old)**
+
+Replace `## 附录 B` TODO with old Appendix B content verbatim.
+
+- [ ] **Step 5: Commit §6, §7, appendices**
+
+```bash
+git add docs/foundations/theory/inference-theory.md
+git commit -m "docs: write §6-§7 and appendices, complete inference-theory.md v2.0 restructure"
+```
+
+---
+
+### Task 8: Final review, lint, and format check
+
+**Files:**
+- Review: `docs/foundations/theory/inference-theory.md`
+
+- [ ] **Step 1: Run ruff format check**
+
+```bash
+ruff check docs/foundations/theory/inference-theory.md 2>/dev/null; echo "ruff does not check .md files, skip"
+```
+
+- [ ] **Step 2: Verify no broken internal links**
+
+Check that all `[text](link)` references in the document point to existing files:
+- `theoretical-foundation.md` — exists in same directory
+- `../bp-on-graph-ir.md` — exists in parent directory
+
+```bash
+ls docs/foundations/theory/theoretical-foundation.md docs/foundations/bp-on-graph-ir.md
+```
+
+Expected: both files listed, no errors.
+
+- [ ] **Step 3: Verify document structure**
+
+Grep for section headers to confirm correct numbering:
+
+```bash
+grep -E "^##" docs/foundations/theory/inference-theory.md
+```
+
+Expected output should show:
+```
+## 1. Jaynes 第一性原理
+## 2. 统一势函数模型
+## 3. 蕴含格中的 Abstraction 与 Induction
+## 4. 五种 Factor 类型
+## 5. 信念传播算法
 ## 6. 已知局限与演进方向
-
-### 6.1 已解决的局限
-
-以下问题在 sum-product loopy BP 重写中已解决：
-
-1. ~~边类型未区分~~：现已实现类型感知 factor potential（deduction、retraction、contradiction 各有独立语义）
-2. ~~多因子消息顺序覆盖~~：现使用 2-vector 消息 + 乘法聚合，多条入边的消息正确合并
-3. ~~无反向传播~~：现有完整的 var→factor 和 factor→var 双向消息，backward 抑制自然涌现
-4. ~~因子顺序影响结果~~：现使用同步 schedule，所有消息从旧值计算后同时更新
-5. ~~Contradiction 无独立语义~~：现使用 Jaynes 惩罚性 potential（§4.3），contradiction 自带强力 backward inhibition
-6. ~~Gate 语义阻止双向信息流~~：现已统一为普通 factor 参与者，关系节点的 belief 可被证据更新（§2.3）
-
-### 6.2 当前局限
-
-1. **纯拓扑推理**：BP 完全不看节点内容，无法利用语义相似性
-
-### 6.3 可能的演进方向
-
-| 方向 | 说明 | 优先级 |
-|------|------|--------|
-| GPU 加速 BP | 用 PGMax (JAX) 替代自研 NumPy 实现 | 中 |
-| 嵌入辅助 BP | 用 embedding 相似度调节消息权重 | 低 |
-| 局部精确推理 | 树结构子图用精确 BP，环结构用 Loopy BP | 低 |
-
-### 6.4 不打算改变的设计选择
-
-- **节点内容对 BP 不透明**：语义理解交给 LLM，不交给推理引擎
-- **图结构只有合取→合取**：保持简单，不引入析取/否定到图结构层
-- **Pre-grounded**：不存通用规则，只存具体实例
-- **非单调推理**：新证据可以降低已有 belief，这是特性不是 bug
-
----
-
 ## 7. 逻辑编程技术启发
-
-Horn clause 研究领域（逻辑编程、Datalog）的成熟技术对 Gaia 有直接价值：
-
-| 技术 | 来源 | 在 Gaia 中的应用方向 |
-|------|------|---------------------|
-| **Seminaïve evaluation** | Datalog | 每轮 BP 只传播上一轮变化的消息，避免重复计算 |
-| **Magic sets optimization** | Datalog | 优化后向链查询——只计算与查询相关的子图，而非全图 BP |
-| **Tabling / memoization** | Prolog (XSB) | 缓存已推导的中间结果 |
-| **Stratification** | Datalog with negation | 分层处理 contradiction edge——先处理无矛盾子图，再处理矛盾 |
-| **Incremental view maintenance** | Differential Dataflow | 增量 BP——只重算受影响的节点，而非全图重跑 |
-
-其中 seminaïve evaluation 尤其值得关注：当前 BP 实现每轮遍历所有超边，但大部分节点的 belief 在每轮变化很小。Datalog 的 seminaïve 策略（只看上一轮有变化的事实）直接对应"只传播上一轮 belief 变化超过阈值的节点"。
-
-### 7.1 不动点计算与收敛性
-
-从抽象代数视角看，Horn clause 系统是一个**半格 (semilattice)** 上的不动点计算：
-
-```
-操作器 T: 状态空间 → 状态空间
-    T(当前所有已知事实) = 当前所有已知事实 ∪ 新推导出的事实
-```
-
-在纯 Horn clause（布尔、单调）下，T 保证在有限步内收敛到唯一最小不动点（Knaster-Tarski 定理）。
-
-Gaia 在两个维度上扩展了这个保证：
-
-- **概率化**：值域从 {0, 1} 扩展到 [0, 1]，需要 damping 保证收敛
-- **非单调**：contradiction 和 retraction 打破单调性，不动点可能不唯一
-
-但 Gaia 的一个深层性质是：**系统永远有解。** 节点不可变 + 概率连续 = BP 总能给出一组 belief 值，只是精度不同。
-
----
-
 ## 附录 A：术语对照
-
-| 术语 | Gaia 中的对应 | v2.0 / 当前文档锚点 |
-|------|-------------|---------------------|
-| Variable (变量) | belief-bearing knowledge node / local canonical node | `docs/foundations/graph-ir.md`, `libs/graph_ir/models.py` |
-| Prior (先验) | local/global parameterization 中的 node prior | `docs/foundations/bp-on-graph-ir.md` §2, `libs/graph_ir/models.py:LocalParameterization` |
-| Belief (后验信念) | BP 收敛后的 node belief | 本文 §5, `libs/inference/bp.py`, `libs/storage/models.py:BeliefSnapshot` |
-| Factor (因子) | local factor node / runtime factor graph factor | `docs/foundations/graph-ir.md`, `libs/graph_ir/models.py:FactorNode`, `libs/inference/factor_graph.py` |
-| Factor potential (势函数) | factor compatibility function | 本文 §2, `libs/inference/bp.py:_evaluate_potential()` |
-| Noisy-AND | reasoning factor 的 v2.0 目标势函数模型 | 本文 §2.2 |
-| Leak probability (ε) | 前提不全为真时的背景兼容度 | 本文 §2.2, `libs/inference/factor_graph.py:_cromwell_clamp()` |
-| Factor graph (因子图) | runtime bipartite BP graph | 本文 §5.1, `libs/inference/factor_graph.py` |
-| Message passing (消息传递) | BP iteration | 本文 §5.2, `libs/inference/bp.py` |
-| Damping (阻尼) | loopy BP stabilization | 本文 §5.3, `libs/inference/bp.py` |
-| Convergence (收敛) | max_change < threshold | 本文 §5.3, `libs/inference/bp.py` |
-| Gate | 当前 runtime 中关系节点的只读机制；v2.0 目标模型移除此语义 | `docs/foundations/bp-on-graph-ir.md` §4 |
-
 ## 附录 B：与相关系统的概率机制对比
+```
 
-| 系统 | 概率机制 | 推理方式 | 扩展性瓶颈 |
-|------|---------|---------|-----------|
-| **MLN** | 一阶公式 + 权重 → MRF | Gibbs / BP | Grounding: O(N^k) |
-| **PSL** | 连续 [0,1] + Hinge-loss MRF | 凸优化 | 仍需 grounding |
-| **DeepDive** | 候选事实 + 因子图 | Gibbs sampling | 批处理 |
-| **贝叶斯网络** | 条件概率表 | 精确 BP / 变分 | DAG 限制 |
-| **Gaia** | 超图即因子图，noisy-AND + leak | Loopy BP (damped) | 无 grounding |
+- [ ] **Step 4: Verify no TODO markers remain**
+
+```bash
+grep -n "TODO" docs/foundations/theory/inference-theory.md
+```
+
+Expected: no output (all TODOs replaced).
+
+- [ ] **Step 5: Final commit if any fixes were needed**
+
+```bash
+git add docs/foundations/theory/inference-theory.md
+git commit -m "docs: final review fixes for inference-theory.md v2.0"
+```
+
+Only run this if changes were made in steps 1-4.
