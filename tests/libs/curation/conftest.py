@@ -85,10 +85,14 @@ def build_physics_nodes() -> list[GlobalCanonicalNode]:
     """Build all GlobalCanonicalNodes for the physics fixture."""
     return [
         # ── Duplicate pair (fma_1 ≈ fma_2) ──
+        # Phrased to achieve cosine > 0.95 with real embeddings
         GlobalCanonicalNode(
             global_canonical_id=ID_FMA_1,
             knowledge_type="claim",
-            representative_content="F = ma (Newton's second law)",
+            representative_content=(
+                "Newton's second law states that force equals mass "
+                "multiplied by acceleration, F = ma"
+            ),
             member_local_nodes=[_ref("classical_mechanics", "lcn_fma_1")],
             provenance=[_prov("classical_mechanics")],
             metadata={"source_knowledge_names": ["classical_mechanics.fma"]},
@@ -96,7 +100,10 @@ def build_physics_nodes() -> list[GlobalCanonicalNode]:
         GlobalCanonicalNode(
             global_canonical_id=ID_FMA_2,
             knowledge_type="claim",
-            representative_content="Force equals mass times acceleration",
+            representative_content=(
+                "According to Newton's second law, force is equal to "
+                "mass times acceleration (F = ma)"
+            ),
             member_local_nodes=[_ref("modern_physics", "lcn_fma_2")],
             provenance=[_prov("modern_physics")],
             metadata={"source_knowledge_names": ["modern_physics.fma"]},
@@ -112,7 +119,10 @@ def build_physics_nodes() -> list[GlobalCanonicalNode]:
         GlobalCanonicalNode(
             global_canonical_id=ID_GRAVITY,
             knowledge_type="claim",
-            representative_content="All objects fall with equal acceleration in a gravitational field",
+            representative_content=(
+                "All objects in a vacuum fall with the same acceleration "
+                "regardless of mass"
+            ),
             member_local_nodes=[_ref("classical_mechanics", "lcn_gravity")],
             provenance=[_prov("classical_mechanics")],
         ),
@@ -127,22 +137,28 @@ def build_physics_nodes() -> list[GlobalCanonicalNode]:
         GlobalCanonicalNode(
             global_canonical_id=ID_MASS_V,
             knowledge_type="claim",
-            representative_content="Relativistic mass increases with velocity",
+            representative_content=(
+                "Relativistic mass of an object increases as its velocity "
+                "approaches the speed of light"
+            ),
             member_local_nodes=[_ref("modern_physics", "lcn_mass_v")],
             provenance=[_prov("modern_physics")],
         ),
         # ── Equivalence pair ──
+        # Phrased to achieve cosine ~0.67 with real embeddings (related but distinct)
         GlobalCanonicalNode(
             global_canonical_id=ID_HEAT,
             knowledge_type="claim",
-            representative_content="Heat is a form of energy",
+            representative_content="Heat is a form of energy that can be transferred between systems",
             member_local_nodes=[_ref("classical_mechanics", "lcn_heat")],
             provenance=[_prov("classical_mechanics")],
         ),
         GlobalCanonicalNode(
             global_canonical_id=ID_THERMAL,
             knowledge_type="claim",
-            representative_content="Thermal energy is the kinetic energy of molecules",
+            representative_content=(
+                "Thermal energy is the kinetic energy of the random motion of molecules"
+            ),
             member_local_nodes=[_ref("thermodynamics", "lcn_thermal")],
             provenance=[_prov("thermodynamics")],
         ),
