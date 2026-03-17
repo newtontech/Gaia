@@ -69,21 +69,22 @@ def _make_retraction_package() -> Package:
     )
 
 
-def test_retraction_factor_generated():
+def test_retraction_stored_as_metadata_not_factor():
+    """RetractAction should be an intent annotation, not a BP factor."""
     raw = build_raw_graph(_make_retraction_package())
 
+    # No retraction factors should be generated
     retraction_factors = [
         f for f in raw.factor_nodes if f.metadata and f.metadata.get("edge_type") == "retraction"
     ]
-    assert len(retraction_factors) == 1
+    assert len(retraction_factors) == 0
 
-    rf = retraction_factors[0]
-    assert rf.type == "reasoning"
-
-    # Premise is the contradiction, conclusion is the target being retracted
-    node_map = {n.source_refs[0].knowledge_name: n.raw_node_id for n in raw.knowledge_nodes}
-    assert rf.premises == [node_map["contradiction_found"]]
-    assert rf.conclusion == node_map["old_theory"]
+    # Retraction intent stored in graph metadata
+    assert raw.metadata is not None
+    intents = raw.metadata.get("retraction_intents", [])
+    assert len(intents) == 1
+    assert intents[0]["target"] == "old_theory"
+    assert intents[0]["reason"] == "contradiction_found"
 
 
 def test_retract_action_not_in_knowledge_nodes():
@@ -93,7 +94,8 @@ def test_retract_action_not_in_knowledge_nodes():
     assert "retract_old" not in node_names
 
 
-def test_retraction_lowers_target_belief():
+def test_contradiction_still_suppresses_via_mutex():
+    """Even without retraction factor, mutex_constraint + chain should suppress target."""
     pkg = _make_retraction_package()
     raw = build_raw_graph(pkg)
     result = build_singleton_local_graph(raw)
@@ -104,7 +106,7 @@ def test_retraction_lowers_target_belief():
     adapted = adapt_local_graph_to_factor_graph(result.local_graph, params)
     beliefs = BeliefPropagation(damping=0.3, max_iterations=100).run(adapted.factor_graph)
 
-    # Find the old_theory node's belief via local_canonical_id
+    # old_theory should still be suppressed via mutex_constraint
     old_theory_lcn = None
     for node in result.local_graph.knowledge_nodes:
         if node.source_refs[0].knowledge_name == "old_theory":
@@ -113,22 +115,27 @@ def test_retraction_lowers_target_belief():
     assert old_theory_lcn is not None
 
     var_id = adapted.local_id_to_var_id[old_theory_lcn]
+    # With contradiction between old_theory and new_evidence (prior=0.9),
+    # mutex should push old_theory below its prior of 0.7
     assert beliefs[var_id] < 0.7
 
 
-def test_galileo_retraction_in_fixture():
+def test_galileo_retraction_intent_in_fixture():
     pkg = _load(GALILEO_DIR)
     raw = build_raw_graph(pkg)
 
+    # No retraction factors
     retraction_factors = [
         f for f in raw.factor_nodes if f.metadata and f.metadata.get("edge_type") == "retraction"
     ]
-    assert len(retraction_factors) == 1
+    assert len(retraction_factors) == 0
 
-    node_map = {n.source_refs[0].knowledge_name: n.raw_node_id for n in raw.knowledge_nodes}
-    rf = retraction_factors[0]
-    assert node_map["tied_balls_contradiction"] in rf.premises
-    assert rf.conclusion == node_map["heavier_falls_faster"]
+    # Retraction intent in metadata
+    assert raw.metadata is not None
+    intents = raw.metadata.get("retraction_intents", [])
+    assert len(intents) == 1
+    assert intents[0]["target"] == "heavier_falls_faster"
+    assert intents[0]["reason"] == "tied_balls_contradiction"
 
 
 # ── Elaboration: schema → ground + instantiation ──
@@ -323,7 +330,7 @@ def test_newton_fixture_builds():
     raw = build_raw_graph(pkg)
 
     assert len(raw.knowledge_nodes) == 20
-    assert len(raw.factor_nodes) == 11  # 4 instantiation + 5 reasoning + 1 equiv + 1 mutex
+    assert len(raw.factor_nodes) == 10  # 4 instantiation + 4 reasoning + 1 equiv + 1 mutex
 
     types = {n.knowledge_type for n in raw.knowledge_nodes}
     assert "claim" in types

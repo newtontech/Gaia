@@ -171,24 +171,6 @@
       "type": "reasoning"
     },
     {
-      "conclusion": "ext:galileo_falling_bodies.heavier_falls_faster",
-      "contexts": [],
-      "factor_id": "f_b2ce4097cc6a91b5",
-      "metadata": {
-        "edge_type": "retraction"
-      },
-      "premises": [
-        "raw_c3b54ee544548779"
-      ],
-      "source_ref": {
-        "knowledge_name": "retract_aristotle_theoretically",
-        "module": "implications",
-        "package": "newton_principia",
-        "version": "1.0.0"
-      },
-      "type": "reasoning"
-    },
-    {
       "conclusion": "raw_a8c7c0487aca4dde",
       "contexts": [],
       "factor_id": "f_118a2cfa1abb5387",
@@ -589,6 +571,17 @@
       ]
     }
   ],
+  "metadata": {
+    "retraction_intents": [
+      {
+        "content": "牛顿的理论推导提供了第二条独立的反驳路径： 伽利略通过归谬法暴露了亚里士多德定律的内在矛盾， 牛顿则从更基本的力学定律直接推导出与之矛盾的结论。 两条独立路径汇聚，进一步降低亚里士多德定律的可信度。\n",
+        "module": "implications",
+        "name": "retract_aristotle_theoretically",
+        "reason": "newton_vs_aristotle",
+        "target": "aristotle_law"
+      }
+    ]
+  },
   "package": "newton_principia",
   "schema_version": "1.0",
   "version": "1.0.0"

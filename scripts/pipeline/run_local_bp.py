@@ -51,6 +51,10 @@ def run_bp_on_package(pkg_dir: Path, damping: float = 0.3, max_iter: int = 100) 
         fg.add_variable(i, params.node_priors.get(nid, 0.5))
 
     for fi, factor in enumerate(lcg.factor_nodes):
+        # Skip factors with ext: cross-package refs (not resolvable in local BP)
+        all_refs = factor.premises + factor.contexts + [factor.conclusion]
+        if any(r.startswith("ext:") for r in all_refs):
+            continue
         premises_int = [id_to_int[p] for p in factor.premises if p in id_to_int]
         conclusion_int = id_to_int.get(factor.conclusion)
         if conclusion_int is None or not premises_int:
