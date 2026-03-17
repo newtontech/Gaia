@@ -21,6 +21,7 @@ from .models import (
     StructureReport,
 )
 from .operations import create_constraint, merge_nodes
+from .reviewer import CurationReviewer
 
 logger = logging.getLogger(__name__)
 
@@ -113,10 +114,19 @@ async def execute_cleanup(
         else:
             skipped.append(suggestion)
 
-    # needs_review items are left for the curation reviewer agent (V1: skip)
+    # needs_review items go through simplified rule-based reviewer
+    reviewer = CurationReviewer()
     for suggestion in plan.needs_review:
+        decision = reviewer.review(suggestion)
+        if decision == "approve":
+            entry = _execute_suggestion(suggestion, nodes, factors)
+            if entry is not None:
+                audit_log.append(entry)
+                audit_entries.append(entry)
+                executed.append(suggestion)
+                continue
         skipped.append(suggestion)
-        logger.info("Skipped (needs review): %s — %s", suggestion.suggestion_id, suggestion.reason)
+        logger.info("Reviewer %s: %s — %s", decision, suggestion.suggestion_id, suggestion.reason)
 
     # discard items are dropped
     for suggestion in plan.discard:
