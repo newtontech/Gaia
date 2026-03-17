@@ -34,7 +34,7 @@
       "conditional_probability": 0.8
     }
   },
-  "graph_hash": "sha256:07472e60e63e3701a05ae79d7f2d753375ddaded8d9ee21746a33e63e8eb93ba",
+  "graph_hash": "sha256:084a3ef1322c73e97a13acf8cdef3c88bc45974a8f0989337ea27bbbe1b8a26f",
   "graph_scope": "local",
   "metadata": null,
   "node_priors": {
@@ -43,7 +43,10 @@
     "lcn_292f81b065df5b91": 0.88,
     "lcn_315917e2f79d7ef7": 0.55,
     "lcn_3d20684fe585a228": 0.84,
+    "lcn_4106b1710e46373e": 0.93,
+    "lcn_422bad5b75dd2df5": 0.94,
     "lcn_61197e996f3dd38a": 0.5,
+    "lcn_66d50713e601243e": 0.97,
     "lcn_716c8ef657abaf41": 1.0,
     "lcn_8ca9a2b93b0e9307": 0.5,
     "lcn_a95c07b51e050bfb": 0.5,
@@ -51,6 +54,7 @@
     "lcn_aab9003445df2fec": 1.0,
     "lcn_b6bb05362b879e90": 0.6,
     "lcn_cfb4e927e732fb7b": 0.5,
+    "lcn_d6c7bca7e8a06693": 0.9,
     "lcn_df66e0694c5ca5ad": 0.7,
     "lcn_e3d404d0198f7e25": 1.0
   },

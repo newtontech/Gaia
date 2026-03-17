@@ -197,6 +197,64 @@
       ]
     },
     {
+      "kind": "infer_action",
+      "knowledge_type": "action",
+      "local_canonical_id": "lcn_796d71209059ab17",
+      "member_raw_node_ids": [
+        "raw_ab6afd893945f80c"
+      ],
+      "metadata": null,
+      "package": "newton_principia",
+      "parameters": [
+        {
+          "constraint": "unknown",
+          "name": "dynamic_law"
+        },
+        {
+          "constraint": "unknown",
+          "name": "equivalence"
+        },
+        {
+          "constraint": "unknown",
+          "name": "gravity_law"
+        }
+      ],
+      "representative_content": "由 {dynamic_law} 得 F = m_i × a；由 {gravity_law} 得 F = m_g × g。 因为作用在同一物体上的合力相等，所以 m_i × a = m_g × g。 又由 {equivalence} 知 m_i = m_g，两边约去质量，得 a = g。 加速度只取决于引力场强度 g，与物体质量完全无关。\n",
+      "source_refs": [
+        {
+          "knowledge_name": "equate_forces",
+          "module": "derivation",
+          "package": "newton_principia",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "kind": "infer_action",
+      "knowledge_type": "action",
+      "local_canonical_id": "lcn_344146af8b1932e5",
+      "member_raw_node_ids": [
+        "raw_c41c336fcc4c7eb7"
+      ],
+      "metadata": null,
+      "package": "newton_principia",
+      "parameters": [
+        {
+          "constraint": "unknown",
+          "name": "derivation_result"
+        }
+      ],
+      "representative_content": "{derivation_result} 意味着在同一引力场中，无论物体质量多大， 其自由落体加速度都相同。这不是经验归纳，而是从基本定律出发的 纯理论推导。\n",
+      "source_refs": [
+        {
+          "knowledge_name": "interpret_mass_independence",
+          "module": "derivation",
+          "package": "newton_principia",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
       "kind": null,
       "knowledge_type": "claim",
       "local_canonical_id": "lcn_e7e1b9c7cd9c6b39",
@@ -320,6 +378,64 @@
       "source_refs": [
         {
           "knowledge_name": "newton_vs_aristotle",
+          "module": "implications",
+          "package": "newton_principia",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "kind": "infer_action",
+      "knowledge_type": "action",
+      "local_canonical_id": "lcn_cc1deda139d9572d",
+      "member_raw_node_ids": [
+        "raw_f99ede0bda763d22"
+      ],
+      "metadata": null,
+      "package": "newton_principia",
+      "parameters": [
+        {
+          "constraint": "unknown",
+          "name": "aristotle_claim"
+        },
+        {
+          "constraint": "unknown",
+          "name": "newton_result"
+        }
+      ],
+      "representative_content": "{newton_result} 断言加速度与质量无关；{aristotle_claim} 断言速度与重量成正比。 在自由落体条件下（无介质阻力），这两个命题不能同时为真。 牛顿的推导基于更基本的力学定律，亚里士多德的归纳缺乏对混淆变量的控制， 因此应当接受前者、拒绝后者。\n",
+      "source_refs": [
+        {
+          "knowledge_name": "derive_theoretical_contradiction",
+          "module": "implications",
+          "package": "newton_principia",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "kind": "infer_action",
+      "knowledge_type": "action",
+      "local_canonical_id": "lcn_dfd698abeb76807b",
+      "member_raw_node_ids": [
+        "raw_7df230e1698b65b5"
+      ],
+      "metadata": null,
+      "package": "newton_principia",
+      "parameters": [
+        {
+          "constraint": "unknown",
+          "name": "galileo_result"
+        },
+        {
+          "constraint": "unknown",
+          "name": "newton_result"
+        }
+      ],
+      "representative_content": "{galileo_result} 来自思想实验中的归谬法， {newton_result} 来自基本力学定律的演绎推导。 二者在方法上不同，却都指向同一个判断： 亚里士多德的落体规律不能作为普遍定律保留。\n",
+      "source_refs": [
+        {
+          "knowledge_name": "synthesize_independent_refutations",
           "module": "implications",
           "package": "newton_principia",
           "version": "1.0.0"

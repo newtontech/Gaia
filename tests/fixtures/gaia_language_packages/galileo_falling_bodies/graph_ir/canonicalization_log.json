@@ -29,6 +29,34 @@
       "reason": "singleton: no local semantic merge applied"
     },
     {
+      "local_canonical_id": "lcn_4106b1710e46373e",
+      "members": [
+        "raw_c2ce6f83402d503f"
+      ],
+      "reason": "singleton: no local semantic merge applied"
+    },
+    {
+      "local_canonical_id": "lcn_66d50713e601243e",
+      "members": [
+        "raw_a990b93dacd62d5c"
+      ],
+      "reason": "singleton: no local semantic merge applied"
+    },
+    {
+      "local_canonical_id": "lcn_d6c7bca7e8a06693",
+      "members": [
+        "raw_fdb785aa74b1f866"
+      ],
+      "reason": "singleton: no local semantic merge applied"
+    },
+    {
+      "local_canonical_id": "lcn_422bad5b75dd2df5",
+      "members": [
+        "raw_535db8ea513c6aa0"
+      ],
+      "reason": "singleton: no local semantic merge applied"
+    },
+    {
       "local_canonical_id": "lcn_8ca9a2b93b0e9307",
       "members": [
         "raw_4c34b6bb7330df19"

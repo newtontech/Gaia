@@ -64,8 +64,9 @@ def build_raw_graph(pkg: Package) -> RawGraph:
                 continue
             if isinstance(decl, RetractAction):
                 continue  # retract_action only produces a factor, not a knowledge node
-            if isinstance(decl, Action) and getattr(decl, "params", None):
-                continue  # schema actions (with params) are templates, not propositions
+            # Schema actions (with params) are kept as knowledge nodes per design §5.3.
+            # They are currently unconnected (no instantiation factors yet — V1 limitation).
+            # Elaboration will generate ground instances + instantiation factors in a future version.
             node = _build_raw_node(pkg, module.name, decl, version)
             knowledge_nodes.append(node)
             name_to_raw_id[decl.name] = node.raw_node_id

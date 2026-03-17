@@ -309,6 +309,130 @@
       ]
     },
     {
+      "kind": "infer_action",
+      "knowledge_type": "action",
+      "local_canonical_id": "lcn_4106b1710e46373e",
+      "member_raw_node_ids": [
+        "raw_c2ce6f83402d503f"
+      ],
+      "metadata": null,
+      "package": "galileo_falling_bodies",
+      "parameters": [
+        {
+          "constraint": "unknown",
+          "name": "env"
+        },
+        {
+          "constraint": "unknown",
+          "name": "law"
+        }
+      ],
+      "representative_content": "在 {env} 中暂时接受 {law}： 轻球天然比重球下落更慢。于是当轻球与重球绑在一起时， 轻球应当拖慢重球，复合体 HL 的下落速度应慢于单独的重球 H。\n",
+      "source_refs": [
+        {
+          "knowledge_name": "deduce_drag_effect",
+          "module": "reasoning",
+          "package": "galileo_falling_bodies",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "kind": "infer_action",
+      "knowledge_type": "action",
+      "local_canonical_id": "lcn_66d50713e601243e",
+      "member_raw_node_ids": [
+        "raw_a990b93dacd62d5c"
+      ],
+      "metadata": null,
+      "package": "galileo_falling_bodies",
+      "parameters": [
+        {
+          "constraint": "unknown",
+          "name": "prediction_a"
+        },
+        {
+          "constraint": "unknown",
+          "name": "prediction_b"
+        }
+      ],
+      "representative_content": "比较 {prediction_a} 与 {prediction_b}。 这两条结论针对同一个绑球系统、同一时刻、同一环境， 却分别断言“更慢”和“更快”，因此不能同时为真。 这暴露出亚里士多德落体定律在该思想实验中的内在矛盾。\n",
+      "source_refs": [
+        {
+          "knowledge_name": "expose_mutual_exclusion",
+          "module": "reasoning",
+          "package": "galileo_falling_bodies",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "kind": "infer_action",
+      "knowledge_type": "action",
+      "local_canonical_id": "lcn_d6c7bca7e8a06693",
+      "member_raw_node_ids": [
+        "raw_fdb785aa74b1f866"
+      ],
+      "metadata": null,
+      "package": "galileo_falling_bodies",
+      "parameters": [
+        {
+          "constraint": "unknown",
+          "name": "gradient"
+        },
+        {
+          "constraint": "unknown",
+          "name": "observation"
+        }
+      ],
+      "representative_content": "由 {gradient} 可知，介质越稀薄，轻重物体的速度差异越小。 因而 {observation} 更应被解释为介质阻力造成的表象， 而不是重量本身决定自由落体速度的证据。\n",
+      "source_refs": [
+        {
+          "knowledge_name": "explain_everyday_observation",
+          "module": "reasoning",
+          "package": "galileo_falling_bodies",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
+      "kind": "infer_action",
+      "knowledge_type": "action",
+      "local_canonical_id": "lcn_422bad5b75dd2df5",
+      "member_raw_node_ids": [
+        "raw_535db8ea513c6aa0"
+      ],
+      "metadata": null,
+      "package": "galileo_falling_bodies",
+      "parameters": [
+        {
+          "constraint": "unknown",
+          "name": "confound"
+        },
+        {
+          "constraint": "unknown",
+          "name": "env"
+        },
+        {
+          "constraint": "unknown",
+          "name": "support"
+        },
+        {
+          "constraint": "unknown",
+          "name": "verdict"
+        }
+      ],
+      "representative_content": "如果 {verdict}，并且 {confound}，再加上 {support}， 那么在 {env} 这一无空气阻力的极限条件下， 最合理的预测是：不同重量的物体应以相同速率下落。\n",
+      "source_refs": [
+        {
+          "knowledge_name": "synthesize_equal_fall_prediction",
+          "module": "reasoning",
+          "package": "galileo_falling_bodies",
+          "version": "1.0.0"
+        }
+      ]
+    },
+    {
       "kind": null,
       "knowledge_type": "claim",
       "local_canonical_id": "lcn_8ca9a2b93b0e9307",
