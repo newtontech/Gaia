@@ -142,7 +142,8 @@ function buildVisGraph(
     } else if (prior != null) {
       priorLabel = ` [${prior.toFixed(2)}]`;
     }
-    const label = `${name}${priorLabel}`;
+    const shortName = name.length > 25 ? name.slice(0, 23) + "…" : name;
+    const label = `${shortName}${priorLabel}`;
 
     // Build tooltip
     const lines = [`[${n.knowledge_type}${isSchema ? " schema" : ""}] ${name}`];
@@ -160,12 +161,12 @@ function buildVisGraph(
       title: lines.join("\n"),
       color: {
         background: TYPE_COLORS[n.knowledge_type] ?? "#aaa",
-        border: isMerged ? "#faad14" : isSchema ? "#faad14" : "#333",
+        border: isMerged ? "#faad14" : isSchema ? "#faad14" : "#555",
       },
-      font: { color: "#fff", size: 11, multi: "html" },
-      shape: isSchema ? "diamond" : "box",
-      size: isSchema ? 22 : 16,
-      borderWidth: isMerged ? 4 : 2,
+      font: { color: "#fff", size: 10 },
+      shape: "box",
+      size: 14,
+      borderWidth: isSchema || isMerged ? 3 : 1,
     });
   }
 
@@ -183,16 +184,16 @@ function buildVisGraph(
 
     nodes.push({
       id: f.factor_id,
-      label: `■ ${edgeType}${cp != null ? `\np=${cp.toFixed(2)}` : ""}`,
+      label: edgeType,
       title: tooltip,
       color: {
         background: FACTOR_COLORS[f.type] ?? "#595959",
-        border: "#333",
+        border: FACTOR_COLORS[f.type] ?? "#595959",
       },
-      font: { color: "#fff", size: 9 },
+      font: { color: "#fff", size: 8 },
       shape: "box",
-      size: 8,
-      borderWidth: 1,
+      size: 6,
+      borderWidth: 0,
     });
 
     for (const p of f.premises) {
@@ -200,7 +201,7 @@ function buildVisGraph(
         id: `${p}->${f.factor_id}`,
         from: p,
         to: f.factor_id,
-        arrows: "to",
+        arrows: "",
         color: { color: "#595959" },
       });
     }
@@ -209,7 +210,7 @@ function buildVisGraph(
         id: `${c}->${f.factor_id}:ctx`,
         from: c,
         to: f.factor_id,
-        arrows: "to",
+        arrows: "",
         color: { color: "#d9d9d9" },
         dashes: true,
       });
@@ -234,15 +235,23 @@ const LAYOUT_OPTIONS = {
       enabled: true,
       direction: "UD",
       sortMethod: "directed",
-      levelSeparation: 60,
-      nodeSpacing: 150,
-      treeSpacing: 100,
+      levelSeparation: 50,
+      nodeSpacing: 160,
+      treeSpacing: 80,
+      blockShifting: true,
+      edgeMinimization: true,
+      parentCentralization: true,
     },
   },
   physics: { enabled: false },
   interaction: { hover: true, tooltipDelay: 100, zoomView: true, dragView: true, dragNodes: true },
-  nodes: { borderWidth: 2, borderWidthSelected: 3 },
-  edges: { smooth: { type: "cubicBezier", roundness: 0.4 }, arrows: { to: { scaleFactor: 0.5 } }, font: { size: 9 } },
+  nodes: { borderWidth: 1, borderWidthSelected: 3 },
+  edges: {
+    smooth: { type: "cubicBezier", forceDirection: "vertical", roundness: 0.3 },
+    arrows: { to: { scaleFactor: 0.4 } },
+    font: { size: 8, color: "#999" },
+    color: { opacity: 0.7 },
+  },
 };
 
 // ── Components ──
@@ -517,8 +526,8 @@ export function GraphIRViewer() {
           {Object.entries(TYPE_COLORS).map(([type, color]) => (
             <span key={type}><Tag color={color}>{type}</Tag></span>
           ))}
-          <Tag style={{ background: "#595959", color: "#fff", border: "none" }}>■ factor</Tag>
-          <Typography.Text type="secondary">solid = premise · dashed = context · gold border = schema/merged</Typography.Text>
+          <Tag style={{ background: "#595959", color: "#fff", border: "none" }}>● factor</Tag>
+          <Typography.Text type="secondary">solid = premise · dashed = context · thick gold border = schema/merged</Typography.Text>
         </div>
       </Card>
 
