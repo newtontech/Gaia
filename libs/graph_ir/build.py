@@ -72,12 +72,32 @@ def build_raw_graph(pkg: Package) -> RawGraph:
             name_to_raw_id[decl.name] = node.raw_node_id
             decl_obj_to_raw_id[id(decl)] = node.raw_node_id
 
+    # Resolve Ref declarations: map ref name → raw_node_id (or ext: placeholder)
+    local_module_names = {m.name for m in pkg.loaded_modules}
     for module in pkg.loaded_modules:
         for decl in module.knowledge:
-            if isinstance(decl, Ref) and decl._resolved is not None:
+            if not isinstance(decl, Ref):
+                continue
+            # Already resolved via _resolved pointer
+            if decl._resolved is not None:
                 target_raw_id = decl_obj_to_raw_id.get(id(decl._resolved))
                 if target_raw_id is not None:
                     name_to_raw_id[decl.name] = target_raw_id
+                    continue
+            # Try local resolution: target might be "module.name" within this package
+            if "." in decl.target:
+                target_module, target_name = decl.target.split(".", 1)
+                if target_module in local_module_names and target_name in name_to_raw_id:
+                    name_to_raw_id[decl.name] = name_to_raw_id[target_name]
+                    continue
+                # Cross-package ref: register as external placeholder
+                if target_module not in local_module_names:
+                    ext_id = f"ext:{decl.target}"
+                    name_to_raw_id[decl.name] = ext_id
+                    continue
+            # Bare name fallback (already in name_to_raw_id from first pass)
+            if decl.name not in name_to_raw_id and decl.target in name_to_raw_id:
+                name_to_raw_id[decl.name] = name_to_raw_id[decl.target]
 
     # Build action lookup for elaboration
     action_decls: dict[str, Action] = {}
@@ -191,13 +211,19 @@ def build_singleton_local_graph(raw_graph: RawGraph) -> CanonicalizationResult:
             )
         )
 
+    def _map_id(node_id: str) -> str:
+        """Map raw ID to local canonical ID, preserving ext: placeholders."""
+        if node_id.startswith("ext:"):
+            return node_id
+        return raw_to_local[node_id]
+
     local_factors = [
         FactorNode(
             factor_id=f.factor_id,
             type=f.type,
-            premises=[raw_to_local[node_id] for node_id in f.premises],
-            contexts=[raw_to_local[node_id] for node_id in f.contexts],
-            conclusion=raw_to_local[f.conclusion],
+            premises=[_map_id(node_id) for node_id in f.premises],
+            contexts=[_map_id(node_id) for node_id in f.contexts],
+            conclusion=_map_id(f.conclusion),
             source_ref=f.source_ref,
             metadata=f.metadata,
         )

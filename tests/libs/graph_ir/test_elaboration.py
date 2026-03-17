@@ -323,7 +323,7 @@ def test_newton_fixture_builds():
     raw = build_raw_graph(pkg)
 
     assert len(raw.knowledge_nodes) == 20
-    assert len(raw.factor_nodes) == 8
+    assert len(raw.factor_nodes) == 11  # 4 instantiation + 5 reasoning + 1 equiv + 1 mutex
 
     types = {n.knowledge_type for n in raw.knowledge_nodes}
     assert "claim" in types

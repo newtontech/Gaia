@@ -27,6 +27,22 @@ def _generate_gcn_id(content: str, knowledge_type: str, counter: int) -> str:
     return f"gcn_{digest[:16]}"
 
 
+def _build_ext_resolver(global_graph: GlobalGraph) -> dict[str, str]:
+    """Build a mapping from ext:package.knowledge_name → gcn_id.
+
+    Uses source_knowledge_names stored in GlobalCanonicalNode metadata
+    during canonicalization.
+    """
+    ext_to_gcn: dict[str, str] = {}
+    for node in global_graph.knowledge_nodes:
+        # Each global node stores which (package, knowledge_name) pairs it represents
+        source_names = (node.metadata or {}).get("source_knowledge_names", [])
+        for entry in source_names:
+            # entry format: "package.knowledge_name"
+            ext_to_gcn[f"ext:{entry}"] = node.global_canonical_id
+    return ext_to_gcn
+
+
 async def canonicalize_package(
     local_graph: LocalCanonicalGraph,
     local_params: LocalParameterization,
@@ -41,7 +57,8 @@ async def canonicalize_package(
     - match_existing: bind to existing GlobalCanonicalNode
     - create_new: create new GlobalCanonicalNode
 
-    Returns CanonicalizationResult with bindings and new/matched nodes.
+    Then lift local factors to global graph, resolving ext: cross-package
+    references against existing global nodes.
     """
     bindings: list[CanonicalBinding] = []
     new_global_nodes: list[GlobalCanonicalNode] = []
@@ -61,6 +78,10 @@ async def canonicalize_package(
             embedding_model=embedding_model,
         )
 
+        # Derive source knowledge_name for ext: resolution later
+        source_name = node.source_refs[0].knowledge_name if node.source_refs else ""
+        source_entry = f"{local_graph.package}.{source_name}"
+
         if match is not None:
             gcn_id, score = match
             bindings.append(
@@ -76,7 +97,6 @@ async def canonicalize_package(
             )
             matched_global_nodes.append(gcn_id)
 
-            # Update existing node's membership
             existing_node = global_graph.node_index.get(gcn_id)
             if existing_node is not None:
                 existing_node.member_local_nodes.append(
@@ -89,6 +109,13 @@ async def canonicalize_package(
                 pkg_ref = PackageRef(package=local_graph.package, version=local_graph.version)
                 if pkg_ref not in existing_node.provenance:
                     existing_node.provenance.append(pkg_ref)
+                # Add source_knowledge_name for ext: resolution
+                meta = existing_node.metadata or {}
+                names = meta.get("source_knowledge_names", [])
+                if source_entry not in names:
+                    names.append(source_entry)
+                meta["source_knowledge_names"] = names
+                existing_node.metadata = meta
         else:
             gcn_id = _generate_gcn_id(
                 content,
@@ -109,7 +136,10 @@ async def canonicalize_package(
                     )
                 ],
                 provenance=[PackageRef(package=local_graph.package, version=local_graph.version)],
-                metadata=node.metadata,
+                metadata={
+                    **(node.metadata or {}),
+                    "source_knowledge_names": [source_entry],
+                },
             )
             new_global_nodes.append(gcn)
             existing_nodes.append(gcn)
@@ -126,8 +156,18 @@ async def canonicalize_package(
             )
 
     # ── Step 5: Factor Integration ──
-    # Lift local factors to global graph, replacing lcn_ IDs with gcn_ IDs.
+    # Build ID resolver: lcn_ → gcn_ for local nodes, ext: → gcn_ for cross-package
     lcn_to_gcn = {b.local_canonical_id: b.global_canonical_id for b in bindings}
+
+    # Rebuild ext: resolver including newly created nodes
+    temp_graph = GlobalGraph(knowledge_nodes=list(global_graph.knowledge_nodes) + new_global_nodes)
+    ext_to_gcn = _build_ext_resolver(temp_graph)
+
+    def _resolve_id(ref_id: str) -> str | None:
+        if ref_id.startswith("ext:"):
+            return ext_to_gcn.get(ref_id)
+        return lcn_to_gcn.get(ref_id)
+
     global_factors: list[FactorNode] = []
     unresolved: list[str] = []
 
@@ -135,7 +175,7 @@ async def canonicalize_package(
         premises_gcn = []
         all_resolved = True
         for p in factor.premises:
-            gcn_id = lcn_to_gcn.get(p)
+            gcn_id = _resolve_id(p)
             if gcn_id is not None:
                 premises_gcn.append(gcn_id)
             else:
@@ -144,12 +184,11 @@ async def canonicalize_package(
 
         contexts_gcn = []
         for c in factor.contexts:
-            gcn_id = lcn_to_gcn.get(c)
+            gcn_id = _resolve_id(c)
             if gcn_id is not None:
                 contexts_gcn.append(gcn_id)
-            # contexts are optional — don't mark as unresolved
 
-        conclusion_gcn = lcn_to_gcn.get(factor.conclusion)
+        conclusion_gcn = _resolve_id(factor.conclusion)
         if conclusion_gcn is None:
             all_resolved = False
             unresolved.append(factor.conclusion)
