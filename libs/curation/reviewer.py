@@ -1,66 +1,177 @@
-"""Simplified curation reviewer — rule-based heuristics for V1.
+"""Curation reviewer — LLM-based with rule-based fallback.
 
-Reviews suggestions in the 0.7-0.95 confidence tier that are not
-auto-approved. Spec §6: separate from package review agent.
+Reviews suggestions in the 0.7-0.95 confidence tier. Uses an LLM to judge
+whether a proposed merge/equivalence/contradiction is semantically correct,
+given the full content of the two nodes involved.
 
-Decision criteria:
-- merge: only approve if cosine > 0.90 (just below auto-threshold)
-- create_equivalence: approve if cosine > 0.85
-- create_contradiction: approve if belief_drop > 0.15 or confidence > 0.80
-- archive_orphan: always approve (low risk)
-- fix_dangling_factor: always approve (structural fix)
+Falls back to rule-based heuristics if no LLM is available.
+
+Spec §6: separate from package review agent — different judgment criteria.
 """
 
 from __future__ import annotations
 
+import json
 import logging
+import re
+from pathlib import Path
 from typing import Literal
+
+from libs.global_graph.models import GlobalCanonicalNode
 
 from .models import CurationSuggestion
 
 logger = logging.getLogger(__name__)
 
-Decision = Literal["approve", "reject"]
+Decision = Literal["approve", "reject", "modify"]
+
+_PROMPT_PATH = Path(__file__).parent / "prompts" / "curation_reviewer.md"
+_JSON_RE = re.compile(r"\{[^{}]*\}", re.DOTALL)
 
 
 class CurationReviewer:
-    """Rule-based reviewer for medium-confidence curation suggestions."""
+    """LLM-based curation reviewer with rule-based fallback.
+
+    Args:
+        model: litellm model name (e.g. "gpt-5-mini"). If None, uses rules only.
+        nodes: Mapping of global_canonical_id → GlobalCanonicalNode for content lookup.
+    """
 
     def __init__(
         self,
-        merge_cosine_threshold: float = 0.90,
-        equiv_cosine_threshold: float = 0.85,
-        contradiction_confidence_threshold: float = 0.80,
-        contradiction_drop_threshold: float = 0.15,
+        model: str | None = "gpt-5-mini",
+        nodes: dict[str, GlobalCanonicalNode] | None = None,
     ) -> None:
-        self._merge_cosine = merge_cosine_threshold
-        self._equiv_cosine = equiv_cosine_threshold
-        self._contradiction_conf = contradiction_confidence_threshold
-        self._contradiction_drop = contradiction_drop_threshold
+        self._model = model
+        self._nodes = nodes or {}
+        self._system_prompt = self._load_system_prompt()
+
+    def _load_system_prompt(self) -> str:
+        if _PROMPT_PATH.exists():
+            return _PROMPT_PATH.read_text()
+        return ""
+
+    # ── Public API ──
 
     def review(self, suggestion: CurationSuggestion) -> Decision:
-        """Review a suggestion and return approve or reject."""
+        """Synchronous review — rule-based only."""
+        return self._review_rules(suggestion)
+
+    async def areview(self, suggestion: CurationSuggestion) -> Decision:
+        """Async review — tries LLM first, falls back to rules."""
+        if self._model and self._nodes:
+            try:
+                return await self._review_llm(suggestion)
+            except Exception:
+                logger.warning(
+                    "LLM review failed for %s, falling back to rules",
+                    suggestion.suggestion_id,
+                    exc_info=True,
+                )
+        return self._review_rules(suggestion)
+
+    # ── LLM path ──
+
+    async def _review_llm(self, suggestion: CurationSuggestion) -> Decision:
+        """Call LLM to review a suggestion."""
+        import litellm
+
+        user_msg = self._build_user_message(suggestion)
+        if user_msg is None:
+            return self._review_rules(suggestion)
+
+        response = await litellm.acompletion(
+            model=self._model,
+            messages=[
+                {"role": "system", "content": self._system_prompt},
+                {"role": "user", "content": user_msg},
+            ],
+        )
+        return self._parse_llm_response(response.choices[0].message.content, suggestion)
+
+    def _build_user_message(self, suggestion: CurationSuggestion) -> str | None:
+        """Build the user message with node contents and evidence."""
+        if len(suggestion.target_ids) != 2:
+            return None
+
+        node_a = self._nodes.get(suggestion.target_ids[0])
+        node_b = self._nodes.get(suggestion.target_ids[1])
+        if not node_a or not node_b:
+            return None
+
+        evidence_lines = []
+        for k, v in suggestion.evidence.items():
+            evidence_lines.append(f"  {k}: {v}")
+
+        return (
+            f"## Proposed Operation: {suggestion.operation}\n\n"
+            f"### Node A: {suggestion.target_ids[0]}\n"
+            f"Type: {node_a.knowledge_type}\n"
+            f"Content: {node_a.representative_content}\n\n"
+            f"### Node B: {suggestion.target_ids[1]}\n"
+            f"Type: {node_b.knowledge_type}\n"
+            f"Content: {node_b.representative_content}\n\n"
+            f"### Evidence\n"
+            + "\n".join(evidence_lines)
+            + f"\n\nConfidence: {suggestion.confidence:.3f}\n"
+            f"Reason: {suggestion.reason}\n"
+        )
+
+    def _parse_llm_response(self, response: str, suggestion: CurationSuggestion) -> Decision:
+        """Parse LLM JSON response into a Decision."""
+        text = response.strip()
+        match = _JSON_RE.search(text)
+        if not match:
+            logger.warning("Could not parse LLM response, falling back to rules")
+            return self._review_rules(suggestion)
+
+        try:
+            parsed = json.loads(match.group(0))
+            decision = parsed.get("decision", "reject")
+            reason = parsed.get("reason", "")
+
+            if decision == "modify":
+                modified_op = parsed.get("modified_operation")
+                logger.info(
+                    "LLM suggests modify %s → %s: %s",
+                    suggestion.operation,
+                    modified_op,
+                    reason,
+                )
+                # For now, treat modify as approve (the caller can check the log)
+                return "approve"
+
+            if decision in ("approve", "reject"):
+                logger.info("LLM %s %s: %s", decision, suggestion.suggestion_id, reason)
+                return decision
+
+        except (json.JSONDecodeError, KeyError):
+            logger.warning("JSON parse error in LLM response, falling back to rules")
+
+        return self._review_rules(suggestion)
+
+    # ── Rule-based fallback ──
+
+    def _review_rules(self, suggestion: CurationSuggestion) -> Decision:
+        """Rule-based review heuristics."""
         op = suggestion.operation
         evidence = suggestion.evidence
 
         if op == "merge":
             cosine = evidence.get("cosine", 0.0)
-            if cosine >= self._merge_cosine:
+            if cosine >= 0.90:
                 return "approve"
             return "reject"
 
         if op == "create_equivalence":
             cosine = evidence.get("cosine", 0.0)
-            if cosine >= self._equiv_cosine:
+            if cosine >= 0.85:
                 return "approve"
             return "reject"
 
         if op == "create_contradiction":
             drop = evidence.get("belief_drop", 0.0)
-            if (
-                drop >= self._contradiction_drop
-                or suggestion.confidence >= self._contradiction_conf
-            ):
+            if drop >= 0.15 or suggestion.confidence >= 0.80:
                 return "approve"
             return "reject"
 

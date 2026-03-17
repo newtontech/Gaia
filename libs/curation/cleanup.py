@@ -89,6 +89,7 @@ async def execute_cleanup(
     nodes: dict[str, GlobalCanonicalNode],
     factors: list[FactorNode],
     audit_log: AuditLog,
+    reviewer_model: str | None = None,
 ) -> CurationResult:
     """Execute a curation plan: auto-approve high confidence, skip low confidence.
 
@@ -97,6 +98,8 @@ async def execute_cleanup(
         nodes: Global nodes by ID (mutable — will be updated in place).
         factors: All factors (mutable — will be updated in place).
         audit_log: Audit log to record operations.
+        reviewer_model: LLM model for reviewing medium-confidence suggestions.
+            If None, uses rule-based fallback only.
 
     Returns:
         CurationResult with executed and skipped suggestions.
@@ -114,11 +117,11 @@ async def execute_cleanup(
         else:
             skipped.append(suggestion)
 
-    # needs_review items go through simplified rule-based reviewer
-    reviewer = CurationReviewer()
+    # needs_review items go through LLM reviewer (with rule-based fallback)
+    reviewer = CurationReviewer(model=reviewer_model, nodes=nodes)
     for suggestion in plan.needs_review:
-        decision = reviewer.review(suggestion)
-        if decision == "approve":
+        decision = await reviewer.areview(suggestion)
+        if decision in ("approve", "modify"):
             entry = _execute_suggestion(suggestion, nodes, factors)
             if entry is not None:
                 audit_log.append(entry)

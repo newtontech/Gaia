@@ -76,6 +76,7 @@ async def run_curation(
     skip_conflict_detection: bool = False,
     bp_max_iterations: int = 50,
     bp_damping: float = 0.5,
+    reviewer_model: str | None = None,
 ) -> CurationResult:
     """Run the full curation pipeline.
 
@@ -177,7 +178,7 @@ async def run_curation(
 
     audit_log = AuditLog()
     mutable_factors = list(all_factors)
-    result = await execute_cleanup(plan, node_map, mutable_factors, audit_log)
+    result = await execute_cleanup(plan, node_map, mutable_factors, audit_log, reviewer_model)
     result.structure_report = structure_report
 
     # Step 7: Persist changes if any operations were executed
