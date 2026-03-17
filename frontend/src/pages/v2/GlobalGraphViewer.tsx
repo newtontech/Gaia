@@ -87,20 +87,35 @@ function buildVisGraph(graph: GlobalGraph) {
 
   for (const n of graph.knowledge_nodes) {
     const nodeId = n.global_canonical_id;
-    const sourceName = (n.metadata as Record<string, unknown>)?.source_knowledge_names as string[] | undefined;
-    const shortName = sourceName?.[0]?.split(".")?.[1] ?? nodeId.slice(4, 16);
-    const label = shortName.length > 25 ? shortName.slice(0, 23) + "..." : shortName;
+    const meta = (n.metadata ?? {}) as Record<string, unknown>;
+    const sourceNames = Array.isArray(meta.source_knowledge_names) ? meta.source_knowledge_names as string[] : [];
+    const shortName = sourceNames[0]?.split(".")?.[1] ?? nodeId.slice(4, 16);
     const pkgs = (n.provenance ?? []).map((p) => p.package);
     const isMultiPkg = pkgs.length > 1;
     const borderColor = isMultiPkg ? "#faad14" : pkgs[0] ? getPackageColor(pkgs[0]) : "#333";
 
+    // Beliefs from GlobalInferenceState
+    const prior = graph.inference_state?.node_priors?.[nodeId];
+    const belief = graph.inference_state?.node_beliefs?.[nodeId];
+    let beliefLabel = "";
+    if (prior != null && belief != null) {
+      const delta = belief - prior;
+      const arrow = delta > 0.01 ? "↑" : delta < -0.01 ? "↓" : "=";
+      beliefLabel = `\n${prior.toFixed(2)} → ${belief.toFixed(2)} ${arrow}`;
+    }
+
+    const truncName = shortName.length > 25 ? shortName.slice(0, 23) + "..." : shortName;
+    const label = `${truncName}${beliefLabel}`;
+
     const tooltip = [
       `[${n.knowledge_type}] ${shortName}`,
       n.representative_content.trim().slice(0, 200),
+      prior != null ? `prior: ${prior.toFixed(3)}` : "",
+      belief != null ? `belief: ${belief.toFixed(3)}` : "",
       `Packages: ${pkgs.join(", ")}`,
       `Members: ${n.member_local_nodes?.length ?? 0}`,
       `ID: ${nodeId}`,
-    ].join("\n");
+    ].filter(Boolean).join("\n");
 
     nodes.push({
       id: nodeId,
@@ -135,17 +150,17 @@ function buildVisGraph(graph: GlobalGraph) {
       borderWidth: 1,
     });
 
-    for (const p of f.premises) {
+    for (let pi = 0; pi < f.premises.length; pi++) {
       edges.push({
-        id: `${p}->${f.factor_id}`,
-        from: p,
+        id: `${f.factor_id}:p${pi}:${f.premises[pi]}`,
+        from: f.premises[pi],
         to: f.factor_id,
         arrows: "",
         color: { color: "#595959" },
       });
     }
     edges.push({
-      id: `${f.factor_id}->${f.conclusion}`,
+      id: `${f.factor_id}:conclusion`,
       from: f.factor_id,
       to: f.conclusion,
       arrows: "to",
@@ -253,6 +268,29 @@ function NodeDrawer({
           <Typography.Paragraph style={{ whiteSpace: "pre-wrap", marginTop: 12 }}>
             {kNode.representative_content}
           </Typography.Paragraph>
+          {(() => {
+            const p = graph.inference_state?.node_priors?.[nodeId];
+            const b = graph.inference_state?.node_beliefs?.[nodeId];
+            if (p == null) return null;
+            return (
+              <div style={{ marginTop: 8 }}>
+                <Typography.Text strong>Prior: {p.toFixed(3)}</Typography.Text>
+                {b != null && (
+                  <>
+                    <Typography.Text strong style={{ marginLeft: 16 }}>
+                      Belief: {b.toFixed(3)}
+                    </Typography.Text>
+                    <Typography.Text
+                      style={{ marginLeft: 8 }}
+                      type={b > p + 0.01 ? "success" : b < p - 0.01 ? "danger" : "secondary"}
+                    >
+                      ({(b - p > 0 ? "+" : "")}{(b - p).toFixed(3)})
+                    </Typography.Text>
+                  </>
+                )}
+              </div>
+            );
+          })()}
 
           <Typography.Title level={5} style={{ marginTop: 16 }}>
             Member Local Nodes
@@ -270,10 +308,10 @@ function NodeDrawer({
             ]}
           />
 
-          {kNode.metadata?.source_knowledge_names && (
+          {Array.isArray((kNode.metadata as Record<string, unknown>)?.source_knowledge_names) && (
             <div style={{ marginTop: 12 }}>
               <Typography.Text type="secondary">
-                Sources: {(kNode.metadata.source_knowledge_names as string[]).join(", ")}
+                Sources: {((kNode.metadata as Record<string, unknown>).source_knowledge_names as string[]).join(", ")}
               </Typography.Text>
             </div>
           )}

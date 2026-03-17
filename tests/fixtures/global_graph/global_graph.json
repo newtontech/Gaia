@@ -944,10 +944,141 @@
     }
   ],
   "inference_state": {
-    "factor_parameters": {},
+    "factor_parameters": {
+      "f_104daf2c484a37da": {
+        "conditional_probability": 0.95
+      },
+      "f_118a2cfa1abb5387": {
+        "conditional_probability": 0.94
+      },
+      "f_1eeb41a484899eb3": {
+        "conditional_probability": 0.9
+      },
+      "f_2cc0ca127bd8157a": {
+        "conditional_probability": 0.93
+      },
+      "f_41fb903b71ed857a": {
+        "conditional_probability": 0.86
+      },
+      "f_49ced7d9952d3035": {
+        "conditional_probability": 0.93
+      },
+      "f_51b81b082af3b76d": {
+        "conditional_probability": 0.94
+      },
+      "f_8f47cebee20b99e6": {
+        "conditional_probability": 1.0
+      },
+      "f_982b333aad98d3c6": {
+        "conditional_probability": 1.0
+      },
+      "f_a056cedf6d046de2": {
+        "conditional_probability": 0.97
+      },
+      "f_a4589ec00285ef81": {
+        "conditional_probability": 0.97
+      },
+      "f_b2ce4097cc6a91b5": {
+        "conditional_probability": 1.0
+      },
+      "f_b98868837751bace": {
+        "conditional_probability": 0.88
+      },
+      "f_cb6667814c366dd8": {
+        "conditional_probability": 0.95
+      },
+      "f_d94bc1f0e6542479": {
+        "conditional_probability": 0.95
+      },
+      "f_f882aaa2d884dec2": {
+        "conditional_probability": 0.8
+      }
+    },
     "graph_hash": "",
-    "node_beliefs": {},
-    "node_priors": {},
+    "node_beliefs": {
+      "gcn_05b23dc2ff808953": 0.999,
+      "gcn_0ae2e548bdc3b146": 0.999,
+      "gcn_10cfe90023ee6ca7": 0.998078,
+      "gcn_11dd1e4d9d82de3b": 0.654003,
+      "gcn_130a415b91c2e8ac": 0.858841,
+      "gcn_2060a151042afb16": 0.716173,
+      "gcn_294abfafb84132f1": 0.793029,
+      "gcn_346c911b63389c15": 0.999616,
+      "gcn_34cabc42c0253a55": 0.818182,
+      "gcn_367e2cc5fe5a38ac": 0.740525,
+      "gcn_3f9a7c3297a1962f": 0.899172,
+      "gcn_4255d77b94766b02": 0.009289,
+      "gcn_43636ff1544de453": 0.723347,
+      "gcn_4c530ed4b621d5b7": 0.941748,
+      "gcn_542a4fb5cca1b069": 0.998732,
+      "gcn_58c421e2aee21da3": 0.744979,
+      "gcn_65f3592372613202": 0.406754,
+      "gcn_681d83be20157cd2": 0.755796,
+      "gcn_7363c864c1e552db": 0.495117,
+      "gcn_7a25511aa794a411": 0.5,
+      "gcn_80ac4e3e82a09318": 0.791812,
+      "gcn_893f845d67c238bb": 0.998777,
+      "gcn_8e3cb03738b170e7": 0.95,
+      "gcn_9041bd8c37476ebb": 0.838675,
+      "gcn_b6616c89da02a570": 0.574855,
+      "gcn_c19c44772bb5129c": 0.884217,
+      "gcn_c2f24a14911f9a97": 0.869159,
+      "gcn_c48405eaa729d879": 0.999,
+      "gcn_c639050dc11c8387": 0.95,
+      "gcn_c7057097844283c5": 0.41631,
+      "gcn_c72ec7157b879f55": 0.998924,
+      "gcn_cf54f2fecae97fb4": 0.998338,
+      "gcn_d02452d248c12ef9": 0.046772,
+      "gcn_f0cc0fa5de32b098": 0.886792,
+      "gcn_f3f88a94a3a009bd": 0.906347,
+      "gcn_f54a12d943826d90": 0.584783,
+      "gcn_fb9792398769ce32": 0.886792,
+      "gcn_fbd0f3e02d09f039": 0.617117,
+      "gcn_fcc107960a9eb351": 0.998807,
+      "gcn_ffc8e93d243b209e": 0.904762
+    },
+    "node_priors": {
+      "gcn_05b23dc2ff808953": 1.0,
+      "gcn_0ae2e548bdc3b146": 1.0,
+      "gcn_10cfe90023ee6ca7": 1.0,
+      "gcn_11dd1e4d9d82de3b": 0.5,
+      "gcn_130a415b91c2e8ac": 0.93,
+      "gcn_2060a151042afb16": 0.84,
+      "gcn_294abfafb84132f1": 0.95,
+      "gcn_346c911b63389c15": 1.0,
+      "gcn_34cabc42c0253a55": 0.9,
+      "gcn_367e2cc5fe5a38ac": 0.55,
+      "gcn_3f9a7c3297a1962f": 0.95,
+      "gcn_4255d77b94766b02": 0.7,
+      "gcn_43636ff1544de453": 0.6,
+      "gcn_4c530ed4b621d5b7": 0.97,
+      "gcn_542a4fb5cca1b069": 1.0,
+      "gcn_58c421e2aee21da3": 0.5,
+      "gcn_65f3592372613202": 0.5,
+      "gcn_681d83be20157cd2": 0.88,
+      "gcn_7363c864c1e552db": 0.5,
+      "gcn_7a25511aa794a411": 0.5,
+      "gcn_80ac4e3e82a09318": 0.5,
+      "gcn_893f845d67c238bb": 1.0,
+      "gcn_8e3cb03738b170e7": 0.95,
+      "gcn_9041bd8c37476ebb": 0.92,
+      "gcn_b6616c89da02a570": 0.5,
+      "gcn_c19c44772bb5129c": 0.985,
+      "gcn_c2f24a14911f9a97": 0.93,
+      "gcn_c48405eaa729d879": 1.0,
+      "gcn_c639050dc11c8387": 0.95,
+      "gcn_c7057097844283c5": 0.6,
+      "gcn_c72ec7157b879f55": 1.0,
+      "gcn_cf54f2fecae97fb4": 1.0,
+      "gcn_d02452d248c12ef9": 0.5,
+      "gcn_f0cc0fa5de32b098": 0.94,
+      "gcn_f3f88a94a3a009bd": 0.975,
+      "gcn_f54a12d943826d90": 0.5,
+      "gcn_fb9792398769ce32": 0.94,
+      "gcn_fbd0f3e02d09f039": 0.5,
+      "gcn_fcc107960a9eb351": 1.0,
+      "gcn_ffc8e93d243b209e": 0.95
+    },
     "updated_at": ""
   },
   "knowledge_nodes": [
