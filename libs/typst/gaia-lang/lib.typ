@@ -1,8 +1,11 @@
-// v1 (kept for backwards compatibility)
+// Core (shared v1 + v2)
 #import "module.typ": module, use, package, export-graph
-#import "knowledge.typ": claim as v1-claim, setting as v1-setting, question as v1-question, contradiction, equivalence
+
+// v1
+#import "knowledge.typ": claim, setting, question, contradiction, equivalence
 #import "chain.typ": chain
 
-// v2
-#import "declarations.typ": claim, setting, question, observation, claim_relation
-#import "tactics.typ": premise, derive, contradict, equate
+// v2 — import directly from declarations.typ / tactics.typ
+// Not re-exported here to avoid shadowing v1 names.
+// Usage: #import "declarations.typ": claim, setting, question, observation, claim_relation
+//        #import "tactics.typ": premise, derive, contradict, equate

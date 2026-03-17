@@ -1,4 +1,4 @@
-#import "../../../../libs/typst/gaia-lang/lib.typ": *
+#import "../../../../libs/typst/gaia-lang/v2.typ": *
 
 #module("follow_up", title: "后续问题 — 未来研究")
 

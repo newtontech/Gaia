@@ -1,4 +1,4 @@
-#import "../../../../libs/typst/gaia-lang/lib.typ": *
+#import "../../../../libs/typst/gaia-lang/v2.typ": *
 
 #module("setting", title: "背景与假设")
 

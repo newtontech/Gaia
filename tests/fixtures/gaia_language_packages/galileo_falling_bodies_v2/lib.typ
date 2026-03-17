@@ -1,4 +1,4 @@
-#import "../../../../libs/typst/gaia-lang/lib.typ": *
+#import "../../../../libs/typst/gaia-lang/v2.typ": *
 
 #include "motivation.typ"
 #include "setting.typ"

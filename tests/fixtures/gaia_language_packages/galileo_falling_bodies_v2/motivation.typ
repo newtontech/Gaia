@@ -1,4 +1,4 @@
-#import "../../../../libs/typst/gaia-lang/lib.typ": *
+#import "../../../../libs/typst/gaia-lang/v2.typ": *
 
 #module("motivation", title: "研究动机 — 为什么要做这项研究")
 

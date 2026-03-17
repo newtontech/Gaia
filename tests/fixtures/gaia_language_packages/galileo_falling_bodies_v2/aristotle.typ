@@ -1,4 +1,4 @@
-#import "../../../../libs/typst/gaia-lang/lib.typ": *
+#import "../../../../libs/typst/gaia-lang/v2.typ": *
 
 #module("aristotle", title: "亚里士多德学说 — 即将被挑战的先验知识")
 
