@@ -12,6 +12,7 @@ def test_established_claims():
     graph = load_typst_package(GALILEO_V2)
     state = analyze_proof_state(graph)
     established = {d["name"] for d in state["established"]}
+    assert "heavier_falls_faster" in established
     assert "tied_balls_contradiction" in established
     assert "air_resistance_is_confound" in established
     assert "vacuum_prediction" in established
@@ -41,12 +42,11 @@ def test_questions_detected():
     assert "follow_up_question" in question_names
 
 
-def test_holes_detected():
-    """heavier_falls_faster is a claim without proof, used as premise."""
+def test_no_holes_in_complete_package():
+    """All claims have proofs, so there should be no holes."""
     graph = load_typst_package(GALILEO_V2)
     state = analyze_proof_state(graph)
-    hole_names = {d["name"] for d in state["holes"]}
-    assert "heavier_falls_faster" in hole_names
+    assert len(state["holes"]) == 0
 
 
 def test_no_false_holes():
@@ -63,4 +63,4 @@ def test_proof_state_format_string():
     state = analyze_proof_state(graph)
     report = state["report"]
     assert "established" in report.lower() or "\u2713" in report
-    assert "hole" in report.lower() or "?" in report
+    assert "axiom" in report.lower() or "\u25cb" in report
