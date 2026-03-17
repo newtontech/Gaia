@@ -6,6 +6,7 @@
 | 日期 | 2026-03-12 |
 | 状态 | **Draft — foundation design** |
 | 关联文档 | [language/gaia-language-spec.md](language/gaia-language-spec.md), [language/gaia-language-design.md](language/gaia-language-design.md), [review/publish-pipeline.md](review/publish-pipeline.md), [theory/inference-theory.md](theory/inference-theory.md), [bp-on-graph-ir.md](bp-on-graph-ir.md) — BP on Graph IR, [server/storage-schema.md](server/storage-schema.md) |
+| V1 实现 specs | [../../superpowers/specs/2026-03-17-simplified-global-canonicalization-design.md](../../superpowers/specs/2026-03-17-simplified-global-canonicalization-design.md) — 简化版 Global Canonicalization, [../../superpowers/specs/2026-03-17-curation-service-design.md](../../superpowers/specs/2026-03-17-curation-service-design.md) — Curation Service |
 
 ---
 
@@ -583,7 +584,42 @@ After:
 
 `FactorGraph.from_subgraph()` and `CompiledFactorGraph` become unnecessary once the canonical graph layers are the canonical input to BP.
 
-## 11. Open Questions
+## 11. V1 Implementation Status
+
+### 11.1 Implemented
+
+| 功能 | 状态 | 实现位置 |
+|------|------|---------|
+| Raw graph generation (`gaia build`) | ✓ | `libs/graph_ir/build.py` |
+| Singleton local canonicalization | ✓ | `libs/graph_ir/build.py` |
+| Local parameterization derivation | ✓ | `libs/graph_ir/build.py` |
+| Elaboration (schema → ground + instantiation factor) | ✓ | `libs/graph_ir/build.py` |
+| Retraction factor generation | ✓ | `libs/graph_ir/build.py` |
+| Local BP on Graph IR | ✓ | `scripts/pipeline/run_local_bp.py` |
+| Graph IR fixture viewer (frontend) | ✓ | `frontend/src/pages/v2/GraphIRViewer.tsx` |
+| Graph IR output directory | ✓ | `graph_ir/` (was `.gaia/graph/`) |
+
+### 11.2 Next: Simplified Global Canonicalization
+
+Spec: [../../superpowers/specs/2026-03-17-simplified-global-canonicalization-design.md](../../superpowers/specs/2026-03-17-simplified-global-canonicalization-design.md)
+
+Minimal subset of §7.4: automatic identity assignment (local node → global node) at publish time via embedding similarity. Skips rebuttal cycle and probability judgments. Conservative threshold — curation corrects missed merges later.
+
+### 11.3 Next: Curation Service
+
+Spec: [../../superpowers/specs/2026-03-17-curation-service-design.md](../../superpowers/specs/2026-03-17-curation-service-design.md)
+
+Offline global graph maintenance: clustering, classification (dedup/equivalence/abstraction/induction), conflict discovery (3-level BP pipeline), structure inspection, cleanup with 3-tier auto-execution.
+
+### 11.4 Future
+
+- Complete review engine with rebuttal cycle and independent probability judgments
+- Per-premise leak (heterogeneous noisy-AND) — see [issue #150](https://github.com/SiliconEinstein/Gaia/issues/150)
+- Frozen external beliefs for local BP cross-package refs — see [issue #152](https://github.com/SiliconEinstein/Gaia/issues/152)
+- LLM-based contradiction detection (curation Level 3)
+- Abstraction / induction auto-creation in curation
+
+## 12. Open Questions
 
 1. **Graph IR serialization format** — JSON is natural for factor graph structure; YAML for human readability. Binary formats for performance.
 2. **Parameter placeholder syntax** — how to consistently represent `{X}` placeholders in content strings across packages.
