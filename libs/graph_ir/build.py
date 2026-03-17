@@ -379,6 +379,10 @@ def _build_reasoning_factor(
                     direct_refs.append(arg.ref)
                 else:
                     indirect_refs.append(arg.ref)
+            # Include the ground action node as a direct premise
+            ground_name = f"{chain.name}__apply_{step.apply}"
+            if ground_name in name_to_raw_id:
+                direct_refs.append(ground_name)
         elif isinstance(step, StepLambda):
             prev_ref = _previous_step_ref(chain, step.step)
             if prev_ref is not None and prev_ref in name_to_raw_id:

@@ -119,7 +119,8 @@
         "edge_type": "deduction"
       },
       "premises": [
-        "lcn_df66e0694c5ca5ad"
+        "lcn_df66e0694c5ca5ad",
+        "lcn_25dddf57cc6aae0d"
       ],
       "source_ref": {
         "knowledge_name": "drag_prediction_chain",
@@ -156,7 +157,8 @@
       },
       "premises": [
         "lcn_8ca9a2b93b0e9307",
-        "lcn_a95c07b51e050bfb"
+        "lcn_a95c07b51e050bfb",
+        "lcn_8c42bbb2570499b9"
       ],
       "source_ref": {
         "knowledge_name": "contradiction_chain",
@@ -230,7 +232,8 @@
         "edge_type": "deduction"
       },
       "premises": [
-        "lcn_1e3724075272f3b5"
+        "lcn_1e3724075272f3b5",
+        "lcn_645d38ebf9ed901b"
       ],
       "source_ref": {
         "knowledge_name": "confound_chain",
@@ -270,7 +273,8 @@
       "premises": [
         "lcn_148c1b8d98f495b5",
         "lcn_61197e996f3dd38a",
-        "lcn_315917e2f79d7ef7"
+        "lcn_315917e2f79d7ef7",
+        "lcn_1f43c2bad5e7676d"
       ],
       "source_ref": {
         "knowledge_name": "synthesis_chain",

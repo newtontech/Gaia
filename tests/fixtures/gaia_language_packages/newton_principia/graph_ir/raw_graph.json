@@ -82,7 +82,8 @@
       "premises": [
         "raw_d21cd1129ee676e2",
         "raw_81fe77ce96b61410",
-        "raw_f16f317dc85166ca"
+        "raw_f16f317dc85166ca",
+        "raw_3c915fc034610d2e"
       ],
       "source_ref": {
         "knowledge_name": "force_equating_chain",
@@ -100,7 +101,8 @@
         "edge_type": "deduction"
       },
       "premises": [
-        "raw_5b64f4a9054d07d0"
+        "raw_5b64f4a9054d07d0",
+        "raw_b0d48227befe5c63"
       ],
       "source_ref": {
         "knowledge_name": "mass_independence_chain",
@@ -118,7 +120,8 @@
         "edge_type": "deduction"
       },
       "premises": [
-        "raw_22c29b355b673b5b"
+        "raw_22c29b355b673b5b",
+        "raw_ab5ae71a224312fb"
       ],
       "source_ref": {
         "knowledge_name": "theoretical_contradiction_chain",
@@ -136,7 +139,8 @@
         "edge_type": "deduction"
       },
       "premises": [
-        "raw_5d0eab6f817d468a"
+        "raw_5d0eab6f817d468a",
+        "raw_992edac888b80370"
       ],
       "source_ref": {
         "knowledge_name": "two_path_rejection_chain",
