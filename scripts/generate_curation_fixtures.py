@@ -219,10 +219,10 @@ async def main():
         )
 
     # Save review traces
-    (FIXTURES_DIR / "review_traces.json").write_text(
+    (FIXTURES_DIR / "curation_review_traces.json").write_text(
         json.dumps(review_traces, indent=2, ensure_ascii=False)
     )
-    print(f"\n✓ Saved review_traces.json ({len(review_traces)} reviews)")
+    print(f"\n✓ Saved curation_review_traces.json ({len(review_traces)} reviews)")
 
     # ── Step 8: Execute cleanup (with LLM reviewer) ──
     mutable_factors = list(all_factors)
