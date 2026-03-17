@@ -11,6 +11,7 @@ router = APIRouter(prefix="/graph-ir", tags=["graph-ir"])
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 PACKAGES_DIR = _REPO_ROOT / "tests/fixtures/gaia_language_packages"
+GLOBAL_GRAPH_DIR = _REPO_ROOT / "tests/fixtures/global_graph"
 
 
 @router.get("")
@@ -59,6 +60,15 @@ def get_local_parameterization(slug: str) -> dict:
     path = PACKAGES_DIR / slug / "graph_ir" / "local_parameterization.json"
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"Parameterization not found: {slug}")
+    return json.loads(path.read_text())
+
+
+@router.get("/global")
+def get_global_graph() -> dict:
+    """Return the global canonical graph."""
+    path = GLOBAL_GRAPH_DIR / "global_graph.json"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="Global graph not found")
     return json.loads(path.read_text())
 
 

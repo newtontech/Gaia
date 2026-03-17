@@ -16,6 +16,7 @@ import { KnowledgeDetail } from "./pages/v2/KnowledgeDetail";
 import { ChainDetail } from "./pages/v2/ChainDetail";
 import { GraphViewer } from "./pages/v2/GraphViewer";
 import { GraphIRViewer } from "./pages/v2/GraphIRViewer";
+import { GlobalGraphViewer } from "./pages/v2/GlobalGraphViewer";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +50,7 @@ export default function App() {
             <Route path="v2/chains/:id" element={<ChainDetail />} />
             <Route path="v2/graph" element={<GraphViewer />} />
             <Route path="v2/graph-ir" element={<GraphIRViewer />} />
+            <Route path="v2/global-graph" element={<GlobalGraphViewer />} />
           </Route>
         </Routes>
       </BrowserRouter>
