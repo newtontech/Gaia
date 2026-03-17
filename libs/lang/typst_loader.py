@@ -42,7 +42,8 @@ def load_typst_package(pkg_path: Path) -> dict:
         pkg_path: Path to directory containing typst.toml and lib.typ.
 
     Returns:
-        Dict with keys: nodes, factors, refs, module, exports.
+        Dict with keys: nodes, factors, refs, modules, exports.
+        Also includes proof_traces and constraints for v2 packages.
         Node content is flattened to plain text strings.
     """
     pkg_path = Path(pkg_path)
@@ -60,17 +61,33 @@ def load_typst_package(pkg_path: Path) -> dict:
     raw = typst.query(str(entrypoint), "<gaia-graph>", field="value", one=True, root=str(root))
     data = json.loads(raw) if isinstance(raw, str) else raw
 
+    # Normalize hyphenated keys to snake_case
+    if "module-titles" in data:
+        data["module_titles"] = data.pop("module-titles")
+    if "proof-traces" in data:
+        data["proof_traces"] = data.pop("proof-traces")
+
     # Flatten content in nodes
     for node in data.get("nodes", []):
-        if isinstance(node.get("content"), dict):
+        if isinstance(node.get("content"), (dict, list)):
             node["content"] = _flatten_content(node["content"]).strip()
-        # Normalize ctx -> context key for downstream consumers
+        # Normalize ctx -> context key for downstream consumers (v1 compat)
         if "ctx" in node:
             node["context"] = node.pop("ctx")
 
-    # Normalize ctx -> context in factors
+    # Normalize ctx -> context in factors (v1 compat)
     for factor in data.get("factors", []):
         if "ctx" in factor:
             factor["context"] = factor.pop("ctx")
+
+    # Flatten content in proof trace steps
+    for trace in data.get("proof_traces", []):
+        for step in trace.get("steps", []):
+            if isinstance(step.get("content"), (dict, list)):
+                step["content"] = _flatten_content(step["content"]).strip()
+
+    # Ensure v2 keys exist (default to empty for v1 packages)
+    data.setdefault("proof_traces", [])
+    data.setdefault("constraints", [])
 
     return data

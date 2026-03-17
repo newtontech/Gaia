@@ -79,3 +79,56 @@ def test_expected_factor_count():
     """Galileo fixture should have ~9 factors."""
     graph = load_typst_package(GALILEO_TYPST)
     assert len(graph["factors"]) >= 6  # at minimum
+
+
+# ── v2 fixture tests ──────────────────────────────────────────────────────────
+
+GALILEO_V2 = Path("tests/fixtures/gaia_language_packages/galileo_falling_bodies_v2")
+
+
+def test_v2_load_returns_proof_traces():
+    graph = load_typst_package(GALILEO_V2)
+    assert "proof_traces" in graph
+    assert len(graph["proof_traces"]) > 0
+
+
+def test_v2_proof_trace_has_premises_and_steps():
+    graph = load_typst_package(GALILEO_V2)
+    trace = graph["proof_traces"][0]
+    assert "conclusion" in trace
+    assert "premises" in trace
+    assert "steps" in trace
+
+
+def test_v2_load_returns_constraints():
+    graph = load_typst_package(GALILEO_V2)
+    assert "constraints" in graph
+
+
+def test_v2_factor_has_no_chain_field():
+    """v2 factors come from proof blocks, not chains."""
+    graph = load_typst_package(GALILEO_V2)
+    reasoning = [f for f in graph["factors"] if f["type"] == "reasoning"]
+    assert len(reasoning) > 0
+    # v2 factors don't have chain/step fields
+    for f in reasoning:
+        assert "premise" in f
+        assert "conclusion" in f
+
+
+def test_v2_observation_node_type():
+    graph = load_typst_package(GALILEO_V2)
+    obs = [n for n in graph["nodes"] if n["type"] == "observation"]
+    assert len(obs) >= 3  # everyday_observation, medium_density, inclined_plane
+
+
+def test_v2_node_has_no_premise_field():
+    """v2 nodes don't carry premise/context — that info is in proof_traces."""
+    graph = load_typst_package(GALILEO_V2)
+    for node in graph["nodes"]:
+        assert "name" in node
+        assert "type" in node
+        assert "content" in node
+        assert "module" in node
+        assert "premise" not in node
+        assert "context" not in node
