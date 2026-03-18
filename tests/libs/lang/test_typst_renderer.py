@@ -1,10 +1,16 @@
-"""Tests for Typst → Markdown rendering."""
+"""Tests for Typst -> Markdown rendering."""
 
 from pathlib import Path
 
 from libs.lang.typst_renderer import render_typst_to_markdown
 
 GALILEO_TYPST = Path("tests/fixtures/gaia_language_packages/galileo_falling_bodies_typst")
+GALILEO_V3 = (
+    Path(__file__).parent.parent.parent
+    / "fixtures"
+    / "gaia_language_packages"
+    / "galileo_falling_bodies_v3"
+)
 
 
 def test_render_produces_nonempty_markdown():
@@ -12,29 +18,57 @@ def test_render_produces_nonempty_markdown():
     assert len(md) > 100
 
 
-def test_render_contains_module_heading():
-    md = render_typst_to_markdown(GALILEO_TYPST)
-    assert "reasoning" in md
+def test_render_v3_produces_nonempty_markdown():
+    md = render_typst_to_markdown(GALILEO_V3)
+    assert len(md) > 100
 
 
-def test_render_contains_chain_heading():
-    md = render_typst_to_markdown(GALILEO_TYPST)
-    assert "tied_balls_argument" in md
+def test_render_v3_has_knowledge_section():
+    md = render_typst_to_markdown(GALILEO_V3)
+    assert "## Knowledge" in md
 
 
-def test_render_contains_claim_content():
-    md = render_typst_to_markdown(GALILEO_TYPST)
-    assert "复合体" in md or "tied_pair_slower" in md
+def test_render_v3_has_proofs_section():
+    md = render_typst_to_markdown(GALILEO_V3)
+    assert "## Proofs" in md
 
 
-def test_render_contains_premise_annotation():
-    md = render_typst_to_markdown(GALILEO_TYPST)
-    assert "Premise" in md or "premise" in md
+def test_render_v3_has_constraints_section():
+    md = render_typst_to_markdown(GALILEO_V3)
+    assert "## Constraints" in md
 
 
-def test_render_to_file(tmp_path):
+def test_render_v3_has_questions_section():
+    md = render_typst_to_markdown(GALILEO_V3)
+    assert "## Questions" in md
+
+
+def test_render_v3_premises_appear():
+    """Premise names should appear in the Proofs section."""
+    md = render_typst_to_markdown(GALILEO_V3)
+    assert "heavier_falls_faster" in md or "heavier falls faster" in md
+
+
+def test_render_v3_no_chain_headings():
+    """v3 rendering should not contain chain headings."""
+    md = render_typst_to_markdown(GALILEO_V3)
+    assert "### Chain:" not in md
+
+
+def test_render_v3_references_section():
+    md = render_typst_to_markdown(GALILEO_V3)
+    assert "## References" in md
+
+
+def test_render_v3_contradiction_in_constraints():
+    md = render_typst_to_markdown(GALILEO_V3)
+    assert "contradiction" in md.lower()
+
+
+def test_render_v3_to_file(tmp_path):
     out = tmp_path / "package.md"
-    render_typst_to_markdown(GALILEO_TYPST, output=out)
+    render_typst_to_markdown(GALILEO_V3, output=out)
     assert out.exists()
     content = out.read_text()
-    assert "reasoning" in content
+    assert "## Proofs" in content
+    assert "## Constraints" in content
