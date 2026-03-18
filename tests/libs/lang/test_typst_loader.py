@@ -5,6 +5,12 @@ from pathlib import Path
 from libs.lang.typst_loader import load_typst_package
 
 GALILEO_TYPST = Path("tests/fixtures/gaia_language_packages/galileo_falling_bodies_typst")
+GALILEO_V3 = (
+    Path(__file__).parent.parent.parent
+    / "fixtures"
+    / "gaia_language_packages"
+    / "galileo_falling_bodies_v3"
+)
 
 
 def test_load_typst_package_returns_graph_with_nodes():
@@ -81,50 +87,52 @@ def test_expected_factor_count():
     assert len(graph["factors"]) >= 6  # at minimum
 
 
-# ── v2 fixture tests ──────────────────────────────────────────────────────────
-
-GALILEO_V2 = Path("tests/fixtures/gaia_language_packages/galileo_falling_bodies_v2")
+# ── v3 fixture tests ──────────────────────────────────────────────────────────
 
 
-def test_v2_load_returns_proof_traces():
-    graph = load_typst_package(GALILEO_V2)
-    assert "proof_traces" in graph
-    assert len(graph["proof_traces"]) > 0
+def test_v3_no_proof_traces_in_output():
+    graph = load_typst_package(GALILEO_V3)
+    assert "proof_traces" not in graph
 
 
-def test_v2_proof_trace_has_premises_and_steps():
-    graph = load_typst_package(GALILEO_V2)
-    trace = graph["proof_traces"][0]
-    assert "conclusion" in trace
-    assert "premises" in trace
-    assert "steps" in trace
+def test_v3_constraints_present():
+    graph = load_typst_package(GALILEO_V3)
+    assert len(graph["constraints"]) >= 1
+    c = graph["constraints"][0]
+    assert c["type"] == "contradiction"
 
 
-def test_v2_load_returns_constraints():
-    graph = load_typst_package(GALILEO_V2)
-    assert "constraints" in graph
+def test_v3_factors_from_premises():
+    graph = load_typst_package(GALILEO_V3)
+    vp = [f for f in graph["factors"] if f["conclusion"] == "vacuum_prediction"]
+    assert len(vp) == 1
+    assert set(vp[0]["premise"]) == {
+        "tied_balls_contradiction",
+        "air_resistance_is_confound",
+        "inclined_plane_observation",
+    }
 
 
-def test_v2_factor_has_no_chain_field():
-    """v2 factors come from proof blocks, not chains."""
-    graph = load_typst_package(GALILEO_V2)
+def test_v3_factor_has_no_chain_field():
+    """v3 factors come from premise blocks, not chains."""
+    graph = load_typst_package(GALILEO_V3)
     reasoning = [f for f in graph["factors"] if f["type"] == "reasoning"]
     assert len(reasoning) > 0
-    # v2 factors don't have chain/step fields
+    # v3 factors don't have chain/step fields
     for f in reasoning:
         assert "premise" in f
         assert "conclusion" in f
 
 
-def test_v2_observation_node_type():
-    graph = load_typst_package(GALILEO_V2)
+def test_v3_observation_node_type():
+    graph = load_typst_package(GALILEO_V3)
     obs = [n for n in graph["nodes"] if n["type"] == "observation"]
     assert len(obs) >= 3  # everyday_observation, medium_density, inclined_plane
 
 
-def test_v2_node_has_no_premise_field():
-    """v2 nodes don't carry premise/context — that info is in proof_traces."""
-    graph = load_typst_package(GALILEO_V2)
+def test_v3_node_has_no_premise_field():
+    """v3 nodes don't carry premise/context — that info is in factors."""
+    graph = load_typst_package(GALILEO_V3)
     for node in graph["nodes"]:
         assert "name" in node
         assert "type" in node

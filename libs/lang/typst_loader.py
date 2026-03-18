@@ -46,8 +46,7 @@ def load_typst_package(pkg_path: Path) -> dict:
         pkg_path: Path to directory containing typst.toml and lib.typ.
 
     Returns:
-        Dict with keys: nodes, factors, refs, modules, exports.
-        Also includes proof_traces and constraints for v2 packages.
+        Dict with keys: nodes, factors, refs, modules, exports, constraints.
         Node content is flattened to plain text strings.
     """
     pkg_path = Path(pkg_path)
@@ -68,8 +67,6 @@ def load_typst_package(pkg_path: Path) -> dict:
     # Normalize hyphenated keys to snake_case
     if "module-titles" in data:
         data["module_titles"] = data.pop("module-titles")
-    if "proof-traces" in data:
-        data["proof_traces"] = data.pop("proof-traces")
 
     # Flatten content in nodes
     for node in data.get("nodes", []):
@@ -84,14 +81,7 @@ def load_typst_package(pkg_path: Path) -> dict:
         if "ctx" in factor:
             factor["context"] = factor.pop("ctx")
 
-    # Flatten content in proof trace steps
-    for trace in data.get("proof_traces", []):
-        for step in trace.get("steps", []):
-            if isinstance(step.get("content"), (dict, list)):
-                step["content"] = _flatten_content(step["content"]).strip()
-
-    # Ensure v2 keys exist (default to empty for v1 packages)
-    data.setdefault("proof_traces", [])
+    # Ensure keys exist (default to empty for v1 packages)
     data.setdefault("constraints", [])
 
     return data
