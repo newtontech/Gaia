@@ -8,7 +8,6 @@ without proofs), and which are open questions.
 
 from __future__ import annotations
 
-NO_PROOF_TYPES = {"setting", "observation", "question"}
 RELATION_TYPES = {"contradiction", "equivalence"}
 
 
@@ -20,7 +19,7 @@ def analyze_proof_state(graph: dict) -> dict:
                constraints.
 
     Returns:
-        Dict with keys: established, axioms, holes, questions, report.
+        Dict with keys: established, axioms, holes, questions, standalone, report.
     """
     nodes = {n["name"]: n for n in graph.get("nodes", [])}
 
@@ -36,10 +35,16 @@ def analyze_proof_state(graph: dict) -> dict:
         for p in factor.get("premise", []):
             used_as_premise.add(p)
 
+    # Also count constraint `between` members as structurally referenced
+    for constraint in graph.get("constraints", []):
+        for member in constraint.get("between", []):
+            used_as_premise.add(member)
+
     established: list[dict] = []
     axioms: list[dict] = []
     holes: list[dict] = []
     questions: list[dict] = []
+    standalone: list[dict] = []
 
     for name, node in nodes.items():
         node_type = node.get("type", "")
@@ -55,15 +60,17 @@ def analyze_proof_state(graph: dict) -> dict:
             established.append(node)
         elif name in used_as_premise:
             holes.append(node)
-        # else: standalone claim, not used — could warn
+        else:
+            standalone.append(node)
 
-    report = _format_report(established, axioms, holes, questions)
+    report = _format_report(established, axioms, holes, questions, standalone)
 
     return {
         "established": established,
         "axioms": axioms,
         "holes": holes,
         "questions": questions,
+        "standalone": standalone,
         "report": report,
     }
 
@@ -73,6 +80,7 @@ def _format_report(
     axioms: list[dict],
     holes: list[dict],
     questions: list[dict],
+    standalone: list[dict] | None = None,
 ) -> str:
     lines: list[str] = []
 
@@ -98,5 +106,11 @@ def _format_report(
         lines.append("? questions:")
         for d in questions:
             lines.append(f"  {d['name']}  (open)")
+
+    if standalone:
+        lines.append("")
+        lines.append("- standalone (not referenced):")
+        for d in standalone:
+            lines.append(f"  {d['name']}  ({d.get('type', '')})")
 
     return "\n".join(lines)

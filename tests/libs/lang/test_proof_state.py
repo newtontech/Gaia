@@ -80,6 +80,43 @@ def test_no_false_holes():
     assert "medium_density_observation" not in hole_names
 
 
+def test_constraint_between_members_are_used_as_premise():
+    """Claims used only as between members of a constraint should be detected as holes."""
+    graph = {
+        "nodes": [
+            {"name": "A", "type": "claim"},
+            {"name": "B", "type": "claim"},
+            {"name": "rel", "type": "contradiction"},
+        ],
+        "factors": [],
+        "constraints": [
+            {"name": "rel", "type": "contradiction", "between": ["A", "B"]},
+        ],
+    }
+    state = analyze_proof_state(graph)
+    hole_names = {d["name"] for d in state["holes"]}
+    assert "A" in hole_names
+    assert "B" in hole_names
+    # The relation itself should be established, not a hole
+    established_names = {d["name"] for d in state["established"]}
+    assert "rel" in established_names
+
+
+def test_standalone_claims_reported():
+    """Claims not proven and not referenced should appear in standalone."""
+    graph = {
+        "nodes": [
+            {"name": "orphan", "type": "claim"},
+        ],
+        "factors": [],
+        "constraints": [],
+    }
+    state = analyze_proof_state(graph)
+    standalone_names = {d["name"] for d in state["standalone"]}
+    assert "orphan" in standalone_names
+    assert len(state["holes"]) == 0
+
+
 def test_proof_state_format_string():
     graph = load_typst_package(GALILEO_V3)
     state = analyze_proof_state(graph)

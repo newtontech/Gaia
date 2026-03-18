@@ -109,7 +109,8 @@ def render_typst_to_markdown(pkg_path: Path, output: Path | None = None) -> str:
         elif node_type == "claim" and node["name"] in factor_by_conclusion:
             proof_nodes.append(node)
         elif node_type == "claim":
-            # Claim without a factor (standalone / unproven)
+            # Claim without a factor — mark as unproven
+            node = {**node, "_unproven": True}
             knowledge_nodes.append(node)
         else:
             other_nodes.append(node)
@@ -129,6 +130,8 @@ def render_typst_to_markdown(pkg_path: Path, output: Path | None = None) -> str:
         lines.append("## Knowledge\n")
         for node in knowledge_nodes:
             label = _TYPE_LABELS.get(node["type"], node["type"])
+            if node.get("_unproven"):
+                label += " — unproven"
             content = _clean_text(node["content"])
             lines.append(f"### {node['name']} [{label}]")
             lines.append(f"> {content}\n")

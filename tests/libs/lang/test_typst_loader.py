@@ -100,6 +100,7 @@ def test_v3_constraints_present():
     assert len(graph["constraints"]) >= 1
     c = graph["constraints"][0]
     assert c["type"] == "contradiction"
+    assert set(c["between"]) == {"composite_is_slower", "composite_is_faster"}
 
 
 def test_v3_factors_from_premises():
