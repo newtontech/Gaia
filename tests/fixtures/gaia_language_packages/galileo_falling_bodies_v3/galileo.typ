@@ -20,33 +20,35 @@
 
 // ── Fine-grained tied-ball decomposition ──
 #claim("composite_is_slower")[
-  由假设，轻球天然比重球慢，轻球应拖慢重球，
-  所以复合体 HL 速度应慢于 H。
+  假设"重者下落更快"，将重球 H 与轻球 L 绑成复合体 HL：
+  轻球会拖慢重球，因此 HL 的下落速度应慢于 H 单独下落。
 ][
   #premise("heavier_falls_faster")
   #premise("thought_experiment_env")
 
-  在假设"重者更快"的前提下 @heavier-falls-faster ，
-  将轻球绑在重球上相当于附加了阻力。
-  因此复合体的速度应介于二者之间，慢于重球单独下落。
+  在"重者更快"假设下 @heavier-falls-faster ，
+  考虑绑球思想实验 @thought-experiment-env ：
+  轻球 L 的"天然速度"慢于重球 H，绑在一起后 L 起拖拽作用，
+  因此复合体 HL 的下落速度应慢于 H 单独下落。
 ]
 
 #claim("composite_is_faster")[
-  但复合体 HL 总重量大于 H，
-  按同一定律应比 H 更快。
+  假设"重者下落更快"，复合体 HL 总重量大于 H，
+  因此 HL 的下落速度应快于 H 单独下落。
 ][
   #premise("heavier_falls_faster")
   #premise("thought_experiment_env")
 
-  同样依据"重者更快" @heavier-falls-faster ，
-  复合体的总质量 = H + L > H，
-  因此预测其下落速度应比 H 更快。
+  同一假设下 @heavier-falls-faster ，
+  在绑球思想实验中 @thought-experiment-env ，
+  复合体 HL 总质量 = H + L > H，
+  按"重者更快"定律，HL 应比 H 下落更快。
 ]
 
 #claim_relation("tied_balls_contradiction",
   type: "contradiction",
   between: ("composite_is_slower", "composite_is_faster")
-)[两个预测由同一前提推出却互相矛盾，假设不自洽。]
+)["复合体比 H 慢"与"复合体比 H 快"由同一假设推出却互相矛盾，说明"重者下落更快"不自洽。]
 
 // ── Medium elimination ──
 #claim("air_resistance_is_confound")[
