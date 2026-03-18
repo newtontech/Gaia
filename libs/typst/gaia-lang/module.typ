@@ -7,9 +7,8 @@
 #let _gaia_refs = state("gaia-refs", ())
 #let _gaia_exports = state("gaia-exports", ())
 
-// v2 accumulators — tactics push tagged entries, export-graph reads final()
+// v2+ accumulators — premise tactic pushes entries, export-graph reads final()
 #let _gaia_proof_premises = state("gaia-proof-premises", ())  // (conclusion, name) pairs
-#let _gaia_proof_steps = state("gaia-proof-steps", ())        // (conclusion, step-dict) pairs
 #let _gaia_constraints = state("gaia-constraints", ())
 
 #let module(name, title: none) = {
@@ -48,24 +47,13 @@
 }
 
 #let export-graph() = context {
-  // Aggregate proof traces from flat accumulators
+  // Build factors directly from premises grouped by conclusion
   let raw_premises = _gaia_proof_premises.final()
-  let raw_steps = _gaia_proof_steps.final()
-
-  // Group by conclusion
   let conclusions = raw_premises.map(p => p.at(0)).dedup()
-  let traces = conclusions.map(c => {
+  let proof_factors = conclusions.map(c => {
     let premises = raw_premises.filter(p => p.at(0) == c).map(p => p.at(1))
-    let steps = raw_steps.filter(s => s.at(0) == c).map(s => s.at(1))
-    (conclusion: c, premises: premises, steps: steps)
-  })
-
-  // Build factors from proof traces (one noisy-AND per proven claim)
-  let proof_factors = traces.filter(t => t.premises.len() > 0).map(t => (
-    type: "reasoning",
-    premise: t.premises,
-    conclusion: t.conclusion,
-  ))
+    (type: "reasoning", premise: premises, conclusion: c)
+  }).filter(f => f.premise.len() > 0)
 
   [#metadata((
     nodes: _gaia_nodes.final(),
@@ -74,7 +62,6 @@
     modules: _gaia_modules.final(),
     module-titles: _gaia_module_titles.final(),
     exports: _gaia_exports.final(),
-    proof-traces: traces,
     constraints: _gaia_constraints.final(),
   )) <gaia-graph>]
 }
