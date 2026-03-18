@@ -1,4 +1,4 @@
-#import "module.typ": _gaia_nodes, _gaia_factors
+#import "module.typ": _gaia_nodes, _gaia_factors, _gaia_module_name
 
 // Internal: detect if we're inside a chain
 #let _chain_active = state("chain-active", false)
@@ -6,7 +6,7 @@
 #let _chain_name = state("chain-name", none)
 #let _chain_step_index = state("chain-step-index", 0)
 
-#let _register_node(name, node_type, content_text, premise, ctx) = {
+#let _register_node(name, node_type, content_text, premise, ctx, mod) = {
   _gaia_nodes.update(nodes => {
     nodes.push((
       name: name,
@@ -14,6 +14,7 @@
       content: content_text,
       premise: premise,
       ctx: ctx,
+      module: mod,
     ))
     nodes
   })
@@ -21,6 +22,7 @@
 
 #let _knowledge(name, node_type, body, premise: (), ctx: ()) = context {
   let is_chain = _chain_active.get()
+  let current_module = _gaia_module_name.get()
 
   // In chain: auto-inject previous step as first premise if no explicit premise
   let effective_premise = premise
@@ -32,7 +34,7 @@
   }
 
   // Register node
-  _register_node(name, node_type, body, effective_premise, ctx)
+  _register_node(name, node_type, body, effective_premise, ctx, current_module)
 
   // If in chain, register factor and update pipeline
   if is_chain {

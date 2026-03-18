@@ -49,11 +49,18 @@
 #let export-graph() = context {
   // Build factors directly from premises grouped by conclusion
   let raw_premises = _gaia_proof_premises.final()
+  let raw_constraints = _gaia_constraints.final()
+
+  // Get constraint names to exclude from reasoning factors —
+  // claim_relation pushes to _gaia_proof_premises for edge connectivity,
+  // but those edges belong to the constraint factor, not a reasoning factor.
+  let constraint_names = raw_constraints.map(c => c.name)
+
   let conclusions = raw_premises.map(p => p.at(0)).dedup()
   let proof_factors = conclusions.map(c => {
     let premises = raw_premises.filter(p => p.at(0) == c).map(p => p.at(1))
     (type: "reasoning", premise: premises, conclusion: c)
-  }).filter(f => f.premise.len() > 0)
+  }).filter(f => f.premise.len() > 0 and f.conclusion not in constraint_names)
 
   [#metadata((
     nodes: _gaia_nodes.final(),
@@ -62,6 +69,6 @@
     modules: _gaia_modules.final(),
     module-titles: _gaia_module_titles.final(),
     exports: _gaia_exports.final(),
-    constraints: _gaia_constraints.final(),
+    constraints: raw_constraints,
   )) <gaia-graph>]
 }
