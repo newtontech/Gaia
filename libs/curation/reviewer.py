@@ -135,6 +135,27 @@ class CurationReviewer:
                 f"Reason: {suggestion.reason}\n"
             )
 
+        # Multi-node operations (create_abstraction)
+        if len(suggestion.target_ids) >= 2:
+            member_lines = []
+            for tid in suggestion.target_ids:
+                node = self._nodes.get(tid)
+                if node:
+                    member_lines.append(
+                        f"### Member: {tid}\n"
+                        f"Type: {node.knowledge_type}\n"
+                        f"Content: {node.representative_content}\n"
+                    )
+            if not member_lines:
+                return None
+            return (
+                f"## Proposed Operation: {suggestion.operation}\n\n"
+                + "\n".join(member_lines)
+                + f"\n### Evidence\n{evidence_block}\n\n"
+                f"Confidence: {suggestion.confidence:.3f}\n"
+                f"Reason: {suggestion.reason}\n"
+            )
+
         return None
 
     def _parse_llm_response(self, response: str, suggestion: CurationSuggestion) -> Decision:
@@ -197,6 +218,11 @@ class CurationReviewer:
 
         if op in ("archive_orphan", "fix_dangling_factor"):
             return "approve"
+
+        if op == "create_abstraction":
+            if suggestion.confidence >= 0.80:
+                return "approve"
+            return "reject"
 
         logger.warning("Unknown operation for review: %s", op)
         return "reject"

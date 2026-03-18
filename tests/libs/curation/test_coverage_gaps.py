@@ -89,13 +89,17 @@ class TestReviewerMessageBuilding:
 
         reviewer = CurationReviewer(model=None, nodes=_NODES)
         s = CurationSuggestion(
-            operation="merge",
+            operation="create_abstraction",
             target_ids=["gcn_a", "gcn_b", "gcn_orphan"],
             confidence=0.90,
-            reason="",
+            reason="shared content",
             evidence={},
         )
-        assert reviewer._build_user_message(s) is None
+        msg = reviewer._build_user_message(s)
+        assert msg is not None
+        assert "create_abstraction" in msg
+        assert "gcn_a" in msg
+        assert "gcn_orphan" in msg
 
     def test_missing_node_returns_none(self):
         from libs.curation.reviewer import CurationReviewer
