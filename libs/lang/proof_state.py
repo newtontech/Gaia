@@ -1,14 +1,15 @@
-"""Proof state analysis for Gaia Language v2 packages.
+"""Proof state analysis for Gaia Language v3 packages.
 
 Analyzes a loaded Typst graph to determine which declarations are
-established (have proofs), which are axioms (settings/observations),
-which are holes (claims used as premises without proofs), and which
-are open questions.
+established (have reasoning factors or are relation types), which are
+axioms (settings/observations), which are holes (claims used as premises
+without proofs), and which are open questions.
 """
 
 from __future__ import annotations
 
 NO_PROOF_TYPES = {"setting", "observation", "question"}
+RELATION_TYPES = {"contradiction", "equivalence"}
 
 
 def analyze_proof_state(graph: dict) -> dict:
@@ -16,22 +17,23 @@ def analyze_proof_state(graph: dict) -> dict:
 
     Args:
         graph: Dict from load_typst_package() with nodes, factors,
-               proof_traces, constraints.
+               constraints.
 
     Returns:
         Dict with keys: established, axioms, holes, questions, report.
     """
     nodes = {n["name"]: n for n in graph.get("nodes", [])}
 
-    # Names that have proof traces (established)
+    # Names that are conclusions of reasoning factors (established)
     proven_names: set[str] = set()
-    for trace in graph.get("proof_traces", []):
-        proven_names.add(trace["conclusion"])
+    for factor in graph.get("factors", []):
+        if factor.get("type") == "reasoning":
+            proven_names.add(factor["conclusion"])
 
-    # Names used as premises across all proofs
+    # Names used as premises across all factors
     used_as_premise: set[str] = set()
-    for trace in graph.get("proof_traces", []):
-        for p in trace.get("premises", []):
+    for factor in graph.get("factors", []):
+        for p in factor.get("premise", []):
             used_as_premise.add(p)
 
     established: list[dict] = []
@@ -46,6 +48,9 @@ def analyze_proof_state(graph: dict) -> dict:
             questions.append(node)
         elif node_type in ("setting", "observation"):
             axioms.append(node)
+        elif node_type in RELATION_TYPES:
+            # claim_relation nodes are always established
+            established.append(node)
         elif name in proven_names:
             established.append(node)
         elif name in used_as_premise:
