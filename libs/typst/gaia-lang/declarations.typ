@@ -74,14 +74,14 @@
     _proof_conclusion.update(_ => name)
 
     // Render claim heading + statement + proof body
-    // Label is on the block, outside any context expression.
-    block(above: 1em)[
-      === #name.replace("_", " ") #label(name.replace("_", "-"))
+    // Wrapped in figure(kind: "gaia") so the label is referenceable via @name.
+    [#figure(kind: "gaia", supplement: none, outlined: false)[
+      === #name.replace("_", " ")
       *Claim:* #statement
 
       *Proof:*
       #proof_body
-    ]
+    ] #label(name.replace("_", "-"))]
 
     // Deactivate proof context
     // Factor emission happens in export-graph via accumulator aggregation
