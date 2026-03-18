@@ -98,8 +98,12 @@
 // ── claim_relation: relation between declarations ──
 // The `between` parameters automatically become premises for this relation.
 // Accepts an optional single content block for a description.
-#let claim_relation(name, type: "contradiction", between: (), body) = {
-  _register_node(name, type, body)
+// Uses ..args to make the body optional (same pattern as #claim).
+#let claim_relation(name, type: "contradiction", between: (), ..args) = {
+  let positional = args.pos()
+  let description = if positional.len() > 0 { positional.at(0) } else { none }
+
+  _register_node(name, type, description)
 
   // Emit constraint
   _gaia_constraints.update(constraints => {
@@ -117,7 +121,7 @@
   }
 
   [#figure(kind: "gaia", supplement: none, outlined: false)[
-    *#name.replace("_", " ")* (#type): #body \
+    *#name.replace("_", " ")* (#type): #if description != none { description } \
     _Between: #between.join(", ")_
   ] #label(name.replace("_", "-"))]
 }
