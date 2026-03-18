@@ -1,4 +1,4 @@
-#import "module.typ": _gaia_nodes, _gaia_factors, _gaia_module_name, _gaia_proof_premises, _gaia_proof_steps, _gaia_constraints
+#import "module.typ": _gaia_nodes, _gaia_factors, _gaia_module_name, _gaia_proof_premises, _gaia_constraints
 
 // ── Internal: proof block context ──
 // NOTE on Typst state timing: state.update() in tactics produces content
@@ -96,13 +96,10 @@
 }
 
 // ── claim_relation: relation between declarations ──
-#let claim_relation(name, type: "contradiction", between: (), ..args) = {
-  let positional = args.pos()
-  let statement = positional.at(0)
-  let has_proof = positional.len() > 1
-  let proof_body = if has_proof { positional.at(1) } else { none }
-
-  _register_node(name, type, statement)
+// The `between` parameters automatically become premises for this relation.
+// Accepts an optional single content block for a description.
+#let claim_relation(name, type: "contradiction", between: (), body) = {
+  _register_node(name, type, body)
 
   // Emit constraint
   _gaia_constraints.update(constraints => {
@@ -114,25 +111,13 @@
     constraints
   })
 
-  if has_proof {
-    _proof_active.update(_ => true)
-    _proof_conclusion.update(_ => name)
-
-    block(above: 1em)[
-      === #name.replace("_", " ") #label(name.replace("_", "-"))
-      *Relation (#type):* #statement \
-      _Between: #between.join(", ")_
-
-      *Proof:*
-      #proof_body
-    ]
-
-    _proof_active.update(_ => false)
-    _proof_conclusion.update(_ => none)
-  } else {
-    [#figure(kind: "gaia", supplement: none, outlined: false)[
-      *#name.replace("_", " ")* (#type): #statement \
-      _Between: #between.join(", ")_
-    ] #label(name.replace("_", "-"))]
+  // Auto-push between members as premises for this relation
+  for member in between {
+    _gaia_proof_premises.update(p => { p.push((name, member)); p })
   }
+
+  [#figure(kind: "gaia", supplement: none, outlined: false)[
+    *#name.replace("_", " ")* (#type): #body \
+    _Between: #between.join(", ")_
+  ] #label(name.replace("_", "-"))]
 }
