@@ -169,24 +169,6 @@
       "type": "reasoning"
     },
     {
-      "conclusion": "lcn_df66e0694c5ca5ad",
-      "contexts": [],
-      "factor_id": "f_8f47cebee20b99e6",
-      "metadata": {
-        "edge_type": "retraction"
-      },
-      "premises": [
-        "lcn_b6bb05362b879e90"
-      ],
-      "source_ref": {
-        "knowledge_name": "retract_aristotle",
-        "module": "reasoning",
-        "package": "galileo_falling_bodies",
-        "version": "1.0.0"
-      },
-      "type": "reasoning"
-    },
-    {
       "conclusion": "lcn_148c1b8d98f495b5",
       "contexts": [],
       "factor_id": "f_cb6667814c366dd8",

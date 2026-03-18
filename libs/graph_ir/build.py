@@ -55,6 +55,7 @@ def build_raw_graph(pkg: Package) -> RawGraph:
     version = pkg.version or "0.0.0"
     knowledge_nodes: list[RawKnowledgeNode] = []
     factor_nodes: list[FactorNode] = []
+    retraction_intents: list[dict] = []
     name_to_raw_id: dict[str, str] = {}
     decl_obj_to_raw_id: dict[int, str] = {}
 
@@ -152,9 +153,19 @@ def build_raw_graph(pkg: Package) -> RawGraph:
                 if factor is not None:
                     factor_nodes.append(factor)
             elif isinstance(decl, RetractAction):
-                factor = _build_retraction_factor(pkg, module.name, decl, version, name_to_raw_id)
-                if factor is not None:
-                    factor_nodes.append(factor)
+                # RetractAction is an author intent declaration, not a BP factor.
+                # The actual belief update comes from existing chain + contradiction
+                # factors via backward BP message passing (per contradiction-handling §3.3).
+                # Record as annotation for audit/review.
+                retraction_intents.append(
+                    {
+                        "name": decl.name,
+                        "target": decl.target,
+                        "reason": decl.reason,
+                        "module": module.name,
+                        "content": decl.content or "",
+                    }
+                )
             elif isinstance(decl, (Contradiction, Equivalence)):
                 factor_nodes.extend(
                     _build_relation_factors(pkg, module.name, decl, version, name_to_raw_id)
@@ -173,11 +184,16 @@ def build_raw_graph(pkg: Package) -> RawGraph:
         if n.raw_node_id in connected_ids or n.knowledge_type != "question"
     ]
 
+    graph_metadata = None
+    if retraction_intents:
+        graph_metadata = {"retraction_intents": retraction_intents}
+
     return RawGraph(
         package=pkg.name,
         version=version,
         knowledge_nodes=knowledge_nodes,
         factor_nodes=factor_nodes,
+        metadata=graph_metadata,
     )
 
 

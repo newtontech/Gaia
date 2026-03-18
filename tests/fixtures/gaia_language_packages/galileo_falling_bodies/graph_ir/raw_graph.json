@@ -169,24 +169,6 @@
       "type": "reasoning"
     },
     {
-      "conclusion": "raw_9700beed75f85007",
-      "contexts": [],
-      "factor_id": "f_8f47cebee20b99e6",
-      "metadata": {
-        "edge_type": "retraction"
-      },
-      "premises": [
-        "raw_16859c596a11a9ae"
-      ],
-      "source_ref": {
-        "knowledge_name": "retract_aristotle",
-        "module": "reasoning",
-        "package": "galileo_falling_bodies",
-        "version": "1.0.0"
-      },
-      "type": "reasoning"
-    },
-    {
       "conclusion": "raw_e26cef85fa3ccc52",
       "contexts": [],
       "factor_id": "f_cb6667814c366dd8",
@@ -734,6 +716,17 @@
       ]
     }
   ],
+  "metadata": {
+    "retraction_intents": [
+      {
+        "content": "既然同一条亚里士多德定律在同一个绑球设定中推出了互不相容的结果， 那么应当被削弱的是原定律本身，而不是这个思想实验。 该矛盾直接回传，降低”重者下落更快”的可信度。\n",
+        "module": "reasoning",
+        "name": "retract_aristotle",
+        "reason": "tied_balls_contradiction",
+        "target": "heavier_falls_faster"
+      }
+    ]
+  },
   "package": "galileo_falling_bodies",
   "schema_version": "1.0",
   "version": "1.0.0"
