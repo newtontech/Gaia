@@ -4,9 +4,7 @@
 
 // ── Cross-module imports ──
 #use("aristotle.heavier_falls_faster")
-#use("aristotle.everyday_observation")
 #use("setting.thought_experiment_env")
-#use("setting.vacuum_env")
 
 // ── Observations (no proof needed) ──
 #observation("medium_density_observation")[
@@ -20,25 +18,35 @@
   与"重量越大速度越大"的简单比例律并不相符。
 ]
 
-// ── Tied balls contradiction ──
-#claim("tied_balls_contradiction")[
-  在假设"重者下落更快"的前提下，
-  绑球系统同时被预测为更快和更慢，产生矛盾。
+// ── Fine-grained tied-ball decomposition ──
+#claim("composite_is_slower")[
+  由假设，轻球天然比重球慢，轻球应拖慢重球，
+  所以复合体 HL 速度应慢于 H。
 ][
   #premise("heavier_falls_faster")
   #premise("thought_experiment_env")
 
-  #by_contradiction[
-    #deduce[
-      由假设，轻球天然比重球慢。
-      轻球应拖慢重球，复合体 HL 速度应慢于 H。
-    ]
-    #deduce[
-      但按同一定律，复合体 HL 总重量大于 H，
-      应比 H 更快。
-    ]
-  ]
+  在假设"重者更快"的前提下 @heavier-falls-faster ，
+  将轻球绑在重球上相当于附加了阻力。
+  因此复合体的速度应介于二者之间，慢于重球单独下落。
 ]
+
+#claim("composite_is_faster")[
+  但复合体 HL 总重量大于 H，
+  按同一定律应比 H 更快。
+][
+  #premise("heavier_falls_faster")
+  #premise("thought_experiment_env")
+
+  同样依据"重者更快" @heavier-falls-faster ，
+  复合体的总质量 = H + L > H，
+  因此预测其下落速度应比 H 更快。
+]
+
+#claim_relation("tied_balls_contradiction",
+  type: "contradiction",
+  between: ("composite_is_slower", "composite_is_faster")
+)[两个预测由同一前提推出却互相矛盾，假设不自洽。]
 
 // ── Medium elimination ──
 #claim("air_resistance_is_confound")[
@@ -47,11 +55,9 @@
 ][
   #premise("medium_density_observation")
 
-  #abduction[
-    如果速度差异由介质阻力造成，那么介质越稀薄差异越小。
-    @medium-density-observation 正好显示了这一点，
-    说明介质阻力是更好的解释。
-  ]
+  如果速度差异由介质阻力造成，那么介质越稀薄差异越小。
+  实验中恰好观察到了这一规律 @medium-density-observation ，
+  说明介质阻力是更好的解释。
 ]
 
 // ── Final synthesis ──
@@ -62,10 +68,9 @@
   #premise("air_resistance_is_confound")
   #premise("inclined_plane_observation")
 
-  #synthesize[
-    绑球矛盾推翻旧定律、
-    介质分析排除干扰因素、
-    斜面实验提供正面支持。
-    三条独立线索汇聚，在真空中结论成立。
-  ]
+  + 绑球思想实验表明旧定律自相矛盾 @tied-balls-contradiction 。
+  + 日常观察到的速度差异实为介质阻力的表象 @air-resistance-is-confound 。
+  + 斜面实验从正面提供了等速趋势的证据 @inclined-plane-observation 。
+
+  三条独立线索汇聚，在真空中结论成立。
 ]
