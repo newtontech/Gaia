@@ -5,12 +5,10 @@ from pathlib import Path
 from libs.lang.proof_state import analyze_proof_state
 from libs.lang.typst_loader import load_typst_package
 
-GALILEO_V3 = (
-    Path(__file__).parent.parent.parent
-    / "fixtures"
-    / "gaia_language_packages"
-    / "galileo_falling_bodies_v3"
-)
+_FIXTURES = Path(__file__).parent.parent.parent / "fixtures" / "gaia_language_packages"
+GALILEO_V3 = _FIXTURES / "galileo_falling_bodies_v3"
+NEWTON_V3 = _FIXTURES / "newton_principia_v3"
+EINSTEIN_V3 = _FIXTURES / "einstein_gravity_v3"
 
 
 def test_established_claims():
@@ -123,3 +121,90 @@ def test_proof_state_format_string():
     report = state["report"]
     assert "established" in report.lower() or "\u2713" in report
     assert "axiom" in report.lower() or "\u25cb" in report
+
+
+# ── Newton v3 ────────────────────────────────────────────────────────────────
+
+
+def test_newton_v3_loads():
+    graph = load_typst_package(NEWTON_V3)
+    assert len(graph["nodes"]) == 7
+    assert len(graph["factors"]) == 1
+
+
+def test_newton_v3_derivation_established():
+    graph = load_typst_package(NEWTON_V3)
+    state = analyze_proof_state(graph)
+    established = {d["name"] for d in state["established"]}
+    assert "freefall_acceleration_equals_g" in established
+
+
+def test_newton_v3_laws_are_holes():
+    """Newton's laws are used as premises but have no proof in this package."""
+    graph = load_typst_package(NEWTON_V3)
+    state = analyze_proof_state(graph)
+    hole_names = {d["name"] for d in state["holes"]}
+    assert "second_law" in hole_names
+    assert "law_of_gravity" in hole_names
+    assert "mass_equivalence" in hole_names
+
+
+def test_newton_v3_derivation_premises():
+    graph = load_typst_package(NEWTON_V3)
+    f = [f for f in graph["factors"] if f["conclusion"] == "freefall_acceleration_equals_g"]
+    assert len(f) == 1
+    assert set(f[0]["premise"]) == {
+        "second_law", "law_of_gravity", "mass_equivalence", "near_earth_surface",
+    }
+
+
+# ── Einstein v3 ──────────────────────────────────────────────────────────────
+
+
+def test_einstein_v3_loads():
+    graph = load_typst_package(EINSTEIN_V3)
+    assert len(graph["nodes"]) == 17
+    assert len(graph["factors"]) == 6
+    assert len(graph["constraints"]) == 1
+
+
+def test_einstein_v3_reasoning_chain():
+    """EP → light bends → GR deflection is a multi-step reasoning chain."""
+    graph = load_typst_package(EINSTEIN_V3)
+    state = analyze_proof_state(graph)
+    established = {d["name"] for d in state["established"]}
+    assert "equivalence_principle" in established
+    assert "light_bends_in_gravity" in established
+    assert "gr_light_deflection" in established
+    assert "eddington_confirms_gr" in established
+    assert "soldner_prediction_disfavored" in established
+    assert "apollo15_confirms_equal_fall" in established
+
+
+def test_einstein_v3_constraint():
+    graph = load_typst_package(EINSTEIN_V3)
+    c = graph["constraints"][0]
+    assert c["name"] == "deflection_contradiction"
+    assert c["type"] == "contradiction"
+    assert set(c["between"]) == {"gr_light_deflection", "soldner_deflection"}
+
+
+def test_einstein_v3_holes():
+    """Postulates without proof in this package should be holes."""
+    graph = load_typst_package(EINSTEIN_V3)
+    state = analyze_proof_state(graph)
+    hole_names = {d["name"] for d in state["holes"]}
+    assert "maxwell_electromagnetism" in hole_names
+    assert "soldner_deflection" in hole_names
+    assert "einstein_field_equations" in hole_names
+
+
+def test_einstein_v3_observations_are_axioms():
+    graph = load_typst_package(EINSTEIN_V3)
+    state = analyze_proof_state(graph)
+    axiom_names = {d["name"] for d in state["axioms"]}
+    assert "eotvos_experiment" in axiom_names
+    assert "eddington_sobral" in axiom_names
+    assert "eddington_principe" in axiom_names
+    assert "apollo15_feather_drop" in axiom_names
+    assert "mercury_perihelion" in axiom_names
