@@ -586,11 +586,10 @@ class TestBuildFactorGraph:
         factors = [
             FactorNode(
                 factor_id="f1",
-                type="reasoning",
+                type="infer",
                 premises=["n1"],
                 conclusion="n2",
                 package_id="pkg",
-                metadata={"edge_type": "deduction"},
             ),
         ]
         fg, s2i, i2s = _build_factor_graph_from_storage(nodes, factors)
@@ -600,15 +599,14 @@ class TestBuildFactorGraph:
     def test_constraint_factor(self):
         from libs.curation.scheduler import _build_factor_graph_from_storage
 
-        nodes = {"n1": MagicMock(), "n2": MagicMock()}
+        nodes = {"n1": MagicMock(), "n2": MagicMock(), "rel": MagicMock()}
         factors = [
             FactorNode(
                 factor_id="f1",
-                type="mutex_constraint",
-                premises=["n1", "n2"],
-                conclusion="gate",
+                type="contradiction",
+                premises=["rel", "n1", "n2"],
+                conclusion=None,
                 package_id="pkg",
-                metadata={"edge_type": "relation_contradiction"},
             ),
         ]
         fg, s2i, i2s = _build_factor_graph_from_storage(nodes, factors)
@@ -621,11 +619,10 @@ class TestBuildFactorGraph:
         factors = [
             FactorNode(
                 factor_id="f1",
-                type="reasoning",
+                type="infer",
                 premises=["n_missing"],
                 conclusion="n1",
                 package_id="pkg",
-                metadata={},
             ),
         ]
         fg, _, _ = _build_factor_graph_from_storage(nodes, factors)
@@ -639,7 +636,7 @@ class TestBuildFactorGraph:
         factors = [
             FactorNode(
                 factor_id="f1",
-                type="reasoning",
+                type="infer",
                 premises=["n1"],
                 conclusion="n2",
                 package_id="pkg",
