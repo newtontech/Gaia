@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from libs.graph_ir.adapter import AdaptedLocalInferenceGraph
-from libs.graph_ir.models import LocalCanonicalGraph, LocalParameterization, RawGraph
+from libs.graph_ir.models import FactorParams, LocalCanonicalGraph, LocalParameterization, RawGraph
 from libs.lang.elaborator import ElaboratedPackage
 from libs.lang import models as lang_models
 from libs.storage import models as storage_models
@@ -52,7 +52,20 @@ class _YamlBuildResult:
 
 
 @dataclass
+class ReviewOutput:
+    """Result of reviewing a knowledge package (v3 Typst)."""
+
+    review: dict  # raw LLM/mock review data
+    node_priors: dict[str, float]  # lcn_id → prior π
+    factor_params: dict[str, FactorParams]  # factor_id → FactorParams
+    model: str
+    source_fingerprint: str | None = None
+
+
+@dataclass
 class ReviewResult:
+    """Legacy review result for YAML packages (kept for backward compat)."""
+
     review: dict
     merged_package: lang_models.Package
     model: str
@@ -155,11 +168,66 @@ async def pipeline_review(
     mock: bool = False,
     model: str = "gpt-5-mini",
     source_fingerprint: str | None = None,
-) -> ReviewResult:
-    """Review the package chains via LLM or mock reviewer.
+) -> ReviewOutput:
+    """Review the package via LLM or mock reviewer (v3 Typst graph_data).
 
     Args:
-        build: Result from pipeline_build.
+        build: Result from pipeline_build (must contain graph_data and local_graph).
+        mock: If True, use MockReviewClient (no LLM calls).
+        model: LLM model name for real reviews.
+        source_fingerprint: Optional fingerprint for staleness detection.
+    """
+    from cli.llm_client import MockReviewClient, ReviewClient
+
+    graph_data = build.graph_data
+
+    if mock:
+        client = MockReviewClient()
+        result = client.review_from_graph_data(graph_data)
+        actual_model = "mock"
+    else:
+        md = _render_markdown_from_graph_data(graph_data)
+        client = ReviewClient(model=model)
+        result = await client.areview_package({"markdown": md})
+        actual_model = model
+
+    # Normalize review into sidecar format
+    now = datetime.now(timezone.utc)
+    review_data = {
+        "package": graph_data.get("package", "unknown"),
+        "model": actual_model,
+        "timestamp": now.isoformat(),
+        "source_fingerprint": source_fingerprint,
+        "summary": result.get("summary", ""),
+        "chains": result.get("chains", []),
+    }
+
+    # Build node_priors: lcn_id → default prior by knowledge_type
+    node_priors = _build_node_priors(build.local_graph)
+
+    # Build factor_params: factor_id → FactorParams from review chains
+    factor_params = _build_factor_params(build.local_graph, graph_data, review_data)
+
+    return ReviewOutput(
+        review=review_data,
+        node_priors=node_priors,
+        factor_params=factor_params,
+        model=actual_model,
+        source_fingerprint=source_fingerprint,
+    )
+
+
+async def _pipeline_review_yaml(
+    build: _YamlBuildResult,
+    *,
+    mock: bool = False,
+    model: str = "gpt-5-mini",
+    source_fingerprint: str | None = None,
+) -> ReviewResult:
+    """Review the package chains via LLM or mock reviewer (YAML legacy).
+
+    Args:
+        build: Result from _pipeline_build_yaml.
         mock: If True, use MockReviewClient (no LLM calls).
         model: LLM model name for real reviews.
         source_fingerprint: Optional fingerprint for staleness detection.
@@ -352,6 +420,97 @@ async def pipeline_publish(
 
 
 # ── Internal helpers ─────────────────────────────────────
+
+# Default priors by knowledge_type
+_DEFAULT_PRIORS: dict[str, float] = {
+    "setting": 1.0,
+    "observation": 1.0,
+    "question": 0.5,
+    "contradiction": 0.5,
+    "equivalence": 0.5,
+    "corroboration": 0.5,
+    "claim": 0.5,
+}
+
+
+def _build_node_priors(local_graph: LocalCanonicalGraph) -> dict[str, float]:
+    """Build node_priors dict: lcn_id → default prior based on knowledge_type."""
+    priors: dict[str, float] = {}
+    for node in local_graph.knowledge_nodes:
+        priors[node.local_canonical_id] = _DEFAULT_PRIORS.get(node.knowledge_type, 0.5)
+    return priors
+
+
+def _build_factor_params(
+    local_graph: LocalCanonicalGraph,
+    graph_data: dict,
+    review_data: dict,
+) -> dict[str, FactorParams]:
+    """Build factor_params dict: factor_id → FactorParams from review chain results.
+
+    Maps review chain conclusions (knowledge names) → factor_ids via local_graph,
+    then extracts conditional_probability from review steps.
+    """
+    # Build mapping: knowledge_name → lcn_id from knowledge nodes
+    name_to_lcn: dict[str, str] = {}
+    for node in local_graph.knowledge_nodes:
+        if node.source_refs:
+            name_to_lcn[node.source_refs[0].knowledge_name] = node.local_canonical_id
+
+    # Build mapping: conclusion_lcn_id → factor_id from factor nodes (infer type only)
+    conclusion_to_factor: dict[str, str] = {}
+    for factor in local_graph.factor_nodes:
+        if factor.type == "infer" and factor.conclusion:
+            conclusion_to_factor[factor.conclusion] = factor.factor_id
+
+    # Build mapping: conclusion_knowledge_name → factor_id
+    name_to_factor: dict[str, str] = {}
+    for name, lcn_id in name_to_lcn.items():
+        if lcn_id in conclusion_to_factor:
+            name_to_factor[name] = conclusion_to_factor[lcn_id]
+
+    # Parse review chains and extract conditional_probability
+    review_probs: dict[str, float] = {}
+    for chain_entry in review_data.get("chains", []):
+        conclusion_name = chain_entry.get("chain", "")
+        if conclusion_name not in name_to_factor:
+            continue
+        factor_id = name_to_factor[conclusion_name]
+        steps = chain_entry.get("steps", [])
+        if steps:
+            prob = steps[0].get("conditional_prior", 1.0)
+            review_probs[factor_id] = float(prob)
+
+    # Build final factor_params: all infer factors get params, default 1.0 if not in review
+    factor_params: dict[str, FactorParams] = {}
+    for factor in local_graph.factor_nodes:
+        if factor.type == "infer":
+            prob = review_probs.get(factor.factor_id, 1.0)
+            factor_params[factor.factor_id] = FactorParams(conditional_probability=prob)
+
+    return factor_params
+
+
+def _render_markdown_from_graph_data(graph_data: dict) -> str:
+    """Render in-memory markdown from graph_data for LLM review (no filesystem)."""
+    lines: list[str] = []
+    package_name = graph_data.get("package", "unknown")
+    lines.append(f"# Package: {package_name}\n")
+
+    for node in graph_data.get("nodes", []):
+        lines.append(f"### {node['name']} [{node.get('type', 'claim')}]")
+        lines.append(f"> {node.get('content', '')}\n")
+
+    for factor in graph_data.get("factors", []):
+        if factor.get("type") != "reasoning":
+            continue
+        conclusion = factor["conclusion"]
+        premises = factor.get("premise", [])
+        lines.append(f"### {conclusion} [proof]")
+        lines.append(f"**Premises:** {', '.join(premises)}")
+        lines.append(f"**[step:{conclusion}.1]** (prior=0.85)\n")
+
+    return "\n".join(lines)
 
 
 def _map_graph_ir_factors(
