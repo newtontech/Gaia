@@ -34,7 +34,7 @@ def generate_cleanup_plan(
     """Combine all analysis outputs into a unified CurationPlan.
 
     Args:
-        cluster_suggestions: From classification step (merge/equivalence).
+        cluster_suggestions: From dedup + abstraction steps.
         conflict_candidates: From conflict discovery (Level 1 + 2).
         structure_report: From structure inspection.
 
