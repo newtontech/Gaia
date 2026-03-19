@@ -1,0 +1,462 @@
+{
+  "timestamp": "2026-03-19T03:51:13.414319+00:00",
+  "steps": {
+    "clustering": {
+      "cluster_count": 2,
+      "clusters": [
+        {
+          "cluster_id": "cluster_851bee3a",
+          "node_ids": [
+            "gcn_cf54f2fecae97fb4",
+            "gcn_ffc8e93d243b209e"
+          ],
+          "node_contents": {
+            "gcn_cf54f2fecae97fb4": "对地表附近的自由落体：m × a = m × g，约去质量得 a = g。 自由落体加速度等于引力场强度，与物体的质量无关。 意味着在同一引力场中，无论物体质量多大， 其自由落体加速度都相同。这不是经验归纳，而是从基本定律出发的 纯理论推导。\n",
+            "gcn_ffc8e93d243b209e": "{derivation_result} 意味着在同一引力场中，无论物体质量多大， 其自由落体加速度都相同。这不是经验归纳，而是从基本定律出发的 纯理论推导。\n"
+          },
+          "pairs": [
+            {
+              "a": "gcn_ffc8e93d243b209e",
+              "b": "gcn_cf54f2fecae97fb4",
+              "score": 0.893,
+              "method": "embedding"
+            }
+          ]
+        },
+        {
+          "cluster_id": "cluster_823f176d",
+          "node_ids": [
+            "gcn_fb9792398769ce32",
+            "gcn_fcc107960a9eb351"
+          ],
+          "node_contents": {
+            "gcn_fb9792398769ce32": "{galileo_result} 来自思想实验中的归谬法， {newton_result} 来自基本力学定律的演绎推导。 二者在方法上不同，却都指向同一个判断： 亚里士多德的落体规律不能作为普遍定律保留。\n",
+            "gcn_fcc107960a9eb351": "galileo_aristotle_contradicted 来自思想实验中的归谬法， 牛顿的 a=g 推导从理论上排除了\"下落速度与重量成正比\"的可能： 如果加速度不依赖质量，那么亚里士多德的 v∝W 就不是自然界的规律。 这与伽利略的归谬法反驳 来自基本力学定律的演绎推导。 二者在方法上不同，却"
+          },
+          "pairs": [
+            {
+              "a": "gcn_fb9792398769ce32",
+              "b": "gcn_fcc107960a9eb351",
+              "score": 0.8552,
+              "method": "embedding"
+            }
+          ]
+        }
+      ]
+    },
+    "dedup": {
+      "duplicate_groups": 0,
+      "suggestions": []
+    },
+    "abstraction": {
+      "new_node_count": 2,
+      "new_factor_count": 4,
+      "contradiction_count": 0,
+      "new_nodes": [
+        {
+          "id": "gcn_schema_85a6cb5b19e299eb",
+          "type": "claim",
+          "kind": "schema",
+          "content": "亚里士多德关于下落速度与重量成正比的落体规律（v ∝ W）不能作为普遍定律。"
+        },
+        {
+          "id": "gcn_schema_91f87d07912d2aa1",
+          "type": "claim",
+          "kind": "schema",
+          "content": "在同一引力场中，物体的自由落体加速度与物体质量无关（即自由落体加速度相同）；这一结论在成员陈述中被表述为可从基本定律理论推导得到，而非仅仅是经验归纳。"
+        }
+      ],
+      "new_factors": [
+        {
+          "id": "f_inst_f54d312c0bea108f",
+          "type": "instantiation",
+          "premises": [
+            "gcn_schema_85a6cb5b19e299eb"
+          ],
+          "conclusion": "gcn_fb9792398769ce32",
+          "package_id": "__curation__"
+        },
+        {
+          "id": "f_inst_8f1d118c0309cb61",
+          "type": "instantiation",
+          "premises": [
+            "gcn_schema_85a6cb5b19e299eb"
+          ],
+          "conclusion": "gcn_fcc107960a9eb351",
+          "package_id": "__curation__"
+        },
+        {
+          "id": "f_inst_d05026a3fdcf0e1a",
+          "type": "instantiation",
+          "premises": [
+            "gcn_schema_91f87d07912d2aa1"
+          ],
+          "conclusion": "gcn_cf54f2fecae97fb4",
+          "package_id": "__curation__"
+        },
+        {
+          "id": "f_inst_bb969484c730b0c5",
+          "type": "instantiation",
+          "premises": [
+            "gcn_schema_91f87d07912d2aa1"
+          ],
+          "conclusion": "gcn_ffc8e93d243b209e",
+          "package_id": "__curation__"
+        }
+      ],
+      "contradiction_candidates": [],
+      "suggestions": [
+        {
+          "operation": "create_abstraction",
+          "target_ids": [
+            "gcn_fb9792398769ce32",
+            "gcn_fcc107960a9eb351"
+          ],
+          "confidence": 0.85,
+          "reason": "两条声明尽管分别以伽利略的反证思想实验和牛顿由基本力学推导为依据，但都独立得出同一判断：亚里士多德的落体规律不成立，故可抽象为共同结论。",
+          "abstraction_content": "亚里士多德关于下落速度与重量成正比的落体规律（v ∝ W）不能作为普遍定律。"
+        },
+        {
+          "operation": "create_abstraction",
+          "target_ids": [
+            "gcn_cf54f2fecae97fb4",
+            "gcn_ffc8e93d243b209e"
+          ],
+          "confidence": 0.85,
+          "reason": "两条陈述都断言在相同引力场中自由落体加速度与质量无关，并且都把这一点描述为从基本定律出发的理论推导，因此它们共享该实质性结论的交集。",
+          "abstraction_content": "在同一引力场中，物体的自由落体加速度与物体质量无关（即自由落体加速度相同）；这一结论在成员陈述中被表述为可从基本定律理论推导得到，而非仅仅是经验归纳。"
+        }
+      ]
+    },
+    "conflict_detection": {
+      "candidate_count": 10,
+      "candidates": [
+        {
+          "node_a": "gcn_b6616c89da02a570",
+          "node_b": "gcn_43636ff1544de453",
+          "node_a_content": "亚里士多德\"重者下落更快\"的定律因绑球矛盾而不能成立。\n",
+          "node_b_content": "介质越稀薄，轻重物体的下落速度差异越小。\n",
+          "signal_type": "oscillation",
+          "strength": 0.0741
+        },
+        {
+          "node_a": "gcn_b6616c89da02a570",
+          "node_b": "gcn_fbd0f3e02d09f039",
+          "node_a_content": "亚里士多德\"重者下落更快\"的定律因绑球矛盾而不能成立。\n",
+          "node_b_content": "在真空中，不同重量的物体应以相同速率下落。\n",
+          "signal_type": "oscillation",
+          "strength": 0.0741
+        },
+        {
+          "node_a": "gcn_b6616c89da02a570",
+          "node_b": "gcn_10cfe90023ee6ca7",
+          "node_a_content": "亚里士多德\"重者下落更快\"的定律因绑球矛盾而不能成立。\n",
+          "node_b_content": "由 介质越稀薄，轻重物体的下落速度差异越小。 可知，介质越稀薄，轻重物体的速度差异越小。 因而 在日常空气环境中，从同一高度落下时，石头通常比羽毛更早落地； 重物看起来往往比轻物下落得更快。 更应被解释为介质阻力造成的表象， 而不是重量本身决定自由落体速度的证据。\n",
+          "signal_type": "oscillation",
+          "strength": 0.0741
+        },
+        {
+          "node_a": "gcn_b6616c89da02a570",
+          "node_b": "gcn_80ac4e3e82a09318",
+          "node_a_content": "亚里士多德\"重者下落更快\"的定律因绑球矛盾而不能成立。\n",
+          "node_b_content": "在同一引力场中，所有物体的自由落体加速度相同，与质量无关。 这是牛顿力学的理论推论，不依赖于任何具体实验。\n",
+          "signal_type": "oscillation",
+          "strength": 0.0741
+        },
+        {
+          "node_a": "gcn_43636ff1544de453",
+          "node_b": "gcn_fbd0f3e02d09f039",
+          "node_a_content": "介质越稀薄，轻重物体的下落速度差异越小。\n",
+          "node_b_content": "在真空中，不同重量的物体应以相同速率下落。\n",
+          "signal_type": "oscillation",
+          "strength": 0.0741
+        },
+        {
+          "node_a": "gcn_43636ff1544de453",
+          "node_b": "gcn_10cfe90023ee6ca7",
+          "node_a_content": "介质越稀薄，轻重物体的下落速度差异越小。\n",
+          "node_b_content": "由 介质越稀薄，轻重物体的下落速度差异越小。 可知，介质越稀薄，轻重物体的速度差异越小。 因而 在日常空气环境中，从同一高度落下时，石头通常比羽毛更早落地； 重物看起来往往比轻物下落得更快。 更应被解释为介质阻力造成的表象， 而不是重量本身决定自由落体速度的证据。\n",
+          "signal_type": "oscillation",
+          "strength": 0.0741
+        },
+        {
+          "node_a": "gcn_43636ff1544de453",
+          "node_b": "gcn_80ac4e3e82a09318",
+          "node_a_content": "介质越稀薄，轻重物体的下落速度差异越小。\n",
+          "node_b_content": "在同一引力场中，所有物体的自由落体加速度相同，与质量无关。 这是牛顿力学的理论推论，不依赖于任何具体实验。\n",
+          "signal_type": "oscillation",
+          "strength": 0.0741
+        },
+        {
+          "node_a": "gcn_fbd0f3e02d09f039",
+          "node_b": "gcn_10cfe90023ee6ca7",
+          "node_a_content": "在真空中，不同重量的物体应以相同速率下落。\n",
+          "node_b_content": "由 介质越稀薄，轻重物体的下落速度差异越小。 可知，介质越稀薄，轻重物体的速度差异越小。 因而 在日常空气环境中，从同一高度落下时，石头通常比羽毛更早落地； 重物看起来往往比轻物下落得更快。 更应被解释为介质阻力造成的表象， 而不是重量本身决定自由落体速度的证据。\n",
+          "signal_type": "oscillation",
+          "strength": 0.0741
+        },
+        {
+          "node_a": "gcn_fbd0f3e02d09f039",
+          "node_b": "gcn_80ac4e3e82a09318",
+          "node_a_content": "在真空中，不同重量的物体应以相同速率下落。\n",
+          "node_b_content": "在同一引力场中，所有物体的自由落体加速度相同，与质量无关。 这是牛顿力学的理论推论，不依赖于任何具体实验。\n",
+          "signal_type": "oscillation",
+          "strength": 0.0741
+        },
+        {
+          "node_a": "gcn_10cfe90023ee6ca7",
+          "node_b": "gcn_80ac4e3e82a09318",
+          "node_a_content": "由 介质越稀薄，轻重物体的下落速度差异越小。 可知，介质越稀薄，轻重物体的速度差异越小。 因而 在日常空气环境中，从同一高度落下时，石头通常比羽毛更早落地； 重物看起来往往比轻物下落得更快。 更应被解释为介质阻力造成的表象， 而不是重量本身决定自由落体速度的证据。\n",
+          "node_b_content": "在同一引力场中，所有物体的自由落体加速度相同，与质量无关。 这是牛顿力学的理论推论，不依赖于任何具体实验。\n",
+          "signal_type": "oscillation",
+          "strength": 0.0741
+        }
+      ]
+    },
+    "structure": {
+      "error_count": 0,
+      "warning_count": 5,
+      "info_count": 0,
+      "issues": [
+        {
+          "type": "orphan_node",
+          "severity": "warning",
+          "node_ids": [
+            "gcn_c48405eaa729d879"
+          ],
+          "factor_ids": [],
+          "detail": "Node gcn_c48405eaa729d879 has no factor connections"
+        },
+        {
+          "type": "orphan_node",
+          "severity": "warning",
+          "node_ids": [
+            "gcn_05b23dc2ff808953"
+          ],
+          "factor_ids": [],
+          "detail": "Node gcn_05b23dc2ff808953 has no factor connections"
+        },
+        {
+          "type": "orphan_node",
+          "severity": "warning",
+          "node_ids": [
+            "gcn_0ae2e548bdc3b146"
+          ],
+          "factor_ids": [],
+          "detail": "Node gcn_0ae2e548bdc3b146 has no factor connections"
+        },
+        {
+          "type": "orphan_node",
+          "severity": "warning",
+          "node_ids": [
+            "gcn_8e3cb03738b170e7"
+          ],
+          "factor_ids": [],
+          "detail": "Node gcn_8e3cb03738b170e7 has no factor connections"
+        },
+        {
+          "type": "orphan_node",
+          "severity": "warning",
+          "node_ids": [
+            "gcn_c639050dc11c8387"
+          ],
+          "factor_ids": [],
+          "detail": "Node gcn_c639050dc11c8387 has no factor connections"
+        }
+      ]
+    },
+    "cleanup": {
+      "auto_approve_count": 0,
+      "needs_review_count": 7,
+      "discard_count": 10,
+      "executed": [
+        {
+          "operation": "create_abstraction",
+          "target_ids": [
+            "gcn_fb9792398769ce32",
+            "gcn_fcc107960a9eb351"
+          ],
+          "confidence": 0.85,
+          "reason": "两条声明尽管分别以伽利略的反证思想实验和牛顿由基本力学推导为依据，但都独立得出同一判断：亚里士多德的落体规律不成立，故可抽象为共同结论。",
+          "evidence": {
+            "abstraction": "亚里士多德关于下落速度与重量成正比的落体规律（v ∝ W）不能作为普遍定律。",
+            "group_id": "G1"
+          }
+        },
+        {
+          "operation": "create_abstraction",
+          "target_ids": [
+            "gcn_cf54f2fecae97fb4",
+            "gcn_ffc8e93d243b209e"
+          ],
+          "confidence": 0.85,
+          "reason": "两条陈述都断言在相同引力场中自由落体加速度与质量无关，并且都把这一点描述为从基本定律出发的理论推导，因此它们共享该实质性结论的交集。",
+          "evidence": {
+            "abstraction": "在同一引力场中，物体的自由落体加速度与物体质量无关（即自由落体加速度相同）；这一结论在成员陈述中被表述为可从基本定律理论推导得到，而非仅仅是经验归纳。",
+            "group_id": "G1"
+          }
+        }
+      ],
+      "skipped": [
+        {
+          "operation": "archive_orphan",
+          "target_ids": [
+            "gcn_c48405eaa729d879"
+          ],
+          "confidence": 0.8,
+          "reason": "Node gcn_c48405eaa729d879 has no factor connections"
+        },
+        {
+          "operation": "archive_orphan",
+          "target_ids": [
+            "gcn_05b23dc2ff808953"
+          ],
+          "confidence": 0.8,
+          "reason": "Node gcn_05b23dc2ff808953 has no factor connections"
+        },
+        {
+          "operation": "archive_orphan",
+          "target_ids": [
+            "gcn_0ae2e548bdc3b146"
+          ],
+          "confidence": 0.8,
+          "reason": "Node gcn_0ae2e548bdc3b146 has no factor connections"
+        },
+        {
+          "operation": "archive_orphan",
+          "target_ids": [
+            "gcn_8e3cb03738b170e7"
+          ],
+          "confidence": 0.8,
+          "reason": "Node gcn_8e3cb03738b170e7 has no factor connections"
+        },
+        {
+          "operation": "archive_orphan",
+          "target_ids": [
+            "gcn_c639050dc11c8387"
+          ],
+          "confidence": 0.8,
+          "reason": "Node gcn_c639050dc11c8387 has no factor connections"
+        },
+        {
+          "operation": "create_contradiction",
+          "target_ids": [
+            "gcn_b6616c89da02a570",
+            "gcn_43636ff1544de453"
+          ],
+          "confidence": 0.0741,
+          "reason": "Conflict detected via oscillation (strength 0.074)"
+        },
+        {
+          "operation": "create_contradiction",
+          "target_ids": [
+            "gcn_b6616c89da02a570",
+            "gcn_fbd0f3e02d09f039"
+          ],
+          "confidence": 0.0741,
+          "reason": "Conflict detected via oscillation (strength 0.074)"
+        },
+        {
+          "operation": "create_contradiction",
+          "target_ids": [
+            "gcn_b6616c89da02a570",
+            "gcn_10cfe90023ee6ca7"
+          ],
+          "confidence": 0.0741,
+          "reason": "Conflict detected via oscillation (strength 0.074)"
+        },
+        {
+          "operation": "create_contradiction",
+          "target_ids": [
+            "gcn_b6616c89da02a570",
+            "gcn_80ac4e3e82a09318"
+          ],
+          "confidence": 0.0741,
+          "reason": "Conflict detected via oscillation (strength 0.074)"
+        },
+        {
+          "operation": "create_contradiction",
+          "target_ids": [
+            "gcn_43636ff1544de453",
+            "gcn_fbd0f3e02d09f039"
+          ],
+          "confidence": 0.0741,
+          "reason": "Conflict detected via oscillation (strength 0.074)"
+        },
+        {
+          "operation": "create_contradiction",
+          "target_ids": [
+            "gcn_43636ff1544de453",
+            "gcn_10cfe90023ee6ca7"
+          ],
+          "confidence": 0.0741,
+          "reason": "Conflict detected via oscillation (strength 0.074)"
+        },
+        {
+          "operation": "create_contradiction",
+          "target_ids": [
+            "gcn_43636ff1544de453",
+            "gcn_80ac4e3e82a09318"
+          ],
+          "confidence": 0.0741,
+          "reason": "Conflict detected via oscillation (strength 0.074)"
+        },
+        {
+          "operation": "create_contradiction",
+          "target_ids": [
+            "gcn_fbd0f3e02d09f039",
+            "gcn_10cfe90023ee6ca7"
+          ],
+          "confidence": 0.0741,
+          "reason": "Conflict detected via oscillation (strength 0.074)"
+        },
+        {
+          "operation": "create_contradiction",
+          "target_ids": [
+            "gcn_fbd0f3e02d09f039",
+            "gcn_80ac4e3e82a09318"
+          ],
+          "confidence": 0.0741,
+          "reason": "Conflict detected via oscillation (strength 0.074)"
+        },
+        {
+          "operation": "create_contradiction",
+          "target_ids": [
+            "gcn_10cfe90023ee6ca7",
+            "gcn_80ac4e3e82a09318"
+          ],
+          "confidence": 0.0741,
+          "reason": "Conflict detected via oscillation (strength 0.074)"
+        }
+      ],
+      "audit_entries": [
+        {
+          "operation": "create_abstraction",
+          "target_ids": [
+            "gcn_fb9792398769ce32",
+            "gcn_fcc107960a9eb351"
+          ],
+          "suggestion_id": "sug_5eb7b4a8e8b8"
+        },
+        {
+          "operation": "create_abstraction",
+          "target_ids": [
+            "gcn_cf54f2fecae97fb4",
+            "gcn_ffc8e93d243b209e"
+          ],
+          "suggestion_id": "sug_536cd50fb7de"
+        }
+      ]
+    }
+  },
+  "input": {
+    "node_count": 40,
+    "factor_count": 25
+  },
+  "output": {
+    "node_count": 42,
+    "factor_count": 33,
+    "new_nodes_added": 2,
+    "new_factors_added": 8
+  }
+}
