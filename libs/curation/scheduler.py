@@ -1,6 +1,6 @@
 """Curation scheduler — main pipeline orchestrator.
 
-Pipeline: cluster → classify → detect conflicts → inspect structure → cleanup.
+Pipeline: cluster → classify → abstract → detect conflicts → inspect structure → cleanup.
 """
 
 from __future__ import annotations
@@ -17,6 +17,7 @@ from .classification import classify_clusters
 from .cleanup import execute_cleanup, generate_cleanup_plan
 from .clustering import cluster_similar_nodes
 from .conflict import detect_conflicts_level1, detect_conflicts_level2
+from .abstraction import AbstractionAgent
 from .models import ConflictCandidate, CurationResult, StructureReport
 from .structure import inspect_structure
 
@@ -74,9 +75,11 @@ async def run_curation(
     embedding_model: EmbeddingModel | None = None,
     similarity_threshold: float = 0.90,
     skip_conflict_detection: bool = False,
+    skip_abstraction: bool = False,
     bp_max_iterations: int = 50,
     bp_damping: float = 0.5,
     reviewer_model: str | None = None,
+    abstraction_model: str | None = None,
 ) -> CurationResult:
     """Run the full curation pipeline.
 
@@ -84,6 +87,7 @@ async def run_curation(
     1. Load all global nodes and factors
     2. Cluster similar nodes
     3. Classify clusters (duplicate / equivalence)
+    3b. Abstract clusters (extract common conclusions) — optional
     4. Detect conflicts (BP Level 1 + 2) — optional
     5. Inspect structure
     6. Generate and execute cleanup plan
@@ -93,8 +97,11 @@ async def run_curation(
         embedding_model: For similarity computation. Falls back to TF-IDF if None.
         similarity_threshold: Minimum similarity for clustering.
         skip_conflict_detection: Skip BP-based conflict detection (faster).
+        skip_abstraction: Skip abstraction agent (faster).
         bp_max_iterations: Max BP iterations for conflict detection.
         bp_damping: BP damping factor.
+        reviewer_model: Model for curation reviewer.
+        abstraction_model: Model for abstraction agent. Defaults to reviewer_model.
 
     Returns:
         CurationResult with executed operations and audit trail.
@@ -122,8 +129,31 @@ async def run_curation(
     cluster_suggestions = classify_clusters(clusters, node_map)
     logger.info("Generated %d cluster suggestions", len(cluster_suggestions))
 
+    # Step 3b: Abstraction
+    mutable_factors = list(all_factors)
+    if not skip_abstraction:
+        abs_model = abstraction_model or reviewer_model
+        agent = AbstractionAgent(model=abs_model)
+        abs_result = await agent.run(clusters, node_map)
+
+        # Integrate new schema nodes into node_map
+        for node in abs_result.new_nodes:
+            node_map[node.global_canonical_id] = node
+        mutable_factors.extend(abs_result.new_factors)
+        cluster_suggestions.extend(abs_result.suggestions)
+        logger.info(
+            "Abstraction: %d new nodes, %d new factors, %d contradictions",
+            len(abs_result.new_nodes),
+            len(abs_result.new_factors),
+            len(abs_result.contradiction_candidates),
+        )
+    else:
+        abs_result = None
+
     # Step 4: Detect conflicts
     conflict_candidates: list[ConflictCandidate] = []
+    if abs_result and abs_result.contradiction_candidates:
+        conflict_candidates.extend(abs_result.contradiction_candidates)
     if not skip_conflict_detection and len(all_nodes) >= 2 and all_factors:
         bp = BeliefPropagation(
             max_iterations=bp_max_iterations,
@@ -177,7 +207,6 @@ async def run_curation(
     )
 
     audit_log = AuditLog()
-    mutable_factors = list(all_factors)
     result = await execute_cleanup(plan, node_map, mutable_factors, audit_log, reviewer_model)
     result.structure_report = structure_report
 
