@@ -270,13 +270,57 @@ async def _pipeline_review_yaml(
 
 async def pipeline_infer(
     build: BuildResult,
-    review: ReviewResult,
+    review: ReviewOutput,
 ) -> InferResult:
-    """Derive parameterization, adapt to factor graph, and run BP.
+    """Adapt local graph to factor graph and run Belief Propagation.
 
     Args:
         build: Result from pipeline_build.
-        review: Result from pipeline_review.
+        review: Result from pipeline_review (v3 Typst ReviewOutput).
+    """
+    from libs.graph_ir.adapter import adapt_local_graph_to_factor_graph
+    from libs.inference.bp import BeliefPropagation
+
+    # 1. Build LocalParameterization from ReviewOutput
+    local_parameterization = LocalParameterization(
+        graph_hash=build.local_graph.graph_hash(),
+        node_priors=review.node_priors,
+        factor_parameters=review.factor_params,
+    )
+
+    # 2. Adapt to factor graph
+    adapted = adapt_local_graph_to_factor_graph(build.local_graph, local_parameterization)
+
+    # 3. Run BP
+    bp = BeliefPropagation()
+    raw_beliefs = bp.run(adapted.factor_graph)
+
+    # 4. Map var IDs back to names
+    var_id_to_local = {var_id: local_id for local_id, var_id in adapted.local_id_to_var_id.items()}
+    named_beliefs = {
+        adapted.local_id_to_label[var_id_to_local[var_id]]: belief
+        for var_id, belief in raw_beliefs.items()
+    }
+
+    bp_run_id = str(uuid.uuid4())
+
+    return InferResult(
+        beliefs=named_beliefs,
+        bp_run_id=bp_run_id,
+        local_parameterization=local_parameterization,
+        adapted_graph=adapted,
+    )
+
+
+async def _pipeline_infer_yaml(
+    build: _YamlBuildResult,
+    review: ReviewResult,
+) -> InferResult:
+    """Derive parameterization, adapt to factor graph, and run BP (YAML legacy).
+
+    Args:
+        build: Result from _pipeline_build_yaml.
+        review: Result from _pipeline_review_yaml.
     """
     from libs.graph_ir.adapter import adapt_local_graph_to_factor_graph
     from libs.graph_ir.build import derive_local_parameterization
