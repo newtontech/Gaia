@@ -14,7 +14,7 @@
       _gaia_proof_premises.update(p => { p.push((concl, name)); p })
     }
   }
-  block(inset: (left: 1em))[
-    — *Premise:* #name.replace("_", " ")
+  block(above: 2pt, below: 2pt, inset: (left: 0.8em))[
+    #text(size: 9pt, fill: luma(120))[▸ #name.replace("_", " ")]
   ]
 }

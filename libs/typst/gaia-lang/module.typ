@@ -42,8 +42,54 @@
   // The state update above is content and will be placed in document flow.
 }
 
-#let package(name, modules: (), export: ()) = {
+#let package(
+  name,
+  title: none,
+  author: none,
+  version: none,
+  date: none,
+  abstract: none,
+  modules: (),
+  export: (),
+) = {
   _gaia_exports.update(_ => export)
+
+  // Render title block
+  {
+    let display_title = if title != none { title } else { name.replace("_", " ") }
+
+    align(center)[
+      #v(1.5em)
+      #text(size: 8.5pt, fill: luma(140), weight: "bold", tracking: 1pt)[GAIA KNOWLEDGE PACKAGE]
+      #v(0.6em)
+      #text(size: 20pt, weight: "bold")[#display_title]
+      #if version != none {
+        v(0.3em)
+        text(size: 10pt, fill: luma(120))[v#version]
+      }
+      #v(0.8em)
+      #if author != none {
+        text(size: 11pt)[#author]
+      }
+      #if date != none {
+        v(0.2em)
+        text(size: 10pt, fill: luma(120))[#date]
+      }
+      #v(1em)
+    ]
+    line(length: 100%, stroke: 0.5pt + luma(200))
+    if abstract != none {
+      v(0.8em)
+      block(inset: (x: 1.5em))[
+        #text(size: 9pt, fill: luma(100), weight: "bold", tracking: 0.3pt)[ABSTRACT]
+        #v(3pt)
+        #text(size: 10pt)[#abstract]
+      ]
+      v(0.5em)
+      line(length: 100%, stroke: 0.5pt + luma(200))
+    }
+    v(0.5em)
+  }
 }
 
 #let export-graph() = context {

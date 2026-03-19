@@ -20,35 +20,43 @@
 
 // ── Fine-grained tied-ball decomposition ──
 #claim("composite_is_slower")[
-  假设"重者下落更快"，将重球（H）与轻球（L）绑成复合体（HL），
-  则 HL 的下落速度慢于 H 单独下落。
+  假设"重者下落更快"，将重球（$H$）与轻球（$L$）绑成复合体（$H L$），
+  则 $H L$ 的下落速度慢于 $H$ 单独下落。
 ][
   #premise("heavier_falls_faster")
   #premise("thought_experiment_env")
 
   在"重者更快"假设下 @heavier-falls-faster ，
   考虑绑球思想实验 @thought-experiment-env ：
-  轻球 L 的"天然速度"慢于重球 H，绑在一起后 L 起拖拽作用，
-  因此复合体 HL 的下落速度应慢于 H 单独下落。
+  轻球 $L$ 的"天然速度"慢于重球 $H$，绑在一起后 $L$ 起拖拽作用，
+  因此复合体 $H L$ 的下落速度应慢于 $H$ 单独下落。
 ]
 
 #claim("composite_is_faster")[
-  假设"重者下落更快"，将重球（H）与轻球（L）绑成复合体（HL），
-  则 HL 的下落速度快于 H 单独下落。
+  假设"重者下落更快"，将重球（$H$）与轻球（$L$）绑成复合体（$H L$），
+  则 $H L$ 的下落速度快于 $H$ 单独下落。
 ][
   #premise("heavier_falls_faster")
   #premise("thought_experiment_env")
 
   同一假设下 @heavier-falls-faster ，
   在绑球思想实验中 @thought-experiment-env ，
-  复合体 HL 总质量 = H + L > H，
-  按"重者更快"定律，HL 应比 H 下落更快。
+  复合体 $H L$ 总质量 $= H + L > H$，
+  按"重者更快"定律，$H L$ 应比 $H$ 下落更快。
 ]
 
 #claim_relation("tied_balls_contradiction",
   type: "contradiction",
-  between: ("composite_is_slower", "composite_is_faster")
-)[将重球（H）与轻球（L）绑成复合体（HL），"HL 慢于 H"与"HL 快于 H"两个预测互相矛盾。]
+  between: ("composite_is_slower", "composite_is_faster"),
+)[将重球（$H$）与轻球（$L$）绑成复合体（$H L$），
+  "$H L$ 慢于 $H$"与"$H L$ 快于 $H$"两个预测互相矛盾。
+][
+  两个预测来自同一假设"重者下落更快"，
+  针对同一物理对象（复合体 $H L$）：
+  一方面，$L$ 的拖拽效应要求 $H L$ 比 $H$ 慢 @composite-is-slower ；
+  另一方面，$H L$ 总质量更大要求它比 $H$ 快 @composite-is-faster 。
+  快与慢不可能同时成立，因此原假设自相矛盾。
+]
 
 // ── Medium elimination ──
 #claim("air_resistance_is_confound")[

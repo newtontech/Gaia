@@ -128,8 +128,9 @@ def test_proof_state_format_string():
 
 def test_newton_v3_loads():
     graph = load_typst_package(NEWTON_V3)
-    assert len(graph["nodes"]) == 11
-    assert len(graph["factors"]) == 4
+    assert len(graph["nodes"]) == 15
+    assert len(graph["factors"]) == 5
+    assert len(graph["constraints"]) == 2
 
 
 def test_newton_v3_derivation_chain():
@@ -141,6 +142,11 @@ def test_newton_v3_derivation_chain():
     assert "law_of_gravity" in established
     assert "mass_equivalence" in established
     assert "freefall_acceleration_equals_g" in established
+    assert "apollo15_confirms_equal_fall" in established
+    # corroborations are constraints, not reasoning factors
+    constraint_names = {c["name"] for c in graph["constraints"]}
+    assert "galileo_newton_convergence" in constraint_names
+    assert "apollo_galileo_convergence" in constraint_names
 
 
 def test_newton_v3_only_axioms_are_holes():
@@ -170,30 +176,36 @@ def test_newton_v3_mass_equivalence_premises():
 
 def test_einstein_v3_loads():
     graph = load_typst_package(EINSTEIN_V3)
-    assert len(graph["nodes"]) == 17
-    assert len(graph["factors"]) == 6
-    assert len(graph["constraints"]) == 1
+    assert len(graph["nodes"]) == 16
+    assert len(graph["factors"]) == 5
+    assert len(graph["constraints"]) == 2
 
 
 def test_einstein_v3_reasoning_chain():
-    """EP → light bends → GR deflection is a multi-step reasoning chain."""
+    """EP → light bends → GR deflection; EFE + mercury → precession."""
     graph = load_typst_package(EINSTEIN_V3)
     state = analyze_proof_state(graph)
     established = {d["name"] for d in state["established"]}
     assert "equivalence_principle" in established
     assert "light_bends_in_gravity" in established
     assert "gr_light_deflection" in established
+    assert "gr_mercury_precession" in established
     assert "eddington_confirms_gr" in established
-    assert "soldner_prediction_disfavored" in established
-    assert "apollo15_confirms_equal_fall" in established
 
 
-def test_einstein_v3_constraint():
+def test_einstein_v3_constraints():
     graph = load_typst_package(EINSTEIN_V3)
-    c = graph["constraints"][0]
-    assert c["name"] == "deflection_contradiction"
-    assert c["type"] == "contradiction"
-    assert set(c["between"]) == {"gr_light_deflection", "soldner_deflection"}
+    constraint_map = {c["name"]: c for c in graph["constraints"]}
+    # Contradiction
+    assert constraint_map["deflection_contradiction"]["type"] == "contradiction"
+    assert set(constraint_map["deflection_contradiction"]["between"]) == {
+        "gr_light_deflection", "soldner_deflection"
+    }
+    # Corroborations
+    assert constraint_map["gr_dual_confirmation"]["type"] == "corroboration"
+    assert set(constraint_map["gr_dual_confirmation"]["between"]) == {
+        "eddington_confirms_gr", "gr_mercury_precession"
+    }
 
 
 def test_einstein_v3_holes():
@@ -213,5 +225,4 @@ def test_einstein_v3_observations_are_axioms():
     assert "eotvos_experiment" in axiom_names
     assert "eddington_sobral" in axiom_names
     assert "eddington_principe" in axiom_names
-    assert "apollo15_feather_drop" in axiom_names
     assert "mercury_perihelion" in axiom_names
