@@ -97,7 +97,25 @@ async def main() -> None:
     logger.info("--- Step 1: Clustering ---")
     t0 = time.monotonic()
     embedding_model = DPEmbeddingModel()
-    clusters = await cluster_similar_nodes(nodes, threshold=0.85, embedding_model=embedding_model)
+    # Exclude schema nodes and already-connected pairs
+    clusterable_nodes = [n for n in nodes if n.kind != "schema"]
+    connected_pairs: set[tuple[str, str]] = set()
+    for f in factors:
+        for p in f.premises:
+            if f.conclusion:
+                connected_pairs.add((min(p, f.conclusion), max(p, f.conclusion)))
+    logger.info(
+        "Clustering: %d nodes (excluded %d schema), %d connected pairs excluded",
+        len(clusterable_nodes),
+        len(nodes) - len(clusterable_nodes),
+        len(connected_pairs),
+    )
+    clusters = await cluster_similar_nodes(
+        clusterable_nodes,
+        threshold=0.85,
+        embedding_model=embedding_model,
+        exclude_pairs=connected_pairs,
+    )
     t_clustering = time.monotonic() - t0
     logger.info("Found %d clusters (%.1fs)", len(clusters), t_clustering)
 
