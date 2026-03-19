@@ -38,8 +38,8 @@
     refs.push((alias: alias, target: target))
     refs
   })
-  // Render a small note so use() produces visible content
-  text(size: 0.8em, fill: gray)[_imports #alias from #target _]
+  // No visible output — use() is purely structural.
+  // The state update above is content and will be placed in document flow.
 }
 
 #let package(name, modules: (), export: ()) = {

@@ -1,4 +1,5 @@
 #import "../../../../libs/typst/gaia-lang/v2.typ": *
+#show: gaia-style
 
 #include "motivation.typ"
 #include "setting.typ"
