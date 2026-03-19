@@ -208,10 +208,16 @@ class AbstractionAgent:
             return None
 
         action = parsed.get("action", "abandon")
+        reasoning = parsed.get("reasoning", "")
+        history_entry = {"action": action, "reasoning": reasoning}
+
         if action == "rewrite":
             revised = parsed.get("revised_abstraction", "")
             if revised:
-                return group.model_copy(update={"abstraction_content": revised})
+                history = list(group.refine_history) + [history_entry]
+                return group.model_copy(
+                    update={"abstraction_content": revised, "refine_history": history}
+                )
 
         elif action == "remove_members":
             removed_ids = set(parsed.get("removed_ids", []))
@@ -224,7 +230,11 @@ class AbstractionAgent:
                     group.group_id,
                 )
                 return None
-            updates: dict = {"member_node_ids": remaining}
+            history_entry["removed_ids"] = list(removed_ids)
+            updates: dict = {
+                "member_node_ids": remaining,
+                "refine_history": list(group.refine_history) + [history_entry],
+            }
             revised = parsed.get("revised_abstraction")
             if revised:
                 updates["abstraction_content"] = revised
@@ -334,6 +344,13 @@ class AbstractionAgent:
                     member_ids=current_group.member_node_ids,
                     reason=current_group.reason,
                 )
+                # Attach refine history to schema node metadata
+                if current_group.refine_history:
+                    meta = dict(abs_result.schema_node.metadata or {})
+                    meta["refine_history"] = current_group.refine_history
+                    abs_result.schema_node = abs_result.schema_node.model_copy(
+                        update={"metadata": meta}
+                    )
                 result.new_nodes.append(abs_result.schema_node)
                 result.new_factors.extend(abs_result.instantiation_factors)
                 result.suggestions.append(

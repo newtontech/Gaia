@@ -110,6 +110,7 @@ class AbstractionGroup(BaseModel):
     reason: str
     contradiction_pairs: list[tuple[str, str]] = Field(default_factory=list)
     confidence: float = 0.0
+    refine_history: list[dict] = Field(default_factory=list)
 
 
 class VerificationCheck(BaseModel):
