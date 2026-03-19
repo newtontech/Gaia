@@ -210,12 +210,14 @@ def test_einstein_v3_constraints():
     # Contradiction
     assert constraint_map["deflection_contradiction"]["type"] == "contradiction"
     assert set(constraint_map["deflection_contradiction"]["between"]) == {
-        "gr_light_deflection", "soldner_deflection"
+        "gr_light_deflection",
+        "soldner_deflection",
     }
     # Corroborations
     assert constraint_map["gr_dual_confirmation"]["type"] == "corroboration"
     assert set(constraint_map["gr_dual_confirmation"]["between"]) == {
-        "eddington_confirms_gr", "gr_mercury_precession"
+        "eddington_confirms_gr",
+        "gr_mercury_precession",
     }
 
 
