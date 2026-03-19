@@ -1,0 +1,250 @@
+"""Tests for proof state analysis."""
+
+from pathlib import Path
+
+from libs.lang.proof_state import analyze_proof_state
+from libs.lang.typst_loader import load_typst_package
+
+_FIXTURES = Path(__file__).parent.parent.parent / "fixtures" / "gaia_language_packages"
+GALILEO_V3 = _FIXTURES / "galileo_falling_bodies_v3"
+NEWTON_V3 = _FIXTURES / "newton_principia_v3"
+EINSTEIN_V3 = _FIXTURES / "einstein_gravity_v3"
+
+
+def test_established_claims():
+    graph = load_typst_package(GALILEO_V3)
+    state = analyze_proof_state(graph)
+    established = {d["name"] for d in state["established"]}
+    assert "composite_is_slower" in established
+    assert "composite_is_faster" in established
+    assert "air_resistance_is_confound" in established
+    assert "vacuum_prediction" in established
+
+
+def test_claim_relation_is_established():
+    """claim_relation nodes (e.g. contradiction) should be established, not holes."""
+    graph = load_typst_package(GALILEO_V3)
+    state = analyze_proof_state(graph)
+    established = {d["name"] for d in state["established"]}
+    assert "tied_balls_contradiction" in established
+
+
+def test_claim_relation_not_hole():
+    """claim_relation nodes should never appear as holes."""
+    graph = load_typst_package(GALILEO_V3)
+    state = analyze_proof_state(graph)
+    hole_names = {d["name"] for d in state["holes"]}
+    assert "tied_balls_contradiction" not in hole_names
+
+
+def test_heavier_falls_faster_is_hole():
+    """A claim used as premise without a factor concluding it should be a hole."""
+    graph = load_typst_package(GALILEO_V3)
+    state = analyze_proof_state(graph)
+    hole_names = {d["name"] for d in state["holes"]}
+    assert "heavier_falls_faster" in hole_names
+
+
+def test_axioms_include_settings():
+    graph = load_typst_package(GALILEO_V3)
+    state = analyze_proof_state(graph)
+    axiom_names = {d["name"] for d in state["axioms"]}
+    assert "thought_experiment_env" in axiom_names
+    assert "vacuum_env" in axiom_names
+
+
+def test_axioms_include_observations():
+    graph = load_typst_package(GALILEO_V3)
+    state = analyze_proof_state(graph)
+    axiom_names = {d["name"] for d in state["axioms"]}
+    assert "medium_density_observation" in axiom_names
+    assert "inclined_plane_observation" in axiom_names
+
+
+def test_questions_detected():
+    graph = load_typst_package(GALILEO_V3)
+    state = analyze_proof_state(graph)
+    question_names = {d["name"] for d in state["questions"]}
+    assert "main_question" in question_names
+    assert "follow_up_question" in question_names
+
+
+def test_no_false_holes():
+    """Settings and observations should never be holes."""
+    graph = load_typst_package(GALILEO_V3)
+    state = analyze_proof_state(graph)
+    hole_names = {d["name"] for d in state["holes"]}
+    assert "thought_experiment_env" not in hole_names
+    assert "medium_density_observation" not in hole_names
+
+
+def test_constraint_between_members_are_used_as_premise():
+    """Claims used only as between members of a constraint should be detected as holes."""
+    graph = {
+        "nodes": [
+            {"name": "A", "type": "claim"},
+            {"name": "B", "type": "claim"},
+            {"name": "rel", "type": "contradiction"},
+        ],
+        "factors": [],
+        "constraints": [
+            {"name": "rel", "type": "contradiction", "between": ["A", "B"]},
+        ],
+    }
+    state = analyze_proof_state(graph)
+    hole_names = {d["name"] for d in state["holes"]}
+    assert "A" in hole_names
+    assert "B" in hole_names
+    # The relation itself should be established, not a hole
+    established_names = {d["name"] for d in state["established"]}
+    assert "rel" in established_names
+
+
+def test_standalone_claims_reported():
+    """Claims not proven and not referenced should appear in standalone."""
+    graph = {
+        "nodes": [
+            {"name": "orphan", "type": "claim"},
+        ],
+        "factors": [],
+        "constraints": [],
+    }
+    state = analyze_proof_state(graph)
+    standalone_names = {d["name"] for d in state["standalone"]}
+    assert "orphan" in standalone_names
+    assert len(state["holes"]) == 0
+
+
+def test_proof_state_format_string():
+    graph = load_typst_package(GALILEO_V3)
+    state = analyze_proof_state(graph)
+    report = state["report"]
+    assert "established" in report.lower() or "\u2713" in report
+    assert "axiom" in report.lower() or "\u25cb" in report
+
+
+# ── Newton v3 ────────────────────────────────────────────────────────────────
+
+
+def test_newton_v3_loads():
+    graph = load_typst_package(NEWTON_V3)
+    assert len(graph["nodes"]) == 15
+    assert len(graph["factors"]) == 5
+    assert len(graph["constraints"]) == 2
+
+
+def test_newton_v3_derivation_chain():
+    """Historical derivation: Kepler → inverse square → gravity → mass equiv → a=g."""
+    graph = load_typst_package(NEWTON_V3)
+    state = analyze_proof_state(graph)
+    established = {d["name"] for d in state["established"]}
+    assert "inverse_square_force" in established
+    assert "law_of_gravity" in established
+    assert "mass_equivalence" in established
+    assert "freefall_acceleration_equals_g" in established
+    assert "apollo15_confirms_equal_fall" in established
+    # corroborations are constraints, not reasoning factors
+    constraint_names = {c["name"] for c in graph["constraints"]}
+    assert "galileo_newton_convergence" in constraint_names
+    assert "apollo_galileo_convergence" in constraint_names
+
+
+def test_newton_v3_corroborations_are_established():
+    graph = load_typst_package(NEWTON_V3)
+    state = analyze_proof_state(graph)
+    established = {d["name"] for d in state["established"]}
+    standalone = {d["name"] for d in state["standalone"]}
+    assert "galileo_newton_convergence" in established
+    assert "apollo_galileo_convergence" in established
+    assert "galileo_newton_convergence" not in standalone
+    assert "apollo_galileo_convergence" not in standalone
+
+
+def test_newton_v3_only_axioms_are_holes():
+    """Only the two axioms (second/third law) should be holes."""
+    graph = load_typst_package(NEWTON_V3)
+    state = analyze_proof_state(graph)
+    hole_names = {d["name"] for d in state["holes"]}
+    assert hole_names == {"second_law", "third_law"}
+
+
+def test_newton_v3_inverse_square_premises():
+    graph = load_typst_package(NEWTON_V3)
+    f = [f for f in graph["factors"] if f["conclusion"] == "inverse_square_force"]
+    assert len(f) == 1
+    assert set(f[0]["premise"]) == {"kepler_third_law", "second_law"}
+
+
+def test_newton_v3_mass_equivalence_premises():
+    graph = load_typst_package(NEWTON_V3)
+    f = [f for f in graph["factors"] if f["conclusion"] == "mass_equivalence"]
+    assert len(f) == 1
+    assert set(f[0]["premise"]) == {"pendulum_experiment", "second_law", "law_of_gravity"}
+
+
+# ── Einstein v3 ──────────────────────────────────────────────────────────────
+
+
+def test_einstein_v3_loads():
+    graph = load_typst_package(EINSTEIN_V3)
+    assert len(graph["nodes"]) == 16
+    assert len(graph["factors"]) == 5
+    assert len(graph["constraints"]) == 2
+
+
+def test_einstein_v3_reasoning_chain():
+    """EP → light bends → GR deflection; EFE + mercury → precession."""
+    graph = load_typst_package(EINSTEIN_V3)
+    state = analyze_proof_state(graph)
+    established = {d["name"] for d in state["established"]}
+    assert "equivalence_principle" in established
+    assert "light_bends_in_gravity" in established
+    assert "gr_light_deflection" in established
+    assert "gr_mercury_precession" in established
+    assert "eddington_confirms_gr" in established
+
+
+def test_einstein_v3_constraints():
+    graph = load_typst_package(EINSTEIN_V3)
+    constraint_map = {c["name"]: c for c in graph["constraints"]}
+    # Contradiction
+    assert constraint_map["deflection_contradiction"]["type"] == "contradiction"
+    assert set(constraint_map["deflection_contradiction"]["between"]) == {
+        "gr_light_deflection",
+        "soldner_deflection",
+    }
+    # Corroborations
+    assert constraint_map["gr_dual_confirmation"]["type"] == "corroboration"
+    assert set(constraint_map["gr_dual_confirmation"]["between"]) == {
+        "eddington_confirms_gr",
+        "gr_mercury_precession",
+    }
+
+
+def test_einstein_v3_corroboration_is_established():
+    graph = load_typst_package(EINSTEIN_V3)
+    state = analyze_proof_state(graph)
+    established = {d["name"] for d in state["established"]}
+    standalone = {d["name"] for d in state["standalone"]}
+    assert "gr_dual_confirmation" in established
+    assert "gr_dual_confirmation" not in standalone
+
+
+def test_einstein_v3_holes():
+    """Postulates without proof in this package should be holes."""
+    graph = load_typst_package(EINSTEIN_V3)
+    state = analyze_proof_state(graph)
+    hole_names = {d["name"] for d in state["holes"]}
+    assert "maxwell_electromagnetism" in hole_names
+    assert "soldner_deflection" in hole_names
+    assert "einstein_field_equations" in hole_names
+
+
+def test_einstein_v3_observations_are_axioms():
+    graph = load_typst_package(EINSTEIN_V3)
+    state = analyze_proof_state(graph)
+    axiom_names = {d["name"] for d in state["axioms"]}
+    assert "eotvos_experiment" in axiom_names
+    assert "eddington_sobral" in axiom_names
+    assert "eddington_principe" in axiom_names
+    assert "mercury_perihelion" in axiom_names
