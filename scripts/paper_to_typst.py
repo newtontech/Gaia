@@ -35,44 +35,63 @@ from paper_to_yaml import (
 
 # ── Typst Escaping ────────────────────────────────────────────────────
 
+# Module-level flag: when True, _escape_typst renders math as raw text
+_PLAINTEXT_MATH = False
+
+
+def _escape_typst_specials(text: str) -> str:
+    """Escape Typst special characters (#, @, <, >) in plain text."""
+    text = text.replace("#", "\\#")
+    text = text.replace("@", "\\@")
+    text = text.replace("<", "\\<")
+    text = text.replace(">", "\\>")
+    return text
+
 
 def _escape_typst(text: str) -> str:
-    """Escape special Typst characters and convert LaTeX math to mitex calls.
+    """Escape special Typst characters and convert LaTeX math.
 
-    Replaces $...$ with #mi("...") and $$...$$ with #mitex("...") for
-    rendering LaTeX math in Typst via the mitex package.
-    Escapes #, @ in text segments.
+    Uses module-level _PLAINTEXT_MATH flag to control rendering mode:
+    - False (default): convert $...$ to #mi()/#mitex() calls
+    - True: render math as raw code blocks (fallback when mitex fails)
     """
+    if _PLAINTEXT_MATH:
+        # Fallback: keep LaTeX as monospace code blocks — no information lost
+        def _replace_display_plain(m: re.Match) -> str:
+            latex = m.group(1).strip()
+            return f"\n```\n{latex}\n```\n"
 
-    # First handle display math $$...$$
+        text = re.sub(r"\$\$\s*(.*?)\s*\$\$", _replace_display_plain, text, flags=re.DOTALL)
+
+        def _replace_inline_plain(m: re.Match) -> str:
+            return f"`{m.group(1)}`"
+
+        text = re.sub(r"\$([^$]+?)\$", _replace_inline_plain, text)
+        return _escape_typst_specials(text)
+
+    # Normal mode: convert to #mi()/#mitex() calls
     def _replace_display(m: re.Match) -> str:
-        latex = _sanitize_latex(m.group(1).strip())
+        latex = m.group(1).strip()
         latex = latex.replace('"', '\\"')
         return f"\n#mitex(`{latex}`)\n"
 
     text = re.sub(r"\$\$\s*(.*?)\s*\$\$", _replace_display, text, flags=re.DOTALL)
 
-    # Then handle inline math $...$
     def _replace_inline(m: re.Match) -> str:
-        latex = _sanitize_latex(m.group(1))
+        latex = m.group(1)
         latex = latex.replace('"', '\\"')
         return f"#mi(`{latex}`)"
 
     text = re.sub(r"\$([^$]+?)\$", _replace_inline, text)
 
     # Escape Typst specials in remaining text (but not inside #mi/#mitex calls)
-    # Split by mitex/mi calls to avoid double-escaping
     parts = re.split(r"(#mi(?:tex)?\(`[^`]*`\))", text)
     result = []
     for part in parts:
         if part.startswith("#mi"):
             result.append(part)
         else:
-            part = part.replace("#", "\\#")
-            part = part.replace("@", "\\@")
-            part = part.replace("<", "\\<")
-            part = part.replace(">", "\\>")
-            result.append(part)
+            result.append(_escape_typst_specials(part))
     return "".join(result)
 
 
@@ -103,11 +122,22 @@ def _wrap_content(text: str, width: int = 90) -> str:
 # ── Typst Package Generation ─────────────────────────────────────────
 
 
-def build_typst_package(parsed: dict, gaia_lang_import: str) -> dict[str, str]:
+def build_typst_package(
+    parsed: dict, gaia_lang_import: str, plaintext_math: bool = False
+) -> dict[str, str]:
     """Build Typst v3 package files from parsed Step 1+2+3 data.
+
+    Args:
+        parsed: Dict with slug, doi, step1, step2, step3 data.
+        gaia_lang_import: Import path for gaia-lang v2.typ.
+        plaintext_math: If True, render LaTeX as raw text instead of mitex.
+            Used as fallback when mitex compilation fails.
 
     Returns dict mapping filename -> file content string.
     """
+    global _PLAINTEXT_MATH
+    _PLAINTEXT_MATH = plaintext_math
+
     slug = parsed["slug"]
     doi = parsed["doi"]
     step1 = parsed["step1"]
@@ -461,6 +491,26 @@ def _topo_sort_conclusions(
 # ── Write Package ─────────────────────────────────────────────────────
 
 
+def _try_compile(pkg_dir: Path) -> bool:
+    """Try to compile a Typst package. Returns True if successful."""
+    entrypoint = pkg_dir / "lib.typ"
+    if not entrypoint.exists():
+        return False
+    # Find repository root (for resolving imports)
+    root = pkg_dir.resolve()
+    while root != root.parent:
+        if (root / "pyproject.toml").exists():
+            break
+        root = root.parent
+    try:
+        import typst
+
+        typst.query(str(entrypoint), "<gaia-graph>", field="value", one=True, root=str(root))
+        return True
+    except Exception:
+        return False
+
+
 def write_typst_package(data: dict[str, str], output_dir: Path) -> Path:
     """Write Typst package files to output directory."""
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -528,6 +578,16 @@ async def process_paper(
 
     typst_data = build_typst_package(parsed, gaia_lang_import)
     pkg_dir = write_typst_package(typst_data, output_dir / slug)
+
+    # Verify compilation; fallback to plaintext math if mitex fails
+    if not _try_compile(pkg_dir):
+        print("  WARN: mitex compilation failed, retrying with plaintext math fallback")
+        typst_data = build_typst_package(parsed, gaia_lang_import, plaintext_math=True)
+        pkg_dir = write_typst_package(typst_data, output_dir / slug)
+        if _try_compile(pkg_dir):
+            print("  OK (plaintext math fallback)")
+        else:
+            print("  WARN: still fails after fallback (will attempt Graph IR anyway)")
 
     n_settings = sum(1 for p in step3_data["premises"]) + sum(1 for c in step3_data["contexts"])
     n_conclusions = len(step1_data["conclusions"])
