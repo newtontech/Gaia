@@ -80,13 +80,26 @@ class PublishResult:
 
 
 async def pipeline_build(pkg_path: Path) -> BuildResult:
-    """Load, compile, and canonicalize a Typst package — all in memory."""
-    from libs.graph_ir.build_utils import build_singleton_local_graph
-    from libs.graph_ir.typst_compiler import compile_typst_to_raw_graph
-    from libs.lang.typst_loader import load_typst_package
+    """Load, compile, and canonicalize a Typst package — all in memory.
 
-    graph_data = load_typst_package(pkg_path)
-    raw_graph = compile_typst_to_raw_graph(graph_data)
+    Tries v4 (label-based) loader first; falls back to v3 (string-based).
+    """
+    from libs.graph_ir.build_utils import build_singleton_local_graph
+    from libs.graph_ir.typst_compiler import compile_typst_to_raw_graph, compile_v4_to_raw_graph
+    from libs.lang.typst_loader import load_typst_package, load_typst_package_v4
+
+    # Try v4 first: query figure.where(kind: "gaia-node")
+    try:
+        graph_data = load_typst_package_v4(pkg_path)
+        if graph_data["nodes"]:
+            raw_graph = compile_v4_to_raw_graph(graph_data)
+        else:
+            raise ValueError("No v4 nodes found")
+    except Exception:
+        # Fall back to v3
+        graph_data = load_typst_package(pkg_path)
+        raw_graph = compile_typst_to_raw_graph(graph_data)
+
     canonicalization = build_singleton_local_graph(raw_graph)
     source_files = {p.name: p.read_text() for p in pkg_path.glob("*.typ") if p.is_file()}
 
@@ -309,6 +322,7 @@ _DEFAULT_PRIORS: dict[str, float] = {
     "setting": 1.0,
     "observation": 1.0,
     "question": 0.5,
+    "action": 0.5,
     "contradiction": 0.5,
     "equivalence": 0.5,
     "corroboration": 0.5,
@@ -388,7 +402,7 @@ def _render_markdown_from_graph_data(graph_data: dict) -> str:
         if factor.get("type") != "reasoning":
             continue
         conclusion = factor["conclusion"]
-        premises = factor.get("premise", [])
+        premises = factor.get("premises") or factor.get("premise", [])
         lines.append(f"### {conclusion} [proof]")
         lines.append(f"**Premises:** {', '.join(premises)}")
         lines.append(f"**[step:{conclusion}.1]** (prior=0.85)\n")
@@ -473,6 +487,7 @@ def _convert_local_graph_to_storage(
                 knowledge_id=knowledge_id,
                 version=1,
                 type=k_type,
+                kind=node.kind,
                 content=node.representative_content.strip(),
                 prior=prior,
                 keywords=[],
