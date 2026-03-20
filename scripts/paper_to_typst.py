@@ -446,33 +446,16 @@ def _gen_follow_up_typ(
     gaia_lang_import: str, open_questions: str, related_claims: list[str] | None = None
 ) -> str:
     content = _escape_typst(open_questions.strip())
-    lines = [
-        f'#import "{gaia_lang_import}": *',
-        '#import "@preview/mitex:0.2.5": mitex, mi',
-        "",
-        '#module("follow_up", title: "Open Questions")',
-    ]
-    # Import related claims so the question is connected in the graph
-    if related_claims:
-        lines.append("")
-        lines.append("// ── Related claims ──")
-        for claim_name in related_claims:
-            if claim_name != "open_questions":
-                lines.append(f'#use("reasoning.{claim_name}")')
-    lines.append("")
-    lines.append('#question("open_questions")[')
-    lines.append(f"  {_wrap_content(content, 88)}")
-    # Add premises referencing related claims
-    if related_claims:
-        lines.append("][")
-        for claim_name in related_claims:
-            if claim_name != "open_questions":
-                lines.append(f'  #premise("{claim_name}")')
-        lines.append("]")
-    else:
-        lines.append("]")
-    lines.append("")
-    return "\n".join(lines)
+    return (
+        f'#import "{gaia_lang_import}": *\n'
+        f'#import "@preview/mitex:0.2.5": mitex, mi\n'
+        f"\n"
+        f'#module("follow_up", title: "Open Questions")\n'
+        f"\n"
+        f'#question("open_questions")[\n'
+        f"  {_wrap_content(content, 88)}\n"
+        f"]\n"
+    )
 
 
 def _topo_sort_conclusions(
