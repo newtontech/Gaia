@@ -123,8 +123,13 @@ class TestBasicConversion:
         assert b_map["test-pkg/boiling_point"].belief == 0.85
         assert b_map["test-pkg/steam_production"].belief == 0.55
 
-        # Chains and probabilities are empty for Graph IR path
-        assert result.chains == []
+        # Chains generated from reasoning factors
+        assert len(result.chains) == 1
+        chain = result.chains[0]
+        assert chain.type == "deduction"
+        assert len(chain.steps) == 1
+        assert chain.steps[0].premises[0].knowledge_id == "test-pkg/boiling_point"
+        assert chain.steps[0].conclusion.knowledge_id == "test-pkg/steam_production"
         assert result.probabilities == []
 
         # Modules

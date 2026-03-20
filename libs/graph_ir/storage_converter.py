@@ -216,6 +216,58 @@ def convert_graph_ir_to_storage(
             )
         )
 
+    # -- Build chains from reasoning factors --
+    # Each reasoning factor becomes a single-step chain: premises → conclusion
+    chains: list[storage.Chain] = []
+    module_chain_ids: dict[str, list[str]] = {m.module_id: [] for m in modules}
+    for f in lcg.factor_nodes:
+        edge_type = (f.metadata or {}).get("edge_type", "deduction")
+        if edge_type not in (
+            "deduction",
+            "induction",
+            "abstraction",
+            "contradiction",
+            "retraction",
+        ):
+            edge_type = "deduction"
+
+        premises_kid = [lcn_to_kid[p] for p in f.premises if p in lcn_to_kid]
+        conclusion_kid = lcn_to_kid.get(f.conclusion) if f.conclusion else None
+        if not premises_kid or conclusion_kid is None:
+            continue
+
+        # Determine module from source_ref
+        mod_name = f.source_ref.module if f.source_ref else "unknown"
+        module_id = f"{package_id}.{mod_name}"
+        chain_id = f"{package_id}.{mod_name}.{f.factor_id}"
+
+        chains.append(
+            storage.Chain(
+                chain_id=chain_id,
+                module_id=module_id,
+                package_id=package_id,
+                package_version=package_version,
+                type=edge_type,
+                steps=[
+                    storage.ChainStep(
+                        step_index=0,
+                        premises=[
+                            storage.KnowledgeRef(knowledge_id=kid, version=1)
+                            for kid in premises_kid
+                        ],
+                        reasoning="",
+                        conclusion=storage.KnowledgeRef(knowledge_id=conclusion_kid, version=1),
+                    )
+                ],
+            )
+        )
+        if module_id in module_chain_ids:
+            module_chain_ids[module_id].append(chain_id)
+
+    # Update module chain_ids
+    for m in modules:
+        m.chain_ids = module_chain_ids.get(m.module_id, [])
+
     # -- Build belief snapshots --
     belief_snapshots: list[storage.BeliefSnapshot] = []
     if beliefs:
@@ -248,7 +300,7 @@ def convert_graph_ir_to_storage(
         package=package,
         modules=modules,
         knowledge_items=knowledge_items,
-        chains=[],
+        chains=chains,
         factors=factors,
         belief_snapshots=belief_snapshots,
         probabilities=[],
