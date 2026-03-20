@@ -38,17 +38,53 @@ STAGES = [
 ]
 
 
-def _load_config() -> dict:
-    """Load pipeline.toml from repo root. Returns nested dict."""
-    toml_path = REPO_ROOT / "pipeline.toml"
-    if not toml_path.exists():
+def _load_toml(path: Path) -> dict:
+    """Load a single TOML file."""
+    if not path.exists():
         return {}
     try:
         import tomllib
     except ModuleNotFoundError:
         import tomli as tomllib  # type: ignore[no-redef]
-    with open(toml_path, "rb") as f:
+    with open(path, "rb") as f:
         return tomllib.load(f)
+
+
+def _deep_merge(base: dict, override: dict) -> dict:
+    """Deep merge override into base. Override values win."""
+    result = dict(base)
+    for key, val in override.items():
+        if key in result and isinstance(result[key], dict) and isinstance(val, dict):
+            result[key] = _deep_merge(result[key], val)
+        else:
+            result[key] = val
+    return result
+
+
+def _load_config(env: str | None = None) -> dict:
+    """Load pipeline config: base pipeline.toml + env-specific override.
+
+    Load order: pipeline.toml (base) ← pipeline.{env}.toml (override)
+    Env is determined by: --env arg > GAIA_ENV env var > no override
+    """
+    import os
+
+    env = env or os.getenv("GAIA_ENV")
+
+    base = _load_toml(REPO_ROOT / "pipeline.toml")
+
+    if env:
+        env_path = REPO_ROOT / f"pipeline.{env}.toml"
+        if env_path.exists():
+            override = _load_toml(env_path)
+            base = _deep_merge(base, override)
+            print(f"Config: pipeline.toml + pipeline.{env}.toml")
+        else:
+            print(f"Warning: pipeline.{env}.toml not found, using base only")
+    else:
+        print("Config: pipeline.toml (no env override)")
+
+    return base
 
 
 def build_stage_command(
@@ -160,14 +196,14 @@ def run_stage(stage: str, **kwargs) -> tuple[bool, float]:
     print(f"Command: {' '.join(cmd)}")
     print()
 
-    env = None
+    proc_env = None
     if stage == "xml-to-typst":
         import os
 
-        env = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "scripts" / "pipeline")}
+        proc_env = {**os.environ, "PYTHONPATH": str(REPO_ROOT / "scripts" / "pipeline")}
 
     t0 = time.monotonic()
-    result = subprocess.run(cmd, cwd=str(REPO_ROOT), env=env)
+    result = subprocess.run(cmd, cwd=str(REPO_ROOT), env=proc_env)
     elapsed = time.monotonic() - t0
 
     if result.returncode == 0:
@@ -181,13 +217,31 @@ def run_stage(stage: str, **kwargs) -> tuple[bool, float]:
 
 
 def main() -> int:
-    cfg = _load_config()
+    # Pre-parse --env before full argparse (needed to set config defaults)
+    import os
+
+    env_name = None
+    for i, arg in enumerate(sys.argv[1:], 1):
+        if arg == "--env" and i < len(sys.argv):
+            env_name = sys.argv[i + 1]
+            break
+        if arg.startswith("--env="):
+            env_name = arg.split("=", 1)[1]
+            break
+    env_name = env_name or os.getenv("GAIA_ENV")
+
+    cfg = _load_config(env_name)
     pipeline_cfg = cfg.get("pipeline", {})
     storage_cfg = cfg.get("storage", {})
     canon_cfg = pipeline_cfg.get("canonicalization", {})
 
     parser = argparse.ArgumentParser(
         description="Run the full Gaia pipeline. Reads defaults from pipeline.toml.",
+    )
+    parser.add_argument(
+        "--env",
+        default=env_name,
+        help="Environment: local, test, prod (loads pipeline.{env}.toml override)",
     )
     parser.add_argument(
         "--papers-dir",

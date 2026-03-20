@@ -1,0 +1,16 @@
+# Gaia Pipeline — Test environment
+# Usage: python scripts/pipeline/run_full_pipeline.py --env test
+#
+# Writes to: s3://datainfra-test/gaia_server_test
+# Set GAIA_LANCEDB_URI=s3://datainfra-test/gaia_server_test in .env
+
+[pipeline]
+papers_dir = "tests/fixtures/inputs/papers"
+output_dir = "output"
+concurrency = 5
+
+[pipeline.canonicalization]
+use_embedding = true
+
+[storage]
+graph_backend = "none"
