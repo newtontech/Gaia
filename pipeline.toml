@@ -2,10 +2,14 @@
 # Non-sensitive pipeline parameters. DB credentials go in .env
 
 [pipeline]
-# Output directory for intermediate files
+# Input: directory containing paper subdirs with XML files
+papers_dir = "tests/fixtures/inputs/papers"
+# Output directory for all intermediate files (typst_packages/, global_graph/, etc.)
 output_dir = "output"
 # Max concurrent papers for xml-to-typst stage
 concurrency = 5
+# Gaia lang import path (relative from output/typst_packages/<pkg>/)
+gaia_lang_import = "../../../libs/typst/gaia-lang/v2.typ"
 
 [pipeline.bp]
 # Belief propagation parameters
@@ -32,12 +36,11 @@ graph_backend = "none"
 #   GAIA_LANCEDB_PATH=./data/lancedb/gaia
 #
 # Remote LanceDB (S3/TOS):
-#   GAIA_LANCEDB_URI=s3://datainfra-prod/propositional_logic_analysis
-#   (also needs TOS_ACCESS_KEY, TOS_SECRET_KEY, TOS_ENDPOINT, TOS_BUCKET in .env)
+#   GAIA_LANCEDB_URI=s3://datainfra-test/gaia_server_test
+#   (also needs TOS_ACCESS_KEY, TOS_SECRET_KEY, TOS_ENDPOINT in .env)
 #
 # Remote Neo4j:
 #   GAIA_GRAPH_BACKEND=neo4j
 #   GAIA_NEO4J_URI=bolt://remote-host:7687
 #   GAIA_NEO4J_USER=neo4j
 #   GAIA_NEO4J_PASSWORD=...
-#   GAIA_NEO4J_DATABASE=neo4j

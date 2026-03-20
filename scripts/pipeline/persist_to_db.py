@@ -25,18 +25,25 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
-from libs.global_graph.models import (
+from dotenv import load_dotenv  # noqa: E402
+
+load_dotenv()
+
+from libs.global_graph.models import (  # noqa: E402
     CanonicalBinding as GGCanonicalBinding,
     GlobalCanonicalNode as GGGlobalCanonicalNode,
     GlobalGraph,
     GlobalInferenceState as GGInferenceState,
 )
-from libs.global_graph.serialize import load_global_graph
-from libs.graph_ir.models import LocalCanonicalGraph, LocalParameterization
-from libs.graph_ir.storage_converter import _map_factor_type, convert_graph_ir_to_storage
-from libs.storage import models as storage
-from libs.storage.config import StorageConfig
-from libs.storage.manager import StorageManager
+from libs.global_graph.serialize import load_global_graph  # noqa: E402
+from libs.graph_ir.models import LocalCanonicalGraph, LocalParameterization  # noqa: E402
+from libs.graph_ir.storage_converter import (  # noqa: E402
+    _map_factor_type,
+    convert_graph_ir_to_storage,
+)
+from libs.storage import models as storage  # noqa: E402
+from libs.storage.config import StorageConfig  # noqa: E402
+from libs.storage.manager import StorageManager  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
@@ -338,10 +345,15 @@ async def persist_global_graph(
 
 async def main(args: argparse.Namespace) -> None:
     """Run the persist-to-db pipeline."""
+    # StorageConfig reads GAIA_* env vars automatically.
+    # GAIA_LANCEDB_URI takes precedence over GAIA_LANCEDB_PATH.
+    # CLI --db-path overrides GAIA_LANCEDB_PATH but not GAIA_LANCEDB_URI.
     config = StorageConfig(
         lancedb_path=args.db_path,
         graph_backend=args.graph_backend,
     )
+    conn = config.effective_lancedb_connection
+    logger.info("LanceDB connection: %s", conn)
 
     mgr = StorageManager(config)
     await mgr.initialize()
