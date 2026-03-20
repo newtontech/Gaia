@@ -215,7 +215,7 @@ description = "Starter Gaia knowledge package"
 // Modules: motivation
 
 #package("{pkg_name}",
-  title: "{pkg_name.replace('_', ' ')}",
+  title: "{pkg_name.replace("_", " ")}",
   version: "1.0.0",
   modules: ("motivation",),
   export: ("main_question",),
