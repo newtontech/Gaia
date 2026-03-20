@@ -288,6 +288,49 @@ def derive_local_parameterization(
     )
 
 
+def derive_local_parameterization_from_raw(
+    raw_graph: RawGraph,
+    local_graph: LocalCanonicalGraph,
+) -> LocalParameterization:
+    """Derive local parameterization without a YAML Package object.
+
+    Works from RawGraph + LocalCanonicalGraph directly, using node metadata
+    and knowledge_type to determine priors. Suitable for Typst-compiled graphs
+    where no YAML Package is available.
+    """
+    # Build a lookup from raw node metadata for any explicit priors
+    raw_prior_by_name: dict[str, float] = {}
+    for raw_node in raw_graph.knowledge_nodes:
+        if raw_node.metadata and "prior" in raw_node.metadata:
+            for sr in raw_node.source_refs:
+                raw_prior_by_name[(sr.module, sr.knowledge_name)] = raw_node.metadata["prior"]
+
+    node_priors: dict[str, float] = {}
+    for node in local_graph.knowledge_nodes:
+        source_ref = node.source_refs[0]
+        key = (source_ref.module, source_ref.knowledge_name)
+        if key in raw_prior_by_name:
+            node_priors[node.local_canonical_id] = raw_prior_by_name[key]
+        else:
+            node_priors[node.local_canonical_id] = _default_node_prior(None, node.knowledge_type)
+
+    # Reasoning factors from Typst use type="reasoning"; YAML uses "infer"/"abstraction"
+    _parameterizable_factor_types = {"infer", "abstraction", "reasoning"}
+    factor_parameters: dict[str, FactorParams] = {}
+    for factor in local_graph.factor_nodes:
+        if factor.type not in _parameterizable_factor_types or factor.source_ref is None:
+            continue
+        factor_parameters[factor.factor_id] = FactorParams(
+            conditional_probability=1.0,
+        )
+
+    return LocalParameterization(
+        graph_hash=local_graph.graph_hash(),
+        node_priors=node_priors,
+        factor_parameters=factor_parameters,
+    )
+
+
 def _build_raw_node(
     pkg: Package, module_name: str, decl: Knowledge, version: str
 ) -> RawKnowledgeNode:
