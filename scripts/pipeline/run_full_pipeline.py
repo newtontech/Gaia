@@ -61,11 +61,31 @@ def _deep_merge(base: dict, override: dict) -> dict:
     return result
 
 
+def _apply_env_mapping(cfg: dict) -> None:
+    """Apply [storage.env_mapping] — copy .env vars to GAIA_* vars.
+
+    e.g. TEST_GAIA_LANCEDB_URI → GAIA_LANCEDB_URI
+    """
+    import os
+
+    mapping = cfg.get("storage", {}).pop("env_mapping", None)
+    if not mapping:
+        return
+    for src_var, dst_var in mapping.items():
+        value = os.getenv(src_var)
+        if value:
+            os.environ[dst_var] = value
+            print(f"  env: {src_var} → {dst_var}")
+        else:
+            print(f"  env: {src_var} not set, skipping")
+
+
 def _load_config(env: str | None = None) -> dict:
     """Load pipeline config: base pipeline.toml + env-specific override.
 
     Load order: pipeline.toml (base) ← pipeline.{env}.toml (override)
-    Env is determined by: --env arg > GAIA_ENV env var > no override
+    Then applies [storage.env_mapping] to set GAIA_* env vars.
+    Env is determined by: --env arg > GAIA_ENV env var > no override.
     """
     import os
 
@@ -83,6 +103,8 @@ def _load_config(env: str | None = None) -> dict:
             print(f"Warning: pipeline.{env}.toml not found, using base only")
     else:
         print("Config: pipeline.toml (no env override)")
+
+    _apply_env_mapping(base)
 
     return base
 

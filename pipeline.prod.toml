@@ -1,8 +1,5 @@
 # Gaia Pipeline — Production environment
 # Usage: python scripts/pipeline/run_full_pipeline.py --env prod
-#
-# Writes to: s3://datainfra-prod/gaia_server
-# Set GAIA_LANCEDB_URI=s3://datainfra-prod/gaia_server in .env
 
 [pipeline]
 output_dir = "output"
@@ -12,4 +9,11 @@ concurrency = 10
 use_embedding = true
 
 [storage]
-graph_backend = "none"  # TODO: switch to neo4j when ready
+graph_backend = "neo4j"
+
+[storage.env_mapping]
+PROD_GAIA_LANCEDB_URI = "GAIA_LANCEDB_URI"
+PROD_NEO4J_URI = "GAIA_NEO4J_URI"
+PROD_NEO4J_USER = "GAIA_NEO4J_USER"
+PROD_NEO4J_PASSWORD = "GAIA_NEO4J_PASSWORD"
+PROD_NEO4J_DB = "GAIA_NEO4J_DATABASE"
