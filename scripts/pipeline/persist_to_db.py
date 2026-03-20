@@ -97,6 +97,37 @@ def _convert_canonical_binding(
     )
 
 
+def _convert_canonical_bindings_resolved(
+    gg_bindings: list[GGCanonicalBinding],
+    now: datetime,
+    lcn_to_kid: dict[str, str],
+) -> list[storage.CanonicalBinding]:
+    """Convert bindings, resolving local_canonical_id to knowledge_id.
+
+    Neo4j uses local_canonical_id to MERGE Knowledge nodes for CANONICAL_BINDING
+    relationships. If we leave it as lcn_xxx, it creates phantom Knowledge nodes.
+    Replacing with the actual knowledge_id (paper_xxx/name) links to existing nodes.
+    """
+    result = []
+    for b in gg_bindings:
+        # Resolve lcn_id → knowledge_id if mapping available
+        resolved_lcn_id = lcn_to_kid.get(b.local_canonical_id, b.local_canonical_id)
+        result.append(
+            storage.CanonicalBinding(
+                package=b.package,
+                version=b.version,
+                local_graph_hash=b.local_graph_hash,
+                local_canonical_id=resolved_lcn_id,
+                decision=b.decision,
+                global_canonical_id=b.global_canonical_id,
+                decided_at=now,
+                decided_by=b.decided_by,
+                reason=b.reason,
+            )
+        )
+    return result
+
+
 def _convert_inference_state(
     gg_state: GGInferenceState,
 ) -> storage.GlobalInferenceState:
@@ -237,13 +268,18 @@ def _load_local_beliefs(pkg_dir: Path) -> dict[str, float] | None:
 async def persist_packages(
     packages_dir: Path,
     mgr: StorageManager,
-) -> int:
-    """Persist all per-package Graph IR to storage. Returns count of packages persisted."""
+) -> tuple[int, dict[str, str]]:
+    """Persist all per-package Graph IR to storage.
+
+    Returns (count, lcn_to_kid) where lcn_to_kid maps local_canonical_id
+    to knowledge_id across all packages (needed for binding resolution).
+    """
     pkg_dirs = _discover_packages(packages_dir)
     if not pkg_dirs:
         logger.warning("No packages with graph_ir/ found in %s", packages_dir)
-        return 0
+        return 0, {}
 
+    all_lcn_to_kid: dict[str, str] = {}
     count = 0
     for pkg_dir in pkg_dirs:
         pkg_name = pkg_dir.name
@@ -254,6 +290,7 @@ async def persist_packages(
         beliefs = _load_local_beliefs(pkg_dir)
 
         ingest_data = convert_graph_ir_to_storage(lcg, params, beliefs)
+        all_lcn_to_kid.update(ingest_data.lcn_to_kid)
 
         # Save local backups before writing to DB
         _save_package_backups(pkg_dir, ingest_data)
@@ -279,14 +316,23 @@ async def persist_packages(
             len(ingest_data.belief_snapshots),
         )
 
-    return count
+    return count, all_lcn_to_kid
 
 
 async def persist_global_graph(
     global_graph_dir: Path,
     mgr: StorageManager,
+    lcn_to_kid: dict[str, str] | None = None,
 ) -> bool:
-    """Persist global graph to storage. Returns True if persisted."""
+    """Persist global graph to storage. Returns True if persisted.
+
+    Args:
+        global_graph_dir: Directory containing global_graph.json.
+        mgr: Initialized StorageManager.
+        lcn_to_kid: Mapping from local_canonical_id → knowledge_id
+            (from per-package persist). Used to resolve binding IDs so
+            Neo4j links Knowledge nodes correctly.
+    """
     gg_path = global_graph_dir / "global_graph.json"
     if not gg_path.exists():
         logger.info("No global_graph.json found at %s — skipping", gg_path)
@@ -296,10 +342,11 @@ async def persist_global_graph(
     global_graph = load_global_graph(gg_path)
 
     now = datetime.now(UTC)
+    lcn_to_kid = lcn_to_kid or {}
 
     # Convert models
     storage_nodes = [_convert_global_canonical_node(n) for n in global_graph.knowledge_nodes]
-    storage_bindings = [_convert_canonical_binding(b, now) for b in global_graph.bindings]
+    storage_bindings = _convert_canonical_bindings_resolved(global_graph.bindings, now, lcn_to_kid)
     storage_state = _convert_inference_state(global_graph.inference_state)
     storage_factors = _convert_global_factors(global_graph)
 
@@ -314,9 +361,11 @@ async def persist_global_graph(
     if storage_bindings or storage_nodes:
         await mgr.write_canonical_bindings(storage_bindings, storage_nodes)
 
-    # Write global factors
-    if storage_factors:
-        await mgr.write_factors(storage_factors)
+    # Write global factors to LanceDB ONLY (not Neo4j).
+    # Global factors reference gcn_ IDs which are GlobalCanonicalNode, not Knowledge.
+    # Writing them to Neo4j's factor topology would create phantom Knowledge nodes.
+    if storage_factors and mgr.content_store is not None:
+        await mgr.content_store.write_factors(storage_factors)
 
     # Write inference state
     if storage_state.graph_hash:
@@ -365,13 +414,13 @@ async def main(args: argparse.Namespace) -> None:
             await mgr.clean_all()
 
         # Per-package persistence
-        pkg_count = await persist_packages(Path(args.packages_dir), mgr)
-        logger.info("Persisted %d packages", pkg_count)
+        pkg_count, lcn_to_kid = await persist_packages(Path(args.packages_dir), mgr)
+        logger.info("Persisted %d packages (%d lcn→kid mappings)", pkg_count, len(lcn_to_kid))
 
         # Global graph persistence
         if args.global_graph_dir:
             gg_dir = Path(args.global_graph_dir)
-            persisted = await persist_global_graph(gg_dir, mgr)
+            persisted = await persist_global_graph(gg_dir, mgr, lcn_to_kid)
             if persisted:
                 logger.info("Global graph persisted successfully")
         else:

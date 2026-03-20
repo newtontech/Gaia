@@ -50,6 +50,8 @@ class GraphIRIngestData:
     factors: list[storage.FactorNode] = field(default_factory=list)
     belief_snapshots: list[storage.BeliefSnapshot] = field(default_factory=list)
     probabilities: list[storage.ProbabilityRecord] = field(default_factory=list)
+    # Mapping from local_canonical_id → knowledge_id (for binding ID resolution)
+    lcn_to_kid: dict[str, str] = field(default_factory=dict)
 
 
 def _infer_module_role(module_name: str) -> str:
@@ -250,4 +252,5 @@ def convert_graph_ir_to_storage(
         factors=factors,
         belief_snapshots=belief_snapshots,
         probabilities=[],
+        lcn_to_kid=dict(lcn_to_kid),
     )
