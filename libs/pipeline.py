@@ -262,7 +262,7 @@ async def pipeline_publish(
         db_path: LanceDB path shortcut (used if storage_config is None).
         embed_dim: Embedding dimension for stub embeddings.
     """
-    from cli.lang_to_storage import convert_to_storage
+    from archive.cli.lang_to_storage import convert_to_storage
     from libs.embedding import StubEmbeddingModel
     from libs.storage.config import StorageConfig
     from libs.storage.manager import StorageManager

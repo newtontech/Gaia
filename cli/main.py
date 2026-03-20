@@ -439,7 +439,7 @@ def _build_submission_artifact(graph_dir: Path, pkg_path: Path, package_name: st
 async def _publish_local(pkg_path: Path, db_path: str) -> None:
     """Convert artifacts to v2 models and write to LanceDB + Kuzu."""
     from cli.infer_store import load_infer_result
-    from cli.lang_to_storage import convert_to_storage
+    from archive.cli.lang_to_storage import convert_to_storage
     from cli.manifest import deserialize_package
     from cli.review_store import find_latest_review, read_review
     from libs.storage.config import StorageConfig

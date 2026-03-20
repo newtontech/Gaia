@@ -13,7 +13,7 @@ EINSTEIN_DIR = FIXTURES / "einstein_gravity"
 
 def test_galileo_converts_to_storage():
     """Galileo package converts to v2 models with correct counts."""
-    from cli.lang_to_storage import convert_to_storage
+    from archive.cli.lang_to_storage import convert_to_storage
 
     pkg = load_package(GALILEO_DIR)
     pkg = resolve_refs(pkg)
@@ -38,7 +38,7 @@ def test_galileo_converts_to_storage():
 
 def test_knowledge_dedup():
     """Same knowledge referenced from multiple modules should produce one Knowledge."""
-    from cli.lang_to_storage import convert_to_storage
+    from archive.cli.lang_to_storage import convert_to_storage
 
     pkg = load_package(GALILEO_DIR)
     pkg = resolve_refs(pkg)
@@ -50,7 +50,7 @@ def test_knowledge_dedup():
 
 def test_cross_package_refs_not_duplicated():
     """Newton referencing Galileo knowledge should not re-create them."""
-    from cli.lang_to_storage import convert_to_storage
+    from archive.cli.lang_to_storage import convert_to_storage
 
     galileo = load_package(GALILEO_DIR)
     galileo = resolve_refs(galileo)
@@ -66,7 +66,7 @@ def test_cross_package_refs_not_duplicated():
 
 def test_beliefs_become_snapshots():
     """Belief values should become BeliefSnapshot records."""
-    from cli.lang_to_storage import convert_to_storage
+    from archive.cli.lang_to_storage import convert_to_storage
 
     pkg = load_package(GALILEO_DIR)
     pkg = resolve_refs(pkg)
@@ -81,7 +81,7 @@ def test_beliefs_become_snapshots():
 
 def test_review_probabilities_use_full_chain_ids():
     """Review sidecars should map chain names back to full v2 chain IDs."""
-    from cli.lang_to_storage import convert_to_storage
+    from archive.cli.lang_to_storage import convert_to_storage
 
     pkg = load_package(GALILEO_DIR)
     pkg = resolve_refs(pkg)
@@ -113,7 +113,7 @@ def test_review_probabilities_use_full_chain_ids():
 def test_einstein_cross_package_aliases_keep_external_ids():
     """Nested local refs to dependency exports should not become local knowledge items."""
     from cli.main import _load_with_deps
-    from cli.lang_to_storage import convert_to_storage
+    from archive.cli.lang_to_storage import convert_to_storage
 
     pkg = _load_with_deps(EINSTEIN_DIR)
     data = convert_to_storage(pkg=pkg, review={}, beliefs={}, bp_run_id="test")
@@ -142,7 +142,7 @@ def test_einstein_cross_package_aliases_keep_external_ids():
 def test_einstein_subsumption_export_is_materialized_for_publish():
     """Exported subsumption declarations should become local knowledge items for storage."""
     from cli.main import _load_with_deps
-    from cli.lang_to_storage import convert_to_storage
+    from archive.cli.lang_to_storage import convert_to_storage
 
     pkg = _load_with_deps(EINSTEIN_DIR)
     data = convert_to_storage(pkg=pkg, review={}, beliefs={}, bp_run_id="test")
