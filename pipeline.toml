@@ -23,3 +23,5 @@ clustering_threshold = 0.85
 
 [storage]
 graph_backend = "none"
+# To clean DB before persist, pass --clean to run_full_pipeline.py or persist_to_db.py
+# This is NEVER automatic — always requires explicit CLI flag

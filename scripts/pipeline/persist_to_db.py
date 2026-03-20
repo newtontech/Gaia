@@ -359,6 +359,11 @@ async def main(args: argparse.Namespace) -> None:
     await mgr.initialize()
 
     try:
+        # Clean existing data if requested
+        if args.clean:
+            logger.info("Cleaning all existing data before persist...")
+            await mgr.clean_all()
+
         # Per-package persistence
         pkg_count = await persist_packages(Path(args.packages_dir), mgr)
         logger.info("Persisted %d packages", pkg_count)
@@ -400,6 +405,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         choices=["kuzu", "neo4j", "none"],
         default="none",
         help="Graph backend: kuzu, neo4j, or none (default: none).",
+    )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Drop all existing data before persisting.",
     )
     return parser.parse_args(argv)
 

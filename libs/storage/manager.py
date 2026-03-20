@@ -100,6 +100,33 @@ class StorageManager:
         if self.graph_store is not None:
             await self.graph_store.close()
 
+    async def clean_all(self) -> None:
+        """Drop and recreate all tables. Used for fresh pipeline runs."""
+        logger.info("Cleaning all storage data...")
+
+        # LanceDB: drop all tables and reinitialize
+        if self.content_store is not None:
+            from libs.storage.lance_content_store import LanceContentStore
+
+            if isinstance(self.content_store, LanceContentStore):
+                for table_name in list(self.content_store._db.list_tables().tables or []):
+                    self.content_store._db.drop_table(table_name)
+                await self.content_store.initialize()
+                logger.info("LanceDB: all tables dropped and recreated")
+
+        # Neo4j: delete all nodes and relationships
+        if self.graph_store is not None:
+            from libs.storage.neo4j_graph_store import Neo4jGraphStore
+
+            if isinstance(self.graph_store, Neo4jGraphStore):
+                async with self.graph_store._driver.session(
+                    database=self.graph_store._db
+                ) as session:
+                    result = await session.run("MATCH (n) DETACH DELETE n RETURN count(n) AS cnt")
+                    record = await result.single()
+                    logger.info("Neo4j: deleted %d nodes", record["cnt"])
+                await self.graph_store.initialize_schema()
+
     # ── Three-Write: ingest_package ──
 
     async def ingest_package(

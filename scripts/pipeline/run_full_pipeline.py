@@ -122,6 +122,7 @@ def build_stage_command(
     use_embedding: bool,
     concurrency: int,
     gaia_lang_import: str,
+    clean: bool = False,
 ) -> list[str]:
     """Build the subprocess command for a given stage."""
     typst_packages = str(Path(output_dir) / "typst_packages")
@@ -173,6 +174,8 @@ def build_stage_command(
             "--graph-backend",
             graph_backend,
         ]
+        if clean:
+            cmd.append("--clean")
     elif stage == "curation":
         cmd = [
             sys.executable,
@@ -300,6 +303,11 @@ def main() -> int:
         "--gaia-lang-import",
         default=pipeline_cfg.get("gaia_lang_import", "../../../libs/typst/gaia-lang/v2.typ"),
     )
+    parser.add_argument(
+        "--clean",
+        action="store_true",
+        help="Drop all existing DB data before persist stage. Must be explicit.",
+    )
 
     args = parser.parse_args()
 
@@ -328,6 +336,7 @@ def main() -> int:
         "use_embedding": args.use_embedding,
         "concurrency": args.concurrency,
         "gaia_lang_import": args.gaia_lang_import,
+        "clean": args.clean,
     }
 
     results: dict[str, tuple[bool, float]] = {}
