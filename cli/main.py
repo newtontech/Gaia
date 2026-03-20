@@ -64,22 +64,28 @@ def _build_typst(pkg_path: Path, format: str, proof_state: bool = False) -> None
     json_path = build_dir / "graph_data.json"
     json_path.write_text(json_mod.dumps(result.graph_data, ensure_ascii=False, indent=2))
 
-    # Save markdown
+    # Save markdown (v3 renderer only — v4 packages skip this)
     if format in ("md", "all"):
-        from libs.lang.typst_renderer import render_typst_to_markdown
+        try:
+            from libs.lang.typst_renderer import render_typst_to_markdown
 
-        md = render_typst_to_markdown(pkg_path)
-        md_path = build_dir / "package.md"
-        md_path.write_text(md)
-        typer.echo(f"Markdown: {md_path}")
+            md = render_typst_to_markdown(pkg_path)
+            md_path = build_dir / "package.md"
+            md_path.write_text(md)
+            typer.echo(f"Markdown: {md_path}")
+        except Exception:
+            pass  # v4 packages don't have #export-graph()
 
     if format in ("typst", "all"):
-        from libs.lang.typst_clean_renderer import render_typst_to_clean_typst
+        try:
+            from libs.lang.typst_clean_renderer import render_typst_to_clean_typst
 
-        typ = render_typst_to_clean_typst(pkg_path)
-        typ_path = build_dir / "package.typ"
-        typ_path.write_text(typ)
-        typer.echo(f"Typst: {typ_path}")
+            typ = render_typst_to_clean_typst(pkg_path)
+            typ_path = build_dir / "package.typ"
+            typ_path.write_text(typ)
+            typer.echo(f"Typst: {typ_path}")
+        except Exception:
+            pass  # v4 packages don't have #export-graph()
 
     if format in ("json", "all"):
         json_out = build_dir / "graph.json"
