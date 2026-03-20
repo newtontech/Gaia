@@ -226,6 +226,7 @@ def build_typst_package(
         result["follow_up.typ"] = _gen_follow_up_typ(
             gaia_lang_import,
             step1["open_questions"],
+            export_names,
         )
 
     return result
@@ -441,18 +442,37 @@ def _gen_reasoning_typ(
     return "\n".join(lines)
 
 
-def _gen_follow_up_typ(gaia_lang_import: str, open_questions: str) -> str:
+def _gen_follow_up_typ(
+    gaia_lang_import: str, open_questions: str, related_claims: list[str] | None = None
+) -> str:
     content = _escape_typst(open_questions.strip())
-    return (
-        f'#import "{gaia_lang_import}": *\n'
-        f'#import "@preview/mitex:0.2.5": mitex, mi\n'
-        f"\n"
-        f'#module("follow_up", title: "Open Questions")\n'
-        f"\n"
-        f'#question("open_questions")[\n'
-        f"  {_wrap_content(content, 88)}\n"
-        f"]\n"
-    )
+    lines = [
+        f'#import "{gaia_lang_import}": *',
+        '#import "@preview/mitex:0.2.5": mitex, mi',
+        "",
+        '#module("follow_up", title: "Open Questions")',
+    ]
+    # Import related claims so the question is connected in the graph
+    if related_claims:
+        lines.append("")
+        lines.append("// ── Related claims ──")
+        for claim_name in related_claims:
+            if claim_name != "open_questions":
+                lines.append(f'#use("reasoning.{claim_name}")')
+    lines.append("")
+    lines.append('#question("open_questions")[')
+    lines.append(f"  {_wrap_content(content, 88)}")
+    # Add premises referencing related claims
+    if related_claims:
+        lines.append("][")
+        for claim_name in related_claims:
+            if claim_name != "open_questions":
+                lines.append(f'  #premise("{claim_name}")')
+        lines.append("]")
+    else:
+        lines.append("]")
+    lines.append("")
+    return "\n".join(lines)
 
 
 def _topo_sort_conclusions(
@@ -580,6 +600,24 @@ async def process_paper(
 
     typst_data = build_typst_package(parsed, gaia_lang_import)
     pkg_dir = write_typst_package(typst_data, output_dir / slug)
+
+    # Save priors.json — node priors from LLM review (step3)
+    # Used by build_graph_ir.py to inject priors into Graph IR parameterization
+    import json
+
+    priors_map: dict[str, float] = {}
+    for p in step3_data["premises"]:
+        if "prior" in p and p["prior"] is not None:
+            priors_map[_truncate_name(p["name"])] = float(p["prior"])
+    for c in step3_data["contexts"]:
+        if "prior" in c and c["prior"] is not None:
+            priors_map[_truncate_name(c["name"])] = float(c["prior"])
+    # Conclusions default to 0.5
+    for conc in step1_data["conclusions"]:
+        conc_name = _truncate_name(_slugify(conc["title"]))
+        if conc_name not in priors_map:
+            priors_map[conc_name] = 0.5
+    (pkg_dir / "priors.json").write_text(json.dumps(priors_map, indent=2, ensure_ascii=False))
 
     # Verify compilation; fallback to plaintext math if mitex fails
     if not _try_compile(pkg_dir):
