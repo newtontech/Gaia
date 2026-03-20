@@ -33,7 +33,7 @@ from libs.global_graph.models import (
 )
 from libs.global_graph.serialize import load_global_graph
 from libs.graph_ir.models import LocalCanonicalGraph, LocalParameterization
-from libs.graph_ir.storage_converter import convert_graph_ir_to_storage
+from libs.graph_ir.storage_converter import _map_factor_type, convert_graph_ir_to_storage
 from libs.storage import models as storage
 from libs.storage.config import StorageConfig
 from libs.storage.manager import StorageManager
@@ -136,11 +136,11 @@ def _convert_global_factors(
         factors.append(
             storage.FactorNode(
                 factor_id=f.factor_id,
-                type=f.type,
+                type=_map_factor_type(f.type),
                 premises=list(f.premises),
                 contexts=list(f.contexts),
                 conclusion=f.conclusion,
-                package_id=f.package_id,
+                package_id=f.source_ref.package if f.source_ref else "unknown",
                 source_ref=source_ref,
                 metadata=f.metadata,
             )
