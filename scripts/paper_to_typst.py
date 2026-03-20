@@ -303,6 +303,7 @@ def _gen_setting_typ(
 
     seen_names: set[str] = set()
 
+    # Premises are claims (experimental assertions from the paper)
     for p in premises:
         name = _truncate_name(p["name"])
         if name in seen_names:
@@ -310,10 +311,11 @@ def _gen_setting_typ(
         seen_names.add(name)
         content = _escape_typst(p["content"].strip())
         lines.append("")
-        lines.append(f'#setting("{name}")[')
+        lines.append(f'#claim("{name}")[')
         lines.append(f"  {_wrap_content(content, 88)}")
         lines.append("]")
 
+    # Contexts are background settings (methodology, geometry, etc.)
     for c in contexts:
         name = _truncate_name(c["name"])
         if name in seen_names:
