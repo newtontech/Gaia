@@ -212,8 +212,8 @@ class TestModuleDiscovery:
 
         # Each module has correct module_id
         mod_ids = {m.module_id for m in result.modules}
-        assert "test-pkg/analysis" in mod_ids
-        assert "test-pkg/discussion" in mod_ids
+        assert "test-pkg.analysis" in mod_ids
+        assert "test-pkg.discussion" in mod_ids
 
 
 class TestModuleRoleInference:

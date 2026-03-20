@@ -148,7 +148,7 @@ def convert_graph_ir_to_storage(
             module_names[module_name] = set()
         module_names[module_name].add(knowledge_id)
 
-        module_id = f"{package_id}/{module_name}"
+        module_id = f"{package_id}.{module_name}"
 
         knowledge_items.append(
             storage.Knowledge(
@@ -170,7 +170,7 @@ def convert_graph_ir_to_storage(
     # -- Build modules --
     modules: list[storage.Module] = []
     for mod_name in sorted(module_names):
-        module_id = f"{package_id}/{mod_name}"
+        module_id = f"{package_id}.{mod_name}"
         modules.append(
             storage.Module(
                 module_id=module_id,
