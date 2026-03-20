@@ -174,7 +174,7 @@ def publish(
 def init_cmd(
     name: str = typer.Argument(..., help="Package name"),
 ) -> None:
-    """Initialize a new Typst knowledge package."""
+    """Initialize a new Typst knowledge package (v4 label-based DSL)."""
     pkg_dir = Path(name)
     pkg_name = pkg_dir.name
     if pkg_dir.exists():
@@ -183,11 +183,11 @@ def init_cmd(
 
     pkg_dir.mkdir(parents=True)
 
-    # Vendor the minimal Gaia Typst runtime so the package can build anywhere.
-    runtime_src_dir = Path(__file__).resolve().parents[1] / "libs" / "typst" / "gaia-lang"
+    # Vendor the v4 Gaia Typst runtime so the package can build anywhere.
+    runtime_src_dir = Path(__file__).resolve().parents[1] / "libs" / "typst" / "gaia-lang-v4"
     runtime_dst_dir = pkg_dir / "_gaia"
     runtime_dst_dir.mkdir()
-    for filename in ("v2.typ", "module.typ", "declarations.typ", "tactics.typ"):
+    for filename in ("lib.typ", "declarations.typ", "bibliography.typ", "style.typ"):
         src = runtime_src_dir / filename
         (runtime_dst_dir / filename).write_text(src.read_text())
 
@@ -202,41 +202,24 @@ description = "Starter Gaia knowledge package"
     (pkg_dir / "typst.toml").write_text(toml_content)
 
     # gaia.typ
-    gaia_content = """#import "_gaia/v2.typ": *
+    gaia_content = """#import "_gaia/lib.typ": *
 """
     (pkg_dir / "gaia.typ").write_text(gaia_content)
 
     # lib.typ
-    lib_content = f"""#import "gaia.typ": *
+    lib_content = """#import "gaia.typ": *
 #show: gaia-style
 
-// {pkg_name} — knowledge package
-//
-// Modules: motivation
-
-#package("{pkg_name}",
-  title: "{pkg_name.replace("_", " ")}",
-  version: "1.0.0",
-  modules: ("motivation",),
-  export: ("main_question",),
-)
-
 #include "motivation.typ"
-
-#export-graph()
 """
     (pkg_dir / "lib.typ").write_text(lib_content)
 
     # motivation.typ
     motivation_content = """#import "gaia.typ": *
 
-// motivation module
+= Motivation
 
-#module("motivation", title: "研究动机")
-
-#question("main_question")[
-  What is the main research question?
-]
+#question[What is the main research question?] <main_question>
 """
     (pkg_dir / "motivation.typ").write_text(motivation_content)
 
