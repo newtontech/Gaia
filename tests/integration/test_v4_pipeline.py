@@ -72,12 +72,8 @@ class TestGalileoV4Pipeline:
 
     def test_settings_have_high_belief(self, infer_result):
         """Settings (prior=1.0) should retain high belief after BP."""
-        setting_labels = [
-            label
-            for label in infer_result.beliefs
-            if "setting" in label.lower() or "aristotle" in label.lower()
-        ]
-        # At minimum, settings shouldn't collapse to 0
+        setting_labels = [label for label in infer_result.beliefs if ".setting." in label.lower()]
+        assert len(setting_labels) > 0, "No setting labels found"
         for label in setting_labels:
             assert infer_result.beliefs[label] > 0.5, f"Setting {label} has low belief"
 
