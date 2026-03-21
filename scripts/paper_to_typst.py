@@ -35,25 +35,48 @@ from paper_to_yaml import (
 
 # ── Typst Escaping ────────────────────────────────────────────────────
 
+# Module-level flag: when True, _escape_typst renders math as raw text
+_PLAINTEXT_MATH = False
+
+
+def _escape_typst_specials(text: str) -> str:
+    """Escape Typst special characters (#, @, <, >) in plain text."""
+    text = text.replace("#", "\\#")
+    text = text.replace("@", "\\@")
+    text = text.replace("<", "\\<")
+    text = text.replace(">", "\\>")
+    return text
+
 
 def _escape_typst(text: str) -> str:
-    """Escape special Typst characters and convert LaTeX math to mitex calls.
+    """Escape special Typst characters and convert LaTeX math.
 
-    Replaces $...$ with #mi("...") and $$...$$ with #mitex("...") for
-    rendering LaTeX math in Typst via the mitex package.
-    Escapes #, @ in text segments.
+    Uses module-level _PLAINTEXT_MATH flag to control rendering mode:
+    - False (default): convert $...$ to #mi()/#mitex() calls
+    - True: render math as raw code blocks (fallback when mitex fails)
     """
+    if _PLAINTEXT_MATH:
+        # Fallback: keep LaTeX as monospace code blocks — no information lost
+        def _replace_display_plain(m: re.Match) -> str:
+            latex = m.group(1).strip()
+            return f"\n```\n{latex}\n```\n"
 
-    # First handle display math $$...$$
+        text = re.sub(r"\$\$\s*(.*?)\s*\$\$", _replace_display_plain, text, flags=re.DOTALL)
+
+        def _replace_inline_plain(m: re.Match) -> str:
+            return f"`{m.group(1)}`"
+
+        text = re.sub(r"\$([^$]+?)\$", _replace_inline_plain, text)
+        return _escape_typst_specials(text)
+
+    # Normal mode: convert to #mi()/#mitex() calls
     def _replace_display(m: re.Match) -> str:
         latex = m.group(1).strip()
-        # Escape quotes inside the LaTeX
         latex = latex.replace('"', '\\"')
         return f"\n#mitex(`{latex}`)\n"
 
     text = re.sub(r"\$\$\s*(.*?)\s*\$\$", _replace_display, text, flags=re.DOTALL)
 
-    # Then handle inline math $...$
     def _replace_inline(m: re.Match) -> str:
         latex = m.group(1)
         latex = latex.replace('"', '\\"')
@@ -62,16 +85,13 @@ def _escape_typst(text: str) -> str:
     text = re.sub(r"\$([^$]+?)\$", _replace_inline, text)
 
     # Escape Typst specials in remaining text (but not inside #mi/#mitex calls)
-    # Split by mitex/mi calls to avoid double-escaping
     parts = re.split(r"(#mi(?:tex)?\(`[^`]*`\))", text)
     result = []
     for part in parts:
         if part.startswith("#mi"):
             result.append(part)
         else:
-            part = part.replace("#", "\\#")
-            part = part.replace("@", "\\@")
-            result.append(part)
+            result.append(_escape_typst_specials(part))
     return "".join(result)
 
 
@@ -102,11 +122,22 @@ def _wrap_content(text: str, width: int = 90) -> str:
 # ── Typst Package Generation ─────────────────────────────────────────
 
 
-def build_typst_package(parsed: dict, gaia_lang_import: str) -> dict[str, str]:
+def build_typst_package(
+    parsed: dict, gaia_lang_import: str, plaintext_math: bool = False
+) -> dict[str, str]:
     """Build Typst v3 package files from parsed Step 1+2+3 data.
+
+    Args:
+        parsed: Dict with slug, doi, step1, step2, step3 data.
+        gaia_lang_import: Import path for gaia-lang v2.typ.
+        plaintext_math: If True, render LaTeX as raw text instead of mitex.
+            Used as fallback when mitex compilation fails.
 
     Returns dict mapping filename -> file content string.
     """
+    global _PLAINTEXT_MATH
+    _PLAINTEXT_MATH = plaintext_math
+
     slug = parsed["slug"]
     doi = parsed["doi"]
     step1 = parsed["step1"]
@@ -195,6 +226,7 @@ def build_typst_package(parsed: dict, gaia_lang_import: str) -> dict[str, str]:
         result["follow_up.typ"] = _gen_follow_up_typ(
             gaia_lang_import,
             step1["open_questions"],
+            export_names,
         )
 
     return result
@@ -272,6 +304,7 @@ def _gen_setting_typ(
 
     seen_names: set[str] = set()
 
+    # Premises are claims (experimental assertions from the paper)
     for p in premises:
         name = _truncate_name(p["name"])
         if name in seen_names:
@@ -279,10 +312,11 @@ def _gen_setting_typ(
         seen_names.add(name)
         content = _escape_typst(p["content"].strip())
         lines.append("")
-        lines.append(f'#setting("{name}")[')
+        lines.append(f'#claim("{name}")[')
         lines.append(f"  {_wrap_content(content, 88)}")
         lines.append("]")
 
+    # Contexts are background settings (methodology, geometry, etc.)
     for c in contexts:
         name = _truncate_name(c["name"])
         if name in seen_names:
@@ -408,7 +442,9 @@ def _gen_reasoning_typ(
     return "\n".join(lines)
 
 
-def _gen_follow_up_typ(gaia_lang_import: str, open_questions: str) -> str:
+def _gen_follow_up_typ(
+    gaia_lang_import: str, open_questions: str, related_claims: list[str] | None = None
+) -> str:
     content = _escape_typst(open_questions.strip())
     return (
         f'#import "{gaia_lang_import}": *\n'
@@ -458,6 +494,26 @@ def _topo_sort_conclusions(
 
 
 # ── Write Package ─────────────────────────────────────────────────────
+
+
+def _try_compile(pkg_dir: Path) -> bool:
+    """Try to compile a Typst package. Returns True if successful."""
+    entrypoint = pkg_dir / "lib.typ"
+    if not entrypoint.exists():
+        return False
+    # Find repository root (for resolving imports)
+    root = pkg_dir.resolve()
+    while root != root.parent:
+        if (root / "pyproject.toml").exists():
+            break
+        root = root.parent
+    try:
+        import typst
+
+        typst.query(str(entrypoint), "<gaia-graph>", field="value", one=True, root=str(root))
+        return True
+    except Exception:
+        return False
 
 
 def write_typst_package(data: dict[str, str], output_dir: Path) -> Path:
@@ -527,6 +583,34 @@ async def process_paper(
 
     typst_data = build_typst_package(parsed, gaia_lang_import)
     pkg_dir = write_typst_package(typst_data, output_dir / slug)
+
+    # Save priors.json — node priors from LLM review (step3)
+    # Used by build_graph_ir.py to inject priors into Graph IR parameterization
+    import json
+
+    priors_map: dict[str, float] = {}
+    for p in step3_data["premises"]:
+        if "prior" in p and p["prior"] is not None:
+            priors_map[_truncate_name(p["name"])] = float(p["prior"])
+    for c in step3_data["contexts"]:
+        if "prior" in c and c["prior"] is not None:
+            priors_map[_truncate_name(c["name"])] = float(c["prior"])
+    # Conclusions default to 0.5
+    for conc in step1_data["conclusions"]:
+        conc_name = _truncate_name(_slugify(conc["title"]))
+        if conc_name not in priors_map:
+            priors_map[conc_name] = 0.5
+    (pkg_dir / "priors.json").write_text(json.dumps(priors_map, indent=2, ensure_ascii=False))
+
+    # Verify compilation; fallback to plaintext math if mitex fails
+    if not _try_compile(pkg_dir):
+        print("  WARN: mitex compilation failed, retrying with plaintext math fallback")
+        typst_data = build_typst_package(parsed, gaia_lang_import, plaintext_math=True)
+        pkg_dir = write_typst_package(typst_data, output_dir / slug)
+        if _try_compile(pkg_dir):
+            print("  OK (plaintext math fallback)")
+        else:
+            print("  WARN: still fails after fallback (will attempt Graph IR anyway)")
 
     n_settings = sum(1 for p in step3_data["premises"]) + sum(1 for c in step3_data["contexts"])
     n_conclusions = len(step1_data["conclusions"])

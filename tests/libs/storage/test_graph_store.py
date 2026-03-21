@@ -5,7 +5,7 @@ auto-skipped if unavailable.
 """
 
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -394,6 +394,23 @@ class TestWriteResourceLinks:
 
 class TestWriteFactorTopology:
     async def test_write_factor_topology(self, graph_store):
+        # Pre-create Knowledge nodes (factor topology MATCHes existing nodes, doesn't create)
+        knowledge_items = [
+            Knowledge(
+                knowledge_id=kid,
+                version=1,
+                type="claim",
+                content=f"content {kid}",
+                prior=0.5,
+                keywords=[],
+                source_package_id="pkg",
+                source_module_id="pkg.mod",
+                created_at=datetime(2024, 1, 1, tzinfo=timezone.utc),
+            )
+            for kid in ["pkg/k1", "pkg/k2", "pkg/k3", "pkg/k4", "pkg/k5", "pkg/rel1"]
+        ]
+        await graph_store.write_topology(knowledge_items, [])
+
         factors = [
             FactorNode(
                 factor_id="pkg.mod.f1",

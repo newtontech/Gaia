@@ -1,0 +1,25 @@
+# Gaia Pipeline — Test environment
+# Usage: python scripts/pipeline/run_full_pipeline.py --env test
+#
+# Maps TEST_* env vars from .env to GAIA_* for StorageConfig
+
+[pipeline]
+papers_dir = "tests/fixtures/inputs/papers"
+output_dir = "output"
+concurrency = 5
+
+[pipeline.canonicalization]
+use_embedding = true
+
+[storage]
+graph_backend = "neo4j"
+
+# Environment variable mapping: .env var name → GAIA_ env var name
+# On load, the value of the .env var is copied to the GAIA_ var
+# so StorageConfig picks it up automatically.
+[storage.env_mapping]
+TEST_GAIA_LANCEDB_URI = "GAIA_LANCEDB_URI"
+TEST_NEO4J_URI = "GAIA_NEO4J_URI"
+TEST_NEO4J_USER = "GAIA_NEO4J_USER"
+TEST_NEO4J_PASSWORD = "GAIA_NEO4J_PASSWORD"
+TEST_NEO4J_DB = "GAIA_NEO4J_DATABASE"

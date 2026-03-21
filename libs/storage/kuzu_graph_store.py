@@ -100,6 +100,7 @@ class KuzuGraphStore(GraphStore):
     """
 
     def __init__(self, db_path: Path | str) -> None:
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
         self._db = kuzu.Database(str(db_path))
         self._conn: kuzu.Connection | None = kuzu.Connection(self._db)
 
@@ -459,6 +460,34 @@ class KuzuGraphStore(GraphStore):
                         "ver": b.version,
                     },
                 )
+
+    # ── Delete global/factor nodes ──
+
+    async def delete_global_nodes(self, global_ids: list[str]) -> None:
+        if not global_ids:
+            return
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, partial(self._delete_global_nodes_sync, global_ids))
+
+    def _delete_global_nodes_sync(self, global_ids: list[str]) -> None:
+        for gid in global_ids:
+            self._conn.execute(
+                "MATCH (n:GlobalCanonicalNode {global_canonical_id: $gid}) DETACH DELETE n",
+                {"gid": gid},
+            )
+
+    async def delete_factors(self, factor_ids: list[str]) -> None:
+        if not factor_ids:
+            return
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, partial(self._delete_factors_sync, factor_ids))
+
+    def _delete_factors_sync(self, factor_ids: list[str]) -> None:
+        for fid in factor_ids:
+            self._conn.execute(
+                "MATCH (n:Factor {factor_id: $fid}) DETACH DELETE n",
+                {"fid": fid},
+            )
 
     # ── Query ──
 

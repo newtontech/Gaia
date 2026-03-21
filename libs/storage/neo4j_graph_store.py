@@ -237,50 +237,34 @@ class Neo4jGraphStore(GraphStore):
                 type=f.type,
             )
             for premise_id in f.premises:
-                await tx.run(
-                    "MERGE (n:Knowledge {knowledge_vid: $vid}) "
-                    "ON CREATE SET n.knowledge_id = $vid, n.version = 1, "
-                    "n.type = 'claim', n.prior = 0.5, n.belief = 0.5",
-                    vid=premise_id,
-                )
+                vid = f"{premise_id}@1" if "@" not in premise_id else premise_id
                 await tx.run(
                     "MATCH (k:Knowledge {knowledge_vid: $kid}), "
                     "(f:Factor {factor_id: $fid}) "
                     "WHERE NOT EXISTS { MATCH (k)-[:FACTOR_PREMISE]->(f) } "
                     "CREATE (k)-[:FACTOR_PREMISE]->(f)",
-                    kid=premise_id,
+                    kid=vid,
                     fid=f.factor_id,
                 )
             for context_id in f.contexts:
-                await tx.run(
-                    "MERGE (n:Knowledge {knowledge_vid: $vid}) "
-                    "ON CREATE SET n.knowledge_id = $vid, n.version = 1, "
-                    "n.type = 'claim', n.prior = 0.5, n.belief = 0.5",
-                    vid=context_id,
-                )
+                vid = f"{context_id}@1" if "@" not in context_id else context_id
                 await tx.run(
                     "MATCH (k:Knowledge {knowledge_vid: $kid}), "
                     "(f:Factor {factor_id: $fid}) "
                     "WHERE NOT EXISTS { MATCH (k)-[:FACTOR_CONTEXT]->(f) } "
                     "CREATE (k)-[:FACTOR_CONTEXT]->(f)",
-                    kid=context_id,
+                    kid=vid,
                     fid=f.factor_id,
                 )
             if f.conclusion is not None:
-                conc_id = f.conclusion
-                await tx.run(
-                    "MERGE (n:Knowledge {knowledge_vid: $vid}) "
-                    "ON CREATE SET n.knowledge_id = $vid, n.version = 1, "
-                    "n.type = 'claim', n.prior = 0.5, n.belief = 0.5",
-                    vid=conc_id,
-                )
+                vid = f"{f.conclusion}@1" if "@" not in f.conclusion else f.conclusion
                 await tx.run(
                     "MATCH (f:Factor {factor_id: $fid}), "
                     "(k:Knowledge {knowledge_vid: $kid}) "
                     "WHERE NOT EXISTS { MATCH (f)-[:FACTOR_CONCLUSION]->(k) } "
                     "CREATE (f)-[:FACTOR_CONCLUSION]->(k)",
                     fid=f.factor_id,
-                    kid=conc_id,
+                    kid=vid,
                 )
 
     async def write_global_topology(
@@ -331,6 +315,38 @@ class Neo4jGraphStore(GraphStore):
                 dec=b.decision,
                 pkg=b.package,
                 ver=b.version,
+            )
+
+    # ── Delete global/factor nodes ──
+
+    async def delete_global_nodes(self, global_ids: list[str]) -> None:
+        if not global_ids:
+            return
+        async with self._driver.session(database=self._db) as session:
+            await session.execute_write(self._tx_delete_global_nodes, global_ids)
+
+    @staticmethod
+    async def _tx_delete_global_nodes(
+        tx: neo4j.AsyncManagedTransaction, global_ids: list[str]
+    ) -> None:
+        for gid in global_ids:
+            await tx.run(
+                "MATCH (n:GlobalCanonicalNode {global_canonical_id: $gid}) DETACH DELETE n",
+                gid=gid,
+            )
+
+    async def delete_factors(self, factor_ids: list[str]) -> None:
+        if not factor_ids:
+            return
+        async with self._driver.session(database=self._db) as session:
+            await session.execute_write(self._tx_delete_factors, factor_ids)
+
+    @staticmethod
+    async def _tx_delete_factors(tx: neo4j.AsyncManagedTransaction, factor_ids: list[str]) -> None:
+        for fid in factor_ids:
+            await tx.run(
+                "MATCH (n:Factor {factor_id: $fid}) DETACH DELETE n",
+                fid=fid,
             )
 
     # ── Query ──

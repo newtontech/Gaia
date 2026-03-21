@@ -1,0 +1,27 @@
+# Gaia Pipeline Configuration — Base (shared defaults)
+#
+# Environment-specific overrides: pipeline.{env}.toml
+# Select env: --env test | GAIA_ENV=test
+# Load order: pipeline.toml (base) ← pipeline.{env}.toml (override)
+
+[pipeline]
+papers_dir = "tests/fixtures/inputs/papers"
+output_dir = "output"
+concurrency = 5
+gaia_lang_import = "../../../libs/typst/gaia-lang/v2.typ"
+
+[pipeline.bp]
+damping = 0.3
+max_iterations = 100
+
+[pipeline.canonicalization]
+use_embedding = true
+
+[pipeline.curation]
+llm_model = "openai/chenkun/gpt-5-mini"
+clustering_threshold = 0.85
+
+[storage]
+graph_backend = "none"
+# To clean DB before persist, pass --clean to run_full_pipeline.py or persist_to_db.py
+# This is NEVER automatic — always requires explicit CLI flag

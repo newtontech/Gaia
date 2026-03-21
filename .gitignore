@@ -43,3 +43,4 @@ data/
 # Frontend
 frontend/node_modules/
 frontend/dist/
+pipeline.local.toml

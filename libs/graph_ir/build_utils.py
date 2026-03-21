@@ -14,8 +14,10 @@ from hashlib import sha256
 from .models import (
     CanonicalizationLogEntry,
     FactorNode,
+    FactorParams,
     LocalCanonicalGraph,
     LocalCanonicalNode,
+    LocalParameterization,
     Parameter,
     RawGraph,
 )
@@ -131,4 +133,51 @@ def build_singleton_local_graph(raw_graph: RawGraph) -> CanonicalizationResult:
             factor_nodes=local_factors,
         ),
         log=log,
+    )
+
+
+def _default_node_prior(knowledge_type: str) -> float:
+    """Default prior based on knowledge type."""
+    if knowledge_type in {"contradiction", "equivalence"}:
+        return 0.5
+    return 1.0
+
+
+def derive_local_parameterization_from_raw(
+    raw_graph: RawGraph,
+    local_graph: LocalCanonicalGraph,
+) -> LocalParameterization:
+    """Derive local parameterization from RawGraph + LocalCanonicalGraph.
+
+    Uses node metadata for explicit priors (e.g. from priors.json),
+    falling back to defaults based on knowledge_type.
+    """
+    raw_prior_by_name: dict[str, float] = {}
+    for raw_node in raw_graph.knowledge_nodes:
+        if raw_node.metadata and "prior" in raw_node.metadata:
+            for sr in raw_node.source_refs:
+                raw_prior_by_name[(sr.module, sr.knowledge_name)] = raw_node.metadata["prior"]
+
+    node_priors: dict[str, float] = {}
+    for node in local_graph.knowledge_nodes:
+        source_ref = node.source_refs[0]
+        key = (source_ref.module, source_ref.knowledge_name)
+        if key in raw_prior_by_name:
+            node_priors[node.local_canonical_id] = raw_prior_by_name[key]
+        else:
+            node_priors[node.local_canonical_id] = _default_node_prior(node.knowledge_type)
+
+    _parameterizable_factor_types = {"infer", "abstraction", "reasoning"}
+    factor_parameters: dict[str, FactorParams] = {}
+    for factor in local_graph.factor_nodes:
+        if factor.type not in _parameterizable_factor_types or factor.source_ref is None:
+            continue
+        factor_parameters[factor.factor_id] = FactorParams(
+            conditional_probability=1.0,
+        )
+
+    return LocalParameterization(
+        graph_hash=local_graph.graph_hash(),
+        node_priors=node_priors,
+        factor_parameters=factor_parameters,
     )
