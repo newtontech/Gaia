@@ -1,4 +1,4 @@
-"""Tests for _convert_local_graph_to_storage() and _render_markdown_from_graph_data()."""
+"""Tests for _convert_local_graph_to_storage() and render_markdown_from_graph_data()."""
 
 from pathlib import Path
 
@@ -6,7 +6,7 @@ import pytest
 
 from libs.pipeline import (
     _convert_local_graph_to_storage,
-    _render_markdown_from_graph_data,
+    render_markdown_from_graph_data,
     pipeline_build,
     pipeline_infer,
     pipeline_review,
@@ -15,9 +15,7 @@ from libs.pipeline import (
 GALILEO_V3 = (
     Path(__file__).parent / "fixtures" / "gaia_language_packages" / "galileo_falling_bodies_v3"
 )
-NEWTON_V4 = (
-    Path(__file__).parent / "fixtures" / "gaia_language_packages" / "newton_principia_v4"
-)
+NEWTON_V4 = Path(__file__).parent / "fixtures" / "gaia_language_packages" / "newton_principia_v4"
 
 
 # ── Shared fixture to avoid rebuilding the pipeline 9 times ──
@@ -98,7 +96,7 @@ async def test_converter_probability_records(converter_data):
         assert 0 < p.value <= 1.0
 
 
-# ── 2. _render_markdown_from_graph_data tests ──
+# ── 2. render_markdown_from_graph_data tests ──
 
 
 def test_render_markdown_has_package_header():
@@ -107,7 +105,7 @@ def test_render_markdown_has_package_header():
         "nodes": [{"name": "n1", "type": "claim", "content": "hello"}],
         "factors": [],
     }
-    md = _render_markdown_from_graph_data(graph_data)
+    md = render_markdown_from_graph_data(graph_data)
     assert "# Package: test_pkg" in md
     assert "### n1 [claim]" in md
     assert "> hello" in md
@@ -124,7 +122,7 @@ def test_render_markdown_includes_reasoning_factors():
             {"type": "reasoning", "premise": ["a"], "conclusion": "b"},
         ],
     }
-    md = _render_markdown_from_graph_data(graph_data)
+    md = render_markdown_from_graph_data(graph_data)
     assert "### b [proof]" in md
     assert "**Premises:** a" in md
 
@@ -137,7 +135,7 @@ def test_render_markdown_skips_non_reasoning_factors():
             {"type": "constraint", "between": ["x", "y"]},
         ],
     }
-    md = _render_markdown_from_graph_data(graph_data)
+    md = render_markdown_from_graph_data(graph_data)
     assert "[proof]" not in md
 
 
@@ -165,6 +163,6 @@ async def test_converter_v4_external_refs_are_not_materialized_locally():
 @pytest.mark.asyncio
 async def test_render_markdown_includes_external_content():
     build = await pipeline_build(NEWTON_V4)
-    md = _render_markdown_from_graph_data(build.graph_data)
+    md = render_markdown_from_graph_data(build.graph_data)
     assert "external from galileo_falling_bodies@4.0.0" in md
     assert "在真空中，不同重量的物体应以相同速率下落。" in md
