@@ -220,16 +220,16 @@ def convert_graph_ir_to_storage(
     # Each reasoning factor becomes a single-step chain: premises → conclusion
     chains: list[storage.Chain] = []
     module_chain_ids: dict[str, list[str]] = {m.module_id: [] for m in modules}
+    # Map factor type → chain type
+    _FACTOR_TO_CHAIN_TYPE: dict[str, str] = {
+        "reasoning": "deduction",
+        "infer": "deduction",
+        "abstraction": "abstraction",
+        "contradiction": "contradiction",
+        "equivalence": "contradiction",
+    }
     for f in lcg.factor_nodes:
-        edge_type = (f.metadata or {}).get("edge_type", "deduction")
-        if edge_type not in (
-            "deduction",
-            "induction",
-            "abstraction",
-            "contradiction",
-            "retraction",
-        ):
-            edge_type = "deduction"
+        chain_type = _FACTOR_TO_CHAIN_TYPE.get(f.type, "infer")
 
         premises_kid = [lcn_to_kid[p] for p in f.premises if p in lcn_to_kid]
         conclusion_kid = lcn_to_kid.get(f.conclusion) if f.conclusion else None

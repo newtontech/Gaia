@@ -1,8 +1,8 @@
-"""Tests for scripts/pipeline/build_graph_ir.py — YAML and Typst paths.
+"""Tests for scripts/pipeline/build_graph_ir.py — Typst path with priors.
 
 Note: Typst tests run against fixture dirs in-place because the Typst compiler
 resolves imports via relative paths (e.g. ../../libs/typst/gaia-lang/v2.typ)
-which break when copied to tmp_path. YAML tests use tmp_path for isolation.
+which break when copied to tmp_path.
 """
 
 from __future__ import annotations
@@ -19,16 +19,7 @@ sys.path.insert(0, str(Path(__file__).parents[2] / "scripts" / "pipeline"))
 from scripts.pipeline.build_graph_ir import build_package_graph_ir
 
 FIXTURES_DIR = Path(__file__).parents[1] / "fixtures" / "gaia_language_packages"
-YAML_PKG = FIXTURES_DIR / "galileo_falling_bodies"
 TYPST_PKG = FIXTURES_DIR / "galileo_falling_bodies_typst"
-
-
-@pytest.fixture
-def yaml_pkg(tmp_path):
-    """Copy YAML fixture to tmp_path for isolated testing."""
-    dst = tmp_path / YAML_PKG.name
-    shutil.copytree(YAML_PKG, dst, ignore=shutil.ignore_patterns("graph_ir"))
-    return dst
 
 
 @pytest.fixture(autouse=False)
@@ -38,28 +29,6 @@ def clean_typst_graph_ir():
     graph_dir = TYPST_PKG / "graph_ir"
     if graph_dir.exists():
         shutil.rmtree(graph_dir)
-
-
-class TestBuildFromYaml:
-    """Test the YAML package path."""
-
-    def test_builds_successfully(self, yaml_pkg):
-        assert build_package_graph_ir(yaml_pkg)
-
-    def test_outputs_exist(self, yaml_pkg):
-        build_package_graph_ir(yaml_pkg)
-        graph_dir = yaml_pkg / "graph_ir"
-        assert (graph_dir / "raw_graph.json").exists()
-        assert (graph_dir / "local_canonical_graph.json").exists()
-        assert (graph_dir / "canonicalization_log.json").exists()
-        assert (graph_dir / "local_parameterization.json").exists()
-
-    def test_raw_graph_has_nodes_and_factors(self, yaml_pkg):
-        build_package_graph_ir(yaml_pkg)
-        raw = json.loads((yaml_pkg / "graph_ir" / "raw_graph.json").read_text())
-        assert len(raw["knowledge_nodes"]) > 0
-        assert len(raw["factor_nodes"]) > 0
-        assert raw["package"] == "galileo_falling_bodies"
 
 
 class TestBuildFromTypst:
@@ -99,8 +68,3 @@ class TestDetection:
 
     def test_skip_no_package(self, tmp_path):
         assert not build_package_graph_ir(tmp_path)
-
-    def test_typst_preferred_over_yaml(self, tmp_path):
-        (tmp_path / "typst.toml").write_text("[package]\nname = 'test'\n")
-        with pytest.raises(FileNotFoundError):
-            build_package_graph_ir(tmp_path)
