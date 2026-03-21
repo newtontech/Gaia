@@ -26,6 +26,7 @@ _FACTOR_TYPE_MAP: dict[str, str] = {
 _KNOWLEDGE_TYPE_MAP: dict[str, str] = {
     "claim": "claim",
     "observation": "claim",
+    "corroboration": "claim",
     "question": "question",
     "setting": "setting",
     "action": "action",
@@ -129,7 +130,7 @@ def convert_graph_ir_to_storage(
 
     # -- Build knowledge items --
     knowledge_items: list[storage.Knowledge] = []
-    # Map from lcn_id to knowledge_id for factor rewiring
+    # Map from lcn_id to knowledge_id for factor rewiring (includes external nodes)
     lcn_to_kid: dict[str, str] = {}
 
     for node in lcg.knowledge_nodes:
@@ -137,12 +138,21 @@ def convert_graph_ir_to_storage(
         if node.source_refs:
             k_name = node.source_refs[0].knowledge_name
             module_name = node.source_refs[0].module
+            ref_package = node.source_refs[0].package
         else:
             k_name = node.local_canonical_id
             module_name = "default"
+            ref_package = None
 
-        knowledge_id = _make_knowledge_id(package_id, k_name)
+        # External nodes use their source package prefix
+        is_external = ref_package is not None and ref_package != package_id
+        kid_package = ref_package if is_external else package_id
+        knowledge_id = _make_knowledge_id(kid_package, k_name)
         lcn_to_kid[node.local_canonical_id] = knowledge_id
+
+        # External nodes are referenced in chains but not materialized locally
+        if is_external:
+            continue
 
         prior = params.node_priors.get(node.local_canonical_id, 0.5)
         # Ensure prior > 0 (storage model constraint: gt=0)
@@ -237,7 +247,7 @@ def convert_graph_ir_to_storage(
         "infer": "deduction",
         "abstraction": "abstraction",
         "contradiction": "contradiction",
-        "equivalence": "contradiction",
+        "equivalence": "equivalence",
     }
     for f in lcg.factor_nodes:
         chain_type = _FACTOR_TO_CHAIN_TYPE.get(f.type, "deduction")
