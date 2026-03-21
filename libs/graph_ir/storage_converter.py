@@ -229,7 +229,7 @@ def convert_graph_ir_to_storage(
         "equivalence": "contradiction",
     }
     for f in lcg.factor_nodes:
-        chain_type = _FACTOR_TO_CHAIN_TYPE.get(f.type, "infer")
+        chain_type = _FACTOR_TO_CHAIN_TYPE.get(f.type, "deduction")
 
         premises_kid = [lcn_to_kid[p] for p in f.premises if p in lcn_to_kid]
         conclusion_kid = lcn_to_kid.get(f.conclusion) if f.conclusion else None
@@ -247,7 +247,7 @@ def convert_graph_ir_to_storage(
                 module_id=module_id,
                 package_id=package_id,
                 package_version=package_version,
-                type=edge_type,
+                type=chain_type,
                 steps=[
                     storage.ChainStep(
                         step_index=0,
