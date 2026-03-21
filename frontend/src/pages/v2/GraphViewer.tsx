@@ -83,18 +83,15 @@ function buildVisGraph(data: UnifiedGraphData) {
   }
 
   for (const f of data.factor_nodes) {
-    const edgeType = (f.metadata?.edge_type as string) ?? f.type;
-
     const tooltip = [
       `[factor: ${f.type}] ${f.factor_id}`,
-      `edge_type: ${edgeType}`,
       `premises: ${f.premises.length}, contexts: ${f.contexts.length}`,
       `package: ${f.package_id}`,
     ].join("\n");
 
     nodes.push({
       id: f.factor_id,
-      label: edgeType,
+      label: f.type,
       title: tooltip,
       color: {
         background: FACTOR_COLORS[f.type] ?? "#595959",
@@ -284,9 +281,6 @@ function NodeDetailDrawer({
         <div>
           <div style={{ marginBottom: 12 }}>
             <Tag color={FACTOR_COLORS[fNode.type] ?? "#595959"}>{fNode.type}</Tag>
-            {fNode.metadata?.edge_type && (
-              <Tag>{String(fNode.metadata.edge_type)}</Tag>
-            )}
           </div>
           <Typography.Text type="secondary" copyable style={{ fontSize: 11 }}>
             {fNode.factor_id}
