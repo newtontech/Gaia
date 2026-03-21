@@ -295,13 +295,12 @@ async def persist_packages(
         # Save local backups before writing to DB
         _save_package_backups(pkg_dir, ingest_data)
 
-        # Write to storage
+        # Write to storage (no factors — only global factors go to factors table)
         await mgr.ingest_package(
             package=ingest_data.package,
             modules=ingest_data.modules,
             knowledge_items=ingest_data.knowledge_items,
             chains=ingest_data.chains,
-            factors=ingest_data.factors,
         )
 
         # Write beliefs if present
