@@ -103,9 +103,7 @@ def _make_knowledge_id(package: str, knowledge_name: str) -> str:
 def _make_chain_id(package_id: str, factor) -> str:
     """Build a published chain ID from author-facing provenance when available."""
     if factor.source_ref:
-        return (
-            f"{package_id}.{factor.source_ref.module}.{factor.source_ref.knowledge_name}"
-        )
+        return f"{package_id}.{factor.source_ref.module}.{factor.source_ref.knowledge_name}"
     return f"{package_id}.{factor.factor_id}"
 
 
