@@ -224,13 +224,13 @@ class TestV4PipelineCrossPackage:
             factor_types = {factor.type for factor in build.local_graph.factor_nodes}
             knowledge_types = {node.knowledge_type for node in build.local_graph.knowledge_nodes}
             assert "corroboration" not in node_types, f"{name} emitted corroboration node types"
-            assert (
-                "corroboration" not in constraint_types
-            ), f"{name} emitted corroboration constraints"
+            assert "corroboration" not in constraint_types, (
+                f"{name} emitted corroboration constraints"
+            )
             assert "corroboration" not in factor_types, f"{name} emitted corroboration factors"
-            assert (
-                "corroboration" not in knowledge_types
-            ), f"{name} emitted corroboration knowledge types"
+            assert "corroboration" not in knowledge_types, (
+                f"{name} emitted corroboration knowledge types"
+            )
 
     def test_deterministic_builds(self, all_builds):
         """Building twice produces same graph hashes."""
