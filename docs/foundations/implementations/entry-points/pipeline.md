@@ -8,7 +8,7 @@ The batch pipeline (`scripts/pipeline/run_full_pipeline.py`) orchestrates end-to
 
 | # | Stage | Script | Purpose |
 |---|-------|--------|---------|
-| 1 | `xml-to-typst` | `scripts/paper_to_typst.py` | Convert paper XML to Typst packages (optional `--skip-llm`) |
+| 1 | `xml-to-typst` | `scripts/paper_to_typst.py` | Convert paper XML to Typst packages (optional `--skip-llm`). **Known issue:** orchestrator path may be stale — see [#195](https://github.com/SiliconEinstein/Gaia/issues/195) |
 | 2 | `build-graph-ir` | `scripts/pipeline/build_graph_ir.py` | Compile Typst packages to Raw Graph + Local Canonical Graph |
 | 3 | `local-bp` | `scripts/pipeline/run_local_bp.py` | Run local belief propagation per package |
 | 4 | `global-canon` | `scripts/pipeline/canonicalize_global.py` | Map local nodes to global canonical nodes (optional `--use-embedding`) |

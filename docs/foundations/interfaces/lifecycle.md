@@ -96,10 +96,10 @@ The `BPService` runs sum-product BP on the global canonical graph with registry-
 Pipeline scripts (`scripts/pipeline/`) orchestrate the CLI lifecycle in batch:
 
 ```
-paper-to-typst  ->  gaia build  ->  gaia infer  ->  gaia publish
+xml-to-typst → build-graph-ir → local-bp → global-canon → persist → curation → global-bp
 ```
 
-Used for seeding the knowledge base from existing papers. Each step in the pipeline calls the same CLI commands; the pipeline adds orchestration, logging, and error handling.
+Used for seeding the knowledge base from existing papers. The pipeline does **not** call the CLI commands — it invokes stage scripts directly (`build_graph_ir.py`, `run_local_bp.py`, `persist_to_db.py`, etc.) via `run_full_pipeline.py`. See `docs/foundations/implementations/entry-points/pipeline.md` for the full 7-stage breakdown.
 
 ## Artifacts at Each Stage
 
