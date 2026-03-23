@@ -73,14 +73,7 @@ Traditional knowledge graphs store **entities** (Einstein, Ulm) connected by **r
 
 ## 6. Language Surface Mapping
 
-Gaia Language expresses ontology through a small set of declarations with parameter-level distinctions:
-
-- `#claim` -- the main declaration for truth-apt assertions, with `kind:` parameter (observation, hypothesis, law, prediction, etc.)
-- `#setting` -- background conditions and regime assumptions
-- `#relation` -- explicit contradiction or equivalence declarations
-- `#question` -- open scientific questions (non-BP)
-
-The `from:` parameter lists load-bearing premises; `under:` lists background conditions. This distinction separates the logical structure of reasoning from its applicability context.
+For how Gaia Language maps these ontological classes to declarations, see `../cli/gaia-lang/knowledge-types.md`.
 
 ## Source
 
