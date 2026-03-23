@@ -117,7 +117,7 @@ where p is the author-assigned conditional probability for the reasoning step.
 
 This covers both deduction (p close to 1.0) and induction (p < 1.0). The `edge_type` values `deduction`, `induction`, `abstraction`, and `paper-extract` all use this same potential shape in the current runtime (`libs/inference/bp.py`).
 
-**Theoretical note**: the target model replaces the "unconstrained when premises false" row with a **noisy-AND + leak** potential (leak = epsilon), which ensures that false premises actively suppress the conclusion rather than leaving it at its prior. This satisfies Jaynes's fourth syllogism (weak denial). The current runtime does not yet implement noisy-AND + leak.
+**Theoretical note**: the target model replaces the "unconstrained when premises false" row with a **noisy-AND + leak** potential (leak = epsilon), which ensures that false premises actively suppress the conclusion rather than leaving it at its prior. This satisfies Jaynes's fourth syllogism (weak denial). The current runtime does not yet implement noisy-AND + leak. See the detailed parameterization in section 6 below.
 
 ### 4.2 Contradiction
 
@@ -185,6 +185,143 @@ Inductive strengthening emerges from BP's message aggregation: multiple high-bel
 | `relation_contradiction` | Same penalty with relation as participant | Stable |
 | `relation_equivalence` | Agreement/disagreement reward | Stable |
 | `retraction` | Inverted conditional | Stable |
+
+## 6. Noisy-AND + Leak: Target Potential Model
+
+### 6.1 Parameters
+
+The noisy-AND + leak model requires only two parameters per reasoning factor:
+
+- **p** — conditional probability P(C=1 | all premises true), the author-assigned strength of the reasoning step.
+- **epsilon (leak)** — background probability that the conclusion holds even when premises are not all true. Default: Cromwell lower bound (10^-3).
+
+This compresses the full CPT (2^n entries for n premises) into 2 parameters, matching Gaia's authoring model where the author specifies a single conditional probability.
+
+### 6.2 Potential Function
+
+```
+phi(P1, ..., Pn, C):
+  all Pi=1, C=1  ->  p          (premises true, support conclusion)
+  all Pi=1, C=0  ->  1-p        (premises true, conclusion absent)
+  any Pi=0, C=1  ->  epsilon    (premises not all true, conclusion still true -> near-impossible)
+  any Pi=0, C=0  ->  1-epsilon  (premises not all true, conclusion false -> compatible)
+```
+
+The key difference from the current all-or-nothing model is the third and fourth rows: instead of potential = 1.0 (silence), false premises actively suppress the conclusion via the epsilon/1-epsilon ratio. This satisfies Jaynes's fourth syllogism (weak denial).
+
+### 6.3 Why Noisy-AND Generalizes the Current Model
+
+The current model sets potential = 1.0 when any premise is false, making the factor silent. This is equivalent to setting epsilon = 0.5 in the noisy-AND formulation (equal weight to C=1 and C=0). The noisy-AND model with epsilon << 1 is strictly more expressive:
+
+- epsilon = 0.5 recovers the current silent behavior
+- epsilon -> 0 gives hard AND gating (conclusion impossible without premises)
+- epsilon = 10^-3 (default) gives strong but not absolute suppression
+
+### 6.4 Jaynes's Four Syllogisms Verified
+
+Given premises P1, P2 with priors pi_1=0.9, pi_2=0.8, conditional probability p=0.9, epsilon=0.001:
+
+**Marginal probability of C:**
+
+```
+P(C=1) = p * pi_1 * pi_2 + epsilon * (1 - pi_1 * pi_2)
+       = 0.9 * 0.72 + 0.001 * 0.28
+       = 0.648
+```
+
+**Syllogism 1 — Modus Ponens:** P(C=1 | P1=1, P2=1) = p = 0.9. Premises true implies conclusion supported.
+
+**Syllogism 2 — Weak confirmation:** P(P1=1 | C=1) = P(C=1|P1=1) * pi_1 / P(C=1) where P(C=1|P1=1) = p*pi_2 + epsilon*(1-pi_2) = 0.7202. Result: 0.7202 * 0.9 / 0.648 = 0.9997 > 0.9. Conclusion true raises premise belief.
+
+**Syllogism 3 — Modus Tollens:** P(P1=1 | C=0) = P(C=0|P1=1) * pi_1 / P(C=0) where P(C=0|P1=1) = 0.2798. Result: 0.2798 * 0.9 / 0.352 = 0.716 < 0.9. Conclusion false lowers premise belief.
+
+**Syllogism 4 — Weak denial:** P(C=1 | P1=0) = epsilon = 0.001 << 0.648. Premise false strongly suppresses conclusion. Under the current model (silent), C would only drop to its prior, not to 0.001.
+
+### 6.5 Weak Syllogism: Partial Premise Support
+
+With noisy-AND + leak, partial premise support (some premises believed, others uncertain) produces graded conclusion support. Consider three premises with beliefs b1=0.9, b2=0.6, b3=0.3:
+
+The factor-to-conclusion message is computed by marginalizing over all premise states, weighted by their beliefs. The dominant terms are:
+
+- All true (weight ~ b1*b2*b3 = 0.162): contributes p to conclusion
+- Mixed states (remaining weight ~ 0.838): contributes epsilon to conclusion
+
+The resulting conclusion support is approximately:
+
+```
+msg(C=1) ~ 0.162 * p + 0.838 * epsilon
+         ~ 0.162 * 0.9 + 0.838 * 0.001
+         ~ 0.147
+```
+
+This is much lower than the all-premises-true case (0.9) but higher than the all-premises-false case (0.001). Partial evidence gives partial support — a smooth interpolation that the current all-or-nothing gating cannot express.
+
+## 7. Factor Potential Derivations by Type
+
+This section collects the explicit potential formulas for all factor types.
+
+### 7.1 Reasoning Support (deduction / induction)
+
+**Current:** conditional potential gated on all-premises-true (section 4.1 above).
+
+**Target (noisy-AND + leak):** phi(P1..Pn, C) as defined in section 6.2.
+
+### 7.2 Contradiction
+
+```
+phi(C_contra, A1, ..., An):
+  C_contra=1, all Ai=1  ->  epsilon   (contradiction holds and all claims true -> near-impossible)
+  all other combinations ->  1.0       (unconstrained)
+```
+
+When both contradicted claims have strong evidence, the factor sends inhibitory backward messages. The claim with weaker evidence yields first (the "weaker evidence yields first" principle from odds-space reasoning). When both claims have overwhelming evidence, the relation node C_contra itself is suppressed — the system questions the contradiction.
+
+### 7.3 Equivalence
+
+```
+phi(C_equiv, A, B):
+  C_equiv=1, A=B    ->  1-epsilon  (equivalence holds + agreement -> high compatibility)
+  C_equiv=1, A!=B   ->  epsilon    (equivalence holds + disagreement -> low compatibility)
+  C_equiv=0, any    ->  1.0        (no equivalence -> unconstrained)
+```
+
+N-ary equivalence decomposes into pairwise factors sharing the same C_equiv node.
+
+### 7.4 Retraction
+
+```
+phi(P1..Pn, C):
+  all Pi=1, C=1  ->  1-p   (retraction evidence present, conclusion survives -> unlikely)
+  all Pi=1, C=0  ->  p     (retraction evidence present, conclusion suppressed -> likely)
+  any Pi=0, any  ->  1.0   (retraction evidence absent -> silent)
+```
+
+Retraction is correctly silent when evidence is absent: "absence of counter-evidence is not evidence of support."
+
+### 7.5 Instantiation
+
+```
+phi(Schema, Instance):
+  Schema=1, Instance=1  ->  1.0    (universal holds, instance holds)
+  Schema=1, Instance=0  ->  0.0    (universal holds, instance fails -> contradiction)
+  Schema=0, Instance=1  ->  1.0    (universal fails, instance can hold independently)
+  Schema=0, Instance=0  ->  1.0    (universal fails, no constraint)
+```
+
+Deterministic: schema true forces instance true. Instance false forces schema false (counterexample). Schema false places no constraint on instance (not-forall-x-P(x) does not imply not-P(a)).
+
+## 8. Current vs Target
+
+| Aspect | Current implementation | Noisy-AND target |
+|---|---|---|
+| **Reasoning support potential** | All-or-nothing gating: potential = 1.0 when any premise is false (silent) | Noisy-AND + leak: potential = epsilon when any premise is false (active suppression) |
+| **Jaynes syllogism 4** | Not satisfied: false premises leave conclusion at prior | Satisfied: false premises drive conclusion toward epsilon |
+| **Weak syllogism** | Not expressible: partial premise support produces no graded signal | Smooth interpolation between full support and full suppression |
+| **Contradiction/equivalence** | Relation node belief used as gate strength; relation belief not updated by BP | Target: relation node participates as ordinary BP variable; can be questioned when evidence conflicts |
+| **Parameters** | p (conditional probability) per reasoning step | p + epsilon (leak, default 10^-3) per reasoning step |
+| **Implementation** | `libs/inference/bp.py` — stable, tested | Not yet implemented in runtime |
+
+The current implementation is correct for its scope: on graphs where premises are well-supported, the all-or-nothing gating produces reasonable beliefs. The noisy-AND target addresses edge cases (partial evidence, syllogism 4 compliance) and is the planned next revision.
 
 ## Source
 
