@@ -13,6 +13,7 @@ BeliefState:
     graph_hash:              str         # 绑定到 GlobalCanonicalGraph 的哈希
     parameterization_hash:   str         # 绑定到 Parameterization 的哈希
     bp_run_id:               str         # 唯一运行 ID
+    timestamp:               str         # ISO 8601 时间戳
 
     # ── 信念 ──
     beliefs:                 dict[str, float]   # 以 gcn_ ID 为键

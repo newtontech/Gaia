@@ -160,6 +160,7 @@ BeliefState 作用在 **GlobalCanonicalGraph** 上，是 BP 的纯输出——�
   "graph_hash": "sha256:...",
   "parameterization_hash": "sha256:...",
   "bp_run_id": "uuid-...",
+  "timestamp": "2026-03-24T12:00:00Z",
   "beliefs": {
     "gcn_8b1c...": 0.82,
     "gcn_9d2a...": 0.71
