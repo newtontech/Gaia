@@ -134,21 +134,36 @@ Template 的核心作用是**桥梁**：它可以将 Setting 或 Question 包装
 - Setting "mean field approximation" + Template `"{method} can be applied in this {context}"` → Claim "Mean field approximation can be applied in this condensed matter system"
 - Question "室温超导是否可能？" + Template `"{Q} is an important question"` → Claim "室温超导是否可能是一个重要问题"
 
-## 6. 推理算子
+## 6. 算子
 
-### 6.1 算子生命周期
+连接知识节点的因子分为两大类：**推理算子**和**计算算子**。
 
-推理算子（连接知识节点的因子）不是一次性创建的。它们经历三个阶段：
+### 6.1 初始算子类型
+
+作者写入知识图时，使用两种初始算子：
+
+| 初始类型 | 说明 |
+|---------|------|
+| **infer** | 推理链接。表示"此处存在某种推理关系"（演绎、归纳、溯因等），但具体语义尚未经过审查确认。这是所有推理算子的初始占位符。 |
+| **toolcall** | 计算链接。表示结论是由计算过程（工具调用、模拟、数值求解等）产生的。前提是计算的输入，结论是计算的输出。 |
+
+两者的区别：infer 的结论来自人类或 agent 的推理判断，toolcall 的结论来自确定性的计算过程。
+
+### 6.2 推理算子的生命周期
+
+infer 类型的算子经历三个阶段：
 
 | 阶段 | 说明 |
 |------|------|
-| **infer** | 作者写入的推理链接。这是所有推理算子的初始占位符类型，表示"此处存在某种推理关系"，但具体语义尚未经过审查确认。 |
-| **candidate** | review/research agent 分析后提议的具体类型。已识别出语义，但尚未经过充分验证。 |
+| **infer** | 作者写入的初始占位符。 |
+| **candidate** | review/research agent 分析后提议的具体推理类型。已识别出语义，但尚未经过充分验证。 |
 | **permanent** | 经过 research/review agent 研究和判断后确认。正式成为图结构的一部分，具有明确的 BP 规则。 |
 
 **特殊情况**：instantiation（从 Template 到具体 Claim 的实例化）是 entailment 的特例。由于其确定性性质，它可以跳过 review 直接升格为 permanent。
 
-### 6.2 算子类型
+toolcall 不经历这个生命周期——它的语义在创建时就是明确的（计算过程本身定义了前提到结论的关系）。
+
+### 6.3 推理算子类型
 
 以下类型适用于 candidate 和 permanent 阶段：
 
