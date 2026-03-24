@@ -77,36 +77,32 @@ def test_create_abstraction_deterministic_ids():
 
     sorted_members = sorted(members)
     digest = sha256(":".join(sorted_members).encode()).hexdigest()[:16]
-    expected_id = f"gcn_schema_{digest}"
+    expected_id = f"gcn_abs_{digest}"
 
-    assert result.schema_node.global_canonical_id == expected_id
-    assert result.schema_node.representative_content == "Force law"
-    assert result.schema_node.kind == "schema"
-    assert result.schema_node.metadata["abstraction_source_nodes"] == sorted_members
+    assert result.abstracted_node.global_canonical_id == expected_id
+    assert result.abstracted_node.representative_content == "Force law"
+    assert result.abstracted_node.kind == "abstraction"
+    assert result.abstracted_node.metadata["abstraction_source_nodes"] == sorted_members
 
     # Same inputs in different order produce same ID
     result2 = create_abstraction("Force law", [ID_FMA_1, ID_FMA_2], reason="test")
-    assert result2.schema_node.global_canonical_id == expected_id
+    assert result2.abstracted_node.global_canonical_id == expected_id
 
 
 def test_create_abstraction_factor_structure():
-    """Each member gets an instantiation factor with correct premises/conclusion."""
+    """Abstraction factor has members as premises and abstracted node as conclusion."""
     members = [ID_FMA_1, ID_HEAT]
     result = create_abstraction("Common energy", members, reason="test")
 
-    schema_id = result.schema_node.global_canonical_id
-    assert len(result.instantiation_factors) == 2
+    abstracted_id = result.abstracted_node.global_canonical_id
+    assert len(result.abstraction_factors) == 1
 
-    for factor in result.instantiation_factors:
-        assert factor.type == "instantiation"
-        assert factor.premises == [schema_id]
-        assert factor.conclusion in sorted(members)
-        assert factor.package_id == "__curation__"
-        assert factor.metadata["curation_created"] is True
-
-    # Verify each member has exactly one factor
-    conclusions = {f.conclusion for f in result.instantiation_factors}
-    assert conclusions == set(members)
+    factor = result.abstraction_factors[0]
+    assert factor.type == "abstraction"
+    assert factor.premises == sorted(members)
+    assert factor.conclusion == abstracted_id
+    assert factor.package_id == "__curation__"
+    assert factor.metadata["curation_created"] is True
 
 
 # ── AbstractionAgent._abstract_cluster tests ──
@@ -410,8 +406,8 @@ async def test_run_end_to_end(mock_acompletion, physics_node_map):
     result = await agent.run([cluster], physics_node_map)
 
     assert len(result.new_nodes) == 1
-    assert result.new_nodes[0].kind == "schema"
-    assert len(result.new_factors) == 2  # one per member
+    assert result.new_nodes[0].kind == "abstraction"
+    assert len(result.new_factors) == 1  # single abstraction factor
     assert len(result.suggestions) == 1
     assert result.suggestions[0].operation == "create_abstraction"
 

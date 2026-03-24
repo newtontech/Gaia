@@ -58,14 +58,6 @@ def adapt_local_graph_to_factor_graph(
                 probability=params.conditional_probability,
                 edge_type=factor.type,
             )
-        elif factor.type == "instantiation":
-            factor_graph.add_factor(
-                edge_id=factor_index,
-                premises=premise_ids,
-                conclusions=[local_id_to_var_id[factor.conclusion]],
-                probability=1.0,
-                edge_type=factor.type,
-            )
         elif factor.type in ("contradiction", "equivalence"):
             # Relation node is already in premises[0], no conclusion
             factor_graph.add_factor(

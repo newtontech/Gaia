@@ -122,10 +122,10 @@ def merge_nodes(
 
 @dataclass
 class AbstractionResult:
-    """Result of creating an abstraction (schema node + instantiation factors)."""
+    """Result of creating an abstraction (abstracted node + abstraction factor)."""
 
-    schema_node: GlobalCanonicalNode
-    instantiation_factors: list[FactorNode]
+    abstracted_node: GlobalCanonicalNode
+    abstraction_factors: list[FactorNode]
 
 
 def create_abstraction(
@@ -133,7 +133,10 @@ def create_abstraction(
     member_ids: list[str],
     reason: str = "",
 ) -> AbstractionResult:
-    """Create a schema node and instantiation factors for an abstraction group.
+    """Create an abstracted node and an abstraction factor for an abstraction group.
+
+    The abstraction factor has the member nodes as premises and the abstracted
+    node as conclusion: member_1, member_2, ... → abstraction → abstracted_node.
 
     Args:
         abstraction_content: The common weaker conclusion text.
@@ -141,17 +144,16 @@ def create_abstraction(
         reason: Why this abstraction was created.
 
     Returns:
-        AbstractionResult with the schema node and per-member instantiation factors.
+        AbstractionResult with the abstracted node and abstraction factor.
     """
-    # Deterministic schema node ID
     sorted_members = sorted(member_ids)
     digest = sha256(":".join(sorted_members).encode()).hexdigest()[:16]
-    schema_id = f"gcn_schema_{digest}"
+    abstracted_id = f"gcn_abs_{digest}"
 
-    schema_node = GlobalCanonicalNode(
-        global_canonical_id=schema_id,
+    abstracted_node = GlobalCanonicalNode(
+        global_canonical_id=abstracted_id,
         knowledge_type="claim",
-        kind="schema",
+        kind="abstraction",
         representative_content=abstraction_content,
         metadata={
             "curation_created": True,
@@ -160,22 +162,19 @@ def create_abstraction(
         },
     )
 
-    # One instantiation factor per member: schema → member
-    factors: list[FactorNode] = []
-    for member_id in sorted_members:
-        pair_key = f"{schema_id}:{member_id}:instantiation"
-        f_digest = sha256(pair_key.encode()).hexdigest()[:16]
-        factor = FactorNode(
-            factor_id=f"f_inst_{f_digest}",
-            type="instantiation",
-            premises=[schema_id],
-            conclusion=member_id,
-            package_id="__curation__",
-            metadata={"curation_created": True},
-        )
-        factors.append(factor)
+    # Single abstraction factor: members → abstracted node
+    factor_key = f"{abstracted_id}:abstraction"
+    f_digest = sha256(factor_key.encode()).hexdigest()[:16]
+    factor = FactorNode(
+        factor_id=f"f_abs_{f_digest}",
+        type="abstraction",
+        premises=sorted_members,
+        conclusion=abstracted_id,
+        package_id="__curation__",
+        metadata={"curation_created": True},
+    )
 
-    return AbstractionResult(schema_node=schema_node, instantiation_factors=factors)
+    return AbstractionResult(abstracted_node=abstracted_node, abstraction_factors=[factor])
 
 
 def create_constraint(
