@@ -136,7 +136,8 @@ loopy BP 最小化 **Bethe 自由能**，这是真实自由能的变分近似。
 
 以下对象在审查/接受后可以进入 BP：
 
-- Claim（封闭断言——唯一的 BP 承载类别，包括其所有结构特化：Observation、Measurement、RegimeAssumption 等）
+- Claim（封闭断言——唯一的 BP 承载类别，包括其结构特化：Observation、Measurement 等）
+- 通过 Template 从 Setting/Question 实例化而来的 Claim
 - 已接受的 equivalent / contradict 关系
 
 ### 5.2 非 BP 对象
