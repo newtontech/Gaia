@@ -168,11 +168,11 @@ FactorNode:
 
 Step:
     reasoning:        str                # 该步的推理描述文本
-    premises:         list[str]          # 该步引用的前提（FactorNode.premises 的子集）
-    conclusion:       str                # 该步的结论（中间步指向下一步的前提，末步 = FactorNode.conclusion）
+    premises:         list[str] | None   # 该步引用的前提（可选）
+    conclusion:       str | None         # 该步的结论（可选）
 ```
 
-`steps` 记录推理过程的分步文本。一个 factor 可以有一步或多步。FactorNode 的 `premises` 和 `conclusion` 是整个推理链的输入和最终输出，`steps` 是中间过程的展开。
+`steps` 记录推理过程的分步文本。一个 factor 可以有一步或多步。每步的 `premises` 和 `conclusion` 是可选的——有些步骤只是描述性的推理过程，不显式关联特定的知识节点。FactorNode 的顶层 `premises` 和 `conclusion` 是整个推理链的输入和最终输出。
 
 Factor 身份是确定性的：`f_{sha256[:16]}` 由源构造计算得出。Factor 在两个身份层之间共享——仅节点 ID 命名空间不同。
 
