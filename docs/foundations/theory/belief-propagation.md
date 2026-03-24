@@ -101,6 +101,58 @@ loopy BP 最小化 **Bethe 自由能**，这是真实自由能的变分近似。
 
 关于 Gaia 的特定因子类型势函数，参见 `../bp/potentials.md`。
 
+## 4. 构造性操作 vs BP 算子
+
+以下区分是强制性的：
+
+### 4.1 图构造/研究操作
+
+这些操作创建或提议新的知识结构：
+
+- 抽象（abstraction）
+- 泛化（generalization）
+- 隐含前提发现（hidden premise discovery）
+- 独立证据审计（independent evidence audit）
+
+它们**不是**自动的 BP 边类型。它们属于审查/策展流程——其结果可能最终产生新的 BP 因子，但操作本身不直接参与信念传播。
+
+### 4.2 BP 算子族
+
+这些算子决定了图被接受后信念更新如何传播：
+
+- entailment（蕴含）
+- induction（归纳）
+- abduction（溯因）
+- equivalent（等价）
+- contradict（矛盾）
+
+每种算子对应不同的势函数。Jaynes 式弱三段论是这些 BP 算子上的合约，不是新的语言声明。
+
+算子类型的完整语义定义见 [scientific-ontology.md](scientific-ontology.md) §5。
+
+## 5. 什么进入 BP
+
+### 5.1 承载 BP 的对象
+
+以下对象在审查/接受后可以进入 BP：
+
+- Claim（封闭断言）
+- RegimeAssumption（体系假设）
+- 已接受的 equivalent / contradict 关系
+
+### 5.2 非 BP 对象
+
+以下对象**不**直接进入 BP：
+
+- Template
+- Question
+- infer 阶段的推理链接（尚未经过审查确认具体类型）
+- candidate 阶段的推理链接（尚未经过充分验证）
+- 审查发现
+- 策展建议
+- 循环审计制品
+- 独立证据审计报告
+
 ## 参考文献
 
 - Jaynes, E.T. *Probability Theory: The Logic of Science* (2003)
