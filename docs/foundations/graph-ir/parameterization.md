@@ -2,64 +2,63 @@
 
 > **Status:** Target design
 
-Parameterization 作用在 **GlobalCanonicalGraph** 上，编码每个全局节点和算子的概率值。它通过 `graph_hash` 绑定到特定版本的全局图。
+Parameterization 是 GlobalCanonicalGraph 上的概率参数层。它由一组**原子记录**构成——每条记录是一个节点的 prior 或一个 factor 的 probability。不同 review 来源（不同模型、不同策略）产出不同的记录，BP 运行前按 resolution policy 组装成完整参数集。
 
 Graph IR 结构定义见 [graph-ir.md](graph-ir.md)。BP 输出见 [belief-state.md](belief-state.md)。三者的关系见 [overview.md](overview.md)。
 
-## Schema
+## 存储层：原子记录
+
+数据库中存储的是独立的参数记录，每条记录携带来源信息：
 
 ```
-Parameterization:
-    graph_hash:         str                            # 绑定到 GlobalCanonicalGraph 的哈希
+PriorRecord:
+    gcn_id:             str              # 全局 claim 节点 ID
+    value:              float            # ∈ (ε, 1-ε)
+    source_id:          str              # 哪个 ParameterizationSource 产出的
+    created_at:         str              # ISO 8601
 
-    # ── 节点参数 ──
-    node_priors:        dict[str, Prior]               # 以 gcn_ ID 为键
-                                                       # 只有 type=claim 的节点有 entry
+FactorParamRecord:
+    factor_id:          str              # 全局 factor ID
+    probability:        float            # ∈ (ε, 1-ε)
+    source_id:          str              # 哪个 ParameterizationSource 产出的
+    created_at:         str              # ISO 8601
 
-    # ── 算子参数 ──
-    factor_params:      dict[str, FactorParams]        # 以 factor_id 为键
-                                                       # 所有 category 都有 entry
-
-Prior:
-    value:              float                          # ∈ (ε, 1-ε)
-    source:             str                            # "review" | "placeholder"
-
-FactorParams:
-    probability:        float                          # ∈ (ε, 1-ε)
-    source:             str                            # "review" | "toolcall_reproducibility" | "placeholder" | ...
+ParameterizationSource:
+    source_id:          str              # 唯一 ID
+    model:              str              # "gpt-5-mini" | "claude-opus" | ...
+    policy:             str | None       # "conservative" | "aggressive" | 自定义策略名
+    config:             dict | None      # threshold, prompt version 等具体配置
+    created_at:         str              # ISO 8601
 ```
 
-## node_priors：只对 Claim
+**关键规则：**
 
-只有 `type=claim` 的 knowledge 节点有 prior。Setting、Question、Template 不出现在 `node_priors` 中——它们不参与 BP，没有 probability 的概念。
+- **PriorRecord 只对 Claim**：只有 `type=claim` 的节点有记录。Setting/Question/Template 不参与 BP。
+- **FactorParamRecord 覆盖所有 category**：infer、toolcall、proof 都有 probability。
+- **一个节点/factor 可以有多条记录**（来自不同 source），BP 运行时选择用哪条。
+- **Cromwell's rule**：所有值钳制到 `[ε, 1-ε]`，ε = 1e-3。
 
-每个 global claim 节点有一个 prior，由 review 赋值。不存在聚合逻辑——canonicalization 对 premise 节点直接复用已有 global 节点（prior 不变），对 conclusion 节点创建新的 global 节点（prior 由 review 独立赋值）。
+## BP 运行时：Resolution Policy
 
-## factor_params：所有 category 都有
+BP 运行前，按 resolution policy 从原子记录中为每个节点/factor 选择一个值，组装成完整参数集：
 
-**所有 factor（infer、toolcall、proof）都有 probability 接口。** 这是统一的设计：
+| policy | 说明 |
+|--------|------|
+| **latest** | 每个节点/factor 取最新的记录（按 `created_at`） |
+| **source:\<source_id\>** | 指定使用某个 ParameterizationSource 的记录 |
+
+组装过程是**现算的**，不持久化。BP 引擎在运行前验证组装结果的完整性：GlobalCanonicalGraph 中每个 claim 节点和每个 factor 都必须有对应的值，否则拒绝运行。
+
+## Prior 来源
+
+每个 global claim 节点的 prior 由 review 赋值。不存在聚合逻辑——canonicalization 对 premise 节点直接复用已有 global 节点（prior 不变），对 conclusion 节点创建新的 global 节点（prior 由 review 独立赋值）。
+
+## Factor probability 来源
 
 - `infer`：概率由 review 赋值，反映推理的可信度
 - `toolcall`：可根据计算的可复现性打分（具体策略后续定义）
 - `proof`：有效证明可设为 1.0（具体策略后续定义）
-
-Probability 存储在参数化覆盖层中，不内联在 FactorNode 结构里。这样同一个 factor 结构可以有不同 reviewer 给出的不同 probability。
-
-## 完整性要求
-
-有效的 Parameterization 必须提供：
-- GlobalCanonicalGraph 中每个 `type=claim` 节点的 prior
-- GlobalCanonicalGraph 中每个 factor 的 probability
-
-缺少条目会使覆盖层无效。BP 不回退到隐式默认值。
-
-## Cromwell's rule
-
-所有 prior 和 probability 被钳制到 `[ε, 1-ε]`，其中 `ε = 1e-3`。这防止 BP 中出现退化的零配分函数状态。
-
-## 图哈希完整性
-
-`graph_hash` 充当版本锁：Parameterization 必须绑定到它所参数化的 GlobalCanonicalGraph 的确切版本。当全局图发生变化（新包摄入、curation 修改），Parameterization 需要更新。
+- Canonicalization 产生的 equivalent candidate factor 使用 placeholder probability，由后续 review 确定最终值
 
 ## 源代码
 
