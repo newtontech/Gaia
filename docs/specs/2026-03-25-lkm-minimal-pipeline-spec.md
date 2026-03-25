@@ -112,15 +112,15 @@ lkm/services/  ──┘
 
 | 表 | 内容 | 对应 Graph IR 对象 |
 |---|------|-------------------|
-| `local_knowledge_nodes` | 包内 knowledge 节点 | KnowledgeNode (lcn_) |
-| `local_factor_nodes` | 包内 factor 节点 | FactorNode (local) |
-| `global_canonical_nodes` | 跨包 knowledge 节点 | GlobalCanonicalNode (gcn_) |
-| `global_factor_nodes` | 跨包 factor 节点 | FactorNode (global) |
+| `knowledge_nodes` | knowledge 节点（local + global 共用） | KnowledgeNode，以 `id` 前缀区分 (`lcn_` / `gcn_`) |
+| `factor_nodes` | factor 节点（local + global 共用） | FactorNode，global 层 `steps`/`weak_points` 为 None |
 | `canonical_bindings` | lcn → gcn 映射 | CanonicalBinding |
 | `prior_records` | claim 先验（原子记录） | PriorRecord |
 | `factor_param_records` | factor 概率（原子记录） | FactorParamRecord |
 | `param_sources` | review 来源 | ParameterizationSource |
 | `belief_states` | BP 输出 | BeliefState |
+
+> **注意：** graph-ir.md §1.1 规定 local 和 global knowledge node 使用同一个 data class（`KnowledgeNode`），通过 `id` 前缀（`lcn_` vs `gcn_`）和字段填充（`content` vs `representative_lcn`）区分层级。Factor 节点同理。因此存储层不再按 local/global 拆分表，而是统一存储，查询时按前缀过滤。
 
 **旧表（Knowledge, Chain, Module, Package 等）全部废弃。**
 
@@ -140,9 +140,8 @@ lkm/services/  ──┘
 
 | 模型 | 文件 | 来源 |
 |------|------|------|
-| `KnowledgeNode` | `graph_ir.py` | graph-ir.md §1 |
-| `GlobalCanonicalNode` | `graph_ir.py` | graph-ir.md §1.1 |
-| `FactorNode` | `graph_ir.py` | graph-ir.md §2 |
+| `KnowledgeNode` | `graph_ir.py` | graph-ir.md §1（local + global 共用同一 data class） |
+| `FactorNode` | `graph_ir.py` | graph-ir.md §2（local + global 共用同一 data class） |
 | `LocalCanonicalGraph` | `graph_ir.py` | graph-ir/overview.md |
 | `GlobalCanonicalGraph` | `graph_ir.py` | graph-ir/overview.md |
 | `PriorRecord` | `parameterization.py` | parameterization.md |
@@ -152,10 +151,10 @@ lkm/services/  ──┘
 | `BeliefState` | `belief_state.py` | belief-state.md |
 | `CanonicalBinding` | `binding.py` | graph-ir.md §3.4 |
 
+> **注意：** `KnowledgeNode` 是 local 和 global 共用的唯一 data class。Local 层 `id` 以 `lcn_` 开头（content-addressed），global 层以 `gcn_` 开头（registry-allocated）。字段填充按层级不同：local 层有 `content`，global 层通常 `content=None` 但有 `representative_lcn`。不再有独立的 `GlobalCanonicalNode` class。`FactorNode` 同理。
+
 **关键约束（来自 graph-ir 文档）：**
-- KnowledgeNode ID: `SHA-256(type + content + sorted(parameters))`，前缀 `lcn_`
-- GlobalCanonicalNode ID: 注册分配，前缀 `gcn_`
-- FactorNode factor_id: `f_{sha256[:16]}`，确定性
+- KnowledgeNode ID: local 层 `SHA-256(type + content + sorted(parameters))`，前缀 `lcn_`；global 层注册分配，前缀 `gcn_`
 - Cromwell's rule: 所有概率 clamp 到 `[ε, 1-ε]`，ε = 1e-3
 - 只有 `type=claim` 的节点参与 BP、有 prior 和 belief
 - `stage=candidate|permanent` + `category=infer` → `reasoning_type` 必填
@@ -164,72 +163,135 @@ lkm/services/  ──┘
 
 ## 3. Pipeline 流程
 
-### 3.1 Ingest（上传 + 持久化 + 规范化）
+完整 pipeline 由 4 个独立模块组成，每个模块有清晰的输入/输出边界：
 
 ```
-输入: LocalCanonicalGraph + package_id + version
-  │
-  ├─ 1. 持久化 local graph → LanceDB (local_knowledge_nodes + local_factor_nodes)
-  │
-  ├─ 2. 加载当前 GlobalCanonicalGraph（从 global_canonical_nodes + global_factor_nodes）
-  │
-  ├─ 3. Global canonicalization（core/canonicalize.py）
-  │     ├─ 分类每个 local node: premise-only / conclusion / both
-  │     ├─ 对每个 node，在 global graph 中找最佳匹配（core/matching.py）
-  │     ├─ 应用 §3.1 决策规则:
-  │     │   ├─ premise-only + 匹配 → match_existing（直接绑定）
-  │     │   ├─ conclusion + 匹配 → equivalent_candidate（新建 gcn + equivalent factor）
-  │     │   ├─ both → 按 conclusion 处理
-  │     │   └─ 无匹配 → create_new
-  │     ├─ Factor lifting: lcn→gcn ID 重写，丢弃 steps/weak_points
-  │     └─ 输出: CanonicalizationResult (bindings + new_global_nodes + global_factors)
-  │
-  └─ 4. 持久化 global 结果 → LanceDB + Neo4j
-        ├─ global_canonical_nodes
-        ├─ global_factor_nodes
-        └─ canonical_bindings
-
-输出: IngestResult
+模块 1: persist_local    → 持久化 local graph
+模块 2: canonicalize      → global canonicalization + 整合 parameterization
+模块 3: persist_global    → 持久化 global 结果（graph IR + parameterization）
+模块 4: global_bp         → 组装参数 → BP → 持久化 belief state
 ```
 
-### 3.2 Parameterization（本期手工提供）
-
-本期不含 review pipeline。参数通过以下方式提供：
-- 测试中：fixture builder 函数生成 PriorRecord + FactorParamRecord
-- 批量 pipeline 中：从 JSON 文件加载或默认值
-- API 中：POST endpoint 接受参数
-
-将来 review pipeline 产出的参数记录直接写入 `prior_records` 和 `factor_param_records` 表。
-
-### 3.3 Global BP
+### 3.1 模块 1: persist_local（持久化本地图）
 
 ```
-输入: GlobalCanonicalGraph + PriorRecord[] + FactorParamRecord[] + ResolutionPolicy
-  │
-  ├─ 1. 组装参数（core/global_bp.py:assemble_parameterization）
-  │     ├─ 按 resolution policy 从原子记录中选值
-  │     ├─ latest: 每个 node/factor 取最新记录
-  │     ├─ source:<id>: 指定 source 的记录
-  │     ├─ prior_cutoff: 只取截止时间前的记录
-  │     └─ 验证完备性: 每个 claim 节点和每个 factor 都必须有值
-  │
-  ├─ 2. 构建 FactorGraph（gaia.bp.adapter — 桥接旧代码）
-  │     ├─ 只有 claim 节点作为 variable
-  │     ├─ 非 claim premise 跳过（不创建 BP edge）
-  │     └─ factor potential 使用 Noisy-AND + Leak 语义
-  │
-  ├─ 3. 运行 BP（libs.inference.bp.BeliefPropagation）
-  │     ├─ damping=0.5, max_iterations=50, threshold=1e-6
-  │     └─ 输出: beliefs dict + diagnostics
-  │
-  └─ 4. 包装为 BeliefState
-        ├─ bp_run_id, created_at
-        ├─ resolution_policy + prior_cutoff（可重现）
-        ├─ beliefs: {gcn_id → posterior}（只有 claim）
-        └─ diagnostics: converged, iterations, max_residual
+输入:
+  - LocalCanonicalGraph
+  - LocalParameterization（node_priors + factor_params，来自 CLI build/review）
+  - package_id + version
+
+操作:
+  持久化 local graph → LanceDB (knowledge_nodes + factor_nodes)
+
+输出: 无（side effect: 数据写入存储）
+```
+
+### 3.2 模块 2: canonicalize（全局规范化 + 整合参数）
+
+```
+输入:
+  - LocalCanonicalGraph
+  - LocalParameterization（node_priors + factor_params）
+  - 当前 GlobalCanonicalGraph（从存储加载）
+  - package_id + version
+
+操作:
+  1. 分类每个 local node: premise-only / conclusion / both
+  2. 对每个 node，在 global graph 中找最佳匹配（core/matching.py）
+  3. 应用 graph-ir.md §3.1 决策规则:
+     ├─ premise-only + 匹配 → match_existing（直接绑定，global prior 不变）
+     ├─ conclusion + 匹配 → equivalent_candidate（新建 gcn + equivalent factor + placeholder params）
+     ├─ both → 按 conclusion 处理
+     └─ 无匹配 → create_new
+  4. Factor lifting: lcn→gcn ID 重写，丢弃 steps/weak_points
+  5. 整合 parameterization:
+     ├─ 将 LocalParameterization 中的 node_priors 转换为 PriorRecord（lcn→gcn 映射）
+     ├─ 将 LocalParameterization 中的 factor_params 转换为 FactorParamRecord（lcn→gcn 映射）
+     └─ 为 equivalent_candidate factor 和新建 gcn 生成 placeholder 记录
+
+输出:
+  CanonicalizationResult:
+    bindings: list[CanonicalBinding]
+    new_global_nodes: list[KnowledgeNode]   # gcn_ prefixed
+    global_factors: list[FactorNode]         # gcn_ IDs, no steps/weak_points
+    prior_records: list[PriorRecord]         # 从 local params 转换 + placeholders
+    factor_param_records: list[FactorParamRecord]  # 从 local params 转换 + placeholders
+    param_source: ParameterizationSource     # 记录来源
+```
+
+### 3.3 模块 3: persist_global（持久化全局结果）
+
+```
+输入: CanonicalizationResult
+
+操作:
+  1. 持久化 global knowledge nodes → LanceDB + Neo4j
+  2. 持久化 global factor nodes → LanceDB + Neo4j
+  3. 持久化 canonical bindings → LanceDB
+  4. 持久化 prior records → LanceDB
+  5. 持久化 factor param records → LanceDB
+  6. 持久化 param source → LanceDB
+
+输出: 无（side effect: 数据写入存储）
+```
+
+### 3.4 模块 4: global_bp（全局信念传播）
+
+```
+输入:
+  - GlobalCanonicalGraph（从存储加载）
+  - PriorRecord[]（从存储加载）
+  - FactorParamRecord[]（从存储加载）
+  - ResolutionPolicy
+
+操作:
+  1. 组装参数（core/global_bp.py:assemble_parameterization）
+     ├─ 按 resolution policy 从原子记录中选值
+     ├─ latest: 每个 node/factor 取最新记录
+     ├─ source:<id>: 指定 source 的记录
+     ├─ prior_cutoff: 只取截止时间前的记录
+     └─ 验证完备性: 每个 claim 节点和每个 factor 都必须有值
+  2. 构建 FactorGraph（gaia.bp.adapter — 桥接旧代码）
+     ├─ 只有 claim 节点作为 variable
+     ├─ 非 claim premise 跳过（不创建 BP edge）
+     └─ factor potential 使用 Noisy-AND + Leak 语义
+  3. 运行 BP（libs.inference.bp.BeliefPropagation）
+     ├─ damping=0.5, max_iterations=50, threshold=1e-6
+     └─ 输出: beliefs dict + diagnostics
+  4. 包装为 BeliefState 并持久化
+     ├─ bp_run_id, created_at
+     ├─ resolution_policy + prior_cutoff（可重现）
+     ├─ beliefs: {gcn_id → posterior}（只有 claim）
+     └─ diagnostics: converged, iterations, max_residual
 
 输出: BeliefState
 ```
+
+### 3.5 端到端编排
+
+`lkm/ingest.py` 编排模块 1-3，`core/global_bp.py` 是模块 4：
+
+```
+ingest_package(local_graph, local_params, package_id, version, storage, embedding_model):
+  模块 1: persist_local(local_graph, package_id, version, storage)
+  模块 2: result = canonicalize(local_graph, local_params, global_graph, package_id, version, embedding_model)
+  模块 3: persist_global(result, storage)
+  return result
+
+run_global_bp(storage, policy):
+  模块 4: belief_state = global_bp(global_graph, prior_records, factor_records, policy)
+  return belief_state
+```
+
+### 3.6 关于 LocalParameterization
+
+本期不含 review pipeline，但 ingest 的输入仍需要 `LocalParameterization`：
+
+- **测试/开发中：** fixture builder 生成默认 prior（0.5）和 factor probability（0.8）
+- **批量 pipeline 中：** 从 CLI build 产出的 JSON 文件加载（`.gaia/infer/` 目录）
+- **API 中：** POST 请求包含 local_graph + local_params
+
+将来 review pipeline 完成后，会在 canonicalize 之前运行 review，review 产出的参数直接作为 LocalParameterization 输入。
 
 ## 4. 完整目录结构
 
