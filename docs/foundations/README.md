@@ -14,8 +14,7 @@ Gaia 的规范参考文档，按架构层级组织。
 - [产品范围](rationale/product-scope.md) — Gaia 是什么、为何存在
 - [架构概览](rationale/architecture-overview.md) — 三层管线、CLI↔LKM 契约
 - [领域词汇表](rationale/domain-vocabulary.md) — Knowledge、Chain、Module、Package
-- [类型系统方向](rationale/type-system-direction.md) — Jaynes + Lean 混合方案
-- [文档维护策略](rationale/documentation-policy.md) — 文档维护规则
+- [文档维护策略](../documentation-policy.md) — 文档维护规则
 
 ## Graph IR — CLI 与 LKM 之间的共享契约
 

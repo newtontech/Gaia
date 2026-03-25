@@ -213,7 +213,7 @@ Historical docs are in `docs/archive/`. Planning docs are in `docs/plans/`. Desi
 
 ## Documentation Policy
 
-When editing architecture or foundation docs, read `docs/foundations/rationale/documentation-policy.md` first.
+When editing architecture or foundation docs, read `docs/documentation-policy.md` first.
 
 ### Foundations Layer Rules
 
