@@ -1,75 +1,206 @@
 # Graph IR 概述
 
-> **Status:** Current canonical
+> **Status:** Target design — 基于 [reasoning-hypergraph.md](../theory/reasoning-hypergraph.md) 重新设计
 
 ## 目的
 
-Graph IR（中间表示）是介于 Gaia Language 与 belief propagation 之间的结构化 factor graph。它是 CLI（本地编写工具）与 LKM（全局知识引擎）之间的**契约**。
+Graph IR 是 Gaia 推理超图的完备数据表示。读完本文档，你应当知道一个完整的 Gaia 知识体系由哪几部分信息构成。
 
-Gaia Language 是作者编写的表层形式。Graph IR 是 BP 进行推理所依赖的机器可读结构形式。BP 运行在 Graph IR 加参数化覆盖层之上——而非直接运行在语言表层上。
+Gaia 的数据由三个独立对象组成：
 
-Graph IR 是一个**一等提交产物**。在 `gaia publish` 期间，包会同时提交其 raw graph 和 local canonical graph。
+```
+Graph IR（结构）    ×    Parameterization（参数）    →    BeliefState（信念）
+什么连接什么               每个节点/算子多可信               BP 计算的后验信念
+编译时确定                  review 产出                     BP 产出
+```
 
-## 三层身份体系
+三者严格分离。Graph IR 有 local 和 global 两层。Parameterization 和 BeliefState 只作用在 GlobalCanonicalGraph 上。
 
-Graph IR 定义了三个身份层，每层代表知识身份解析的不同阶段：
+## 一、Graph IR — 结构
 
-### 1. RawGraph（确定性的，来自 `gaia build`）
+Graph IR 编码**什么连接什么**——推理超图的拓扑结构。它不包含任何概率值。
 
-Raw graph 是编译 Typst 源码后的直接确定性输出。Raw 节点是内容寻址的：相同的源码总是产生相同的 raw graph。在这一层仅合并字节完全相同的内容。
+### 整体结构
 
-输出产物：`graph_ir/raw_graph.json`
+```json
+{
+  "scope": "local",
+  "graph_hash": "sha256:...",
+  "knowledge_nodes": [
+    {
+      "id": "lcn_a3f2e1...",
+      "type": "claim",
+      "content": "该样本在 90 K 以下表现出超导性",
+      "parameters": [],
+      "source_refs": [...],
+      "metadata": {"schema": "observation", "instrument": "..."}
+    },
+    {
+      "id": "lcn_b7e1d4...",
+      "type": "setting",
+      "content": "高温超导研究的当前进展",
+      "parameters": [],
+      "source_refs": [...]
+    },
+    {
+      "id": "lcn_c9a0f3...",
+      "type": "template",
+      "content": "∀x. superconductor(x) → zero_resistance(x)",
+      "parameters": [{"name": "x", "type": "material"}],
+      "source_refs": [...]
+    }
+  ],
+  "factor_nodes": [
+    {
+      "factor_id": "f_d2c8...",
+      "category": "infer",
+      "stage": "initial",
+      "reasoning_type": null,
+      "premises": ["lcn_a3f2e1..."],
+      "weak_points": ["稀薄气体假设可能不成立"],
+      "conclusion": "lcn_e5f1a2...",
+      "steps": [{"reasoning": "基于超导样品的电阻率骤降..."}],
+      "source_ref": {...},
+      "metadata": {"context": ["lcn_b7e1d4..."]}
+    },
+    {
+      "factor_id": "f_f7a1...",
+      "category": "toolcall",
+      "stage": "initial",
+      "reasoning_type": null,
+      "premises": ["lcn_a3f2e1..."],
+      "weak_points": [],
+      "conclusion": "lcn_g8b2c3...",
+      "steps": [{"reasoning": "MCMC fitting using emcee..."}],
+      "source_ref": {...}
+    }
+  ]
+}
+```
 
-### 2. LocalCanonicalGraph（包级语义合并）
+### Knowledge 节点（变量节点）
 
-一个 agent skill 在包范围内将 raw 节点划分为语义等价组。每个 raw 节点恰好映射到一个 local canonical 节点。单例映射（一个 raw 节点对应一个 canonical 节点）是合法的，也是在没有 agent 审查的情况下 `gaia build` 的默认行为。
+表示命题。四种类型：
 
-输出产物：`graph_ir/local_canonical_graph.json` + `graph_ir/canonicalization_log.json`
+| type | 说明 | 参与 BP | 可作为 |
+|------|------|---------|--------|
+| **claim** | 封闭的科学断言 | 是（唯一 BP 承载者） | premise, context, conclusion |
+| **setting** | 背景信息 | 否 | premise, context |
+| **question** | 待研究方向 | 否 | premise, context |
+| **template** | 含自由变量的命题模式 | 否 | premise（instantiation） |
 
-### 3. GlobalCanonicalGraph（注册中心分配，审查后生效）
+详细 schema 见 [graph-ir.md](graph-ir.md) §1。
 
-Global canonical 节点由审查/注册层在发布后分配，不在本地编写。身份信息通过 CanonicalBinding 记录来链接 local canonical 节点与其全局对应节点。
+### Factor 节点（因子节点）
 
-> **愿景设计**：完整的全局规范化（含反驳循环）是目标架构。当前实现使用简化的 embedding 相似度匹配（在发布时执行）。
+表示推理算子，连接 knowledge 节点。三维类型系统：
 
-节点 schema 的各层定义见 [knowledge-nodes.md](knowledge-nodes.md)。
+| 维度 | 值 | 说明 |
+|------|-----|------|
+| **category** | infer / toolcall / proof | 怎么得到结论的 |
+| **stage** | initial / candidate / permanent | 审查到哪了 |
+| **reasoning_type** | entailment / induction / abduction / equivalent / contradict / None | 具体逻辑关系 |
 
-## 规范化 JSON 与图哈希
+详细 schema 见 [graph-ir.md](graph-ir.md) §2。
 
-Local canonical graph 具有确定性的 JSON 序列化。`local_graph_hash`（规范化 JSON 的 SHA-256 哈希）用作完整性校验——审查引擎从源码重新编译 raw graph 并验证其是否与提交的哈希匹配。
+### 两层身份
 
-此哈希还用于将参数化覆盖层绑定到特定的图版本（见 [parameterization.md](parameterization.md)）。
+两个 ID 命名空间，schema 有差异（global 层不存储 content 和 steps）：
 
-## 构建时生成规则
+| 层 | 范围 | ID 前缀 | 内容 |
+|----|------|---------|------|
+| **LocalCanonicalGraph** | 单个包 | `lcn_` | 存储完整 content + factor steps（内容仓库） |
+| **GlobalCanonicalGraph** | 跨包 | `gcn_` | 引用 representative lcn 节点，factor 无 steps（结构索引） |
 
-编译器将 Gaia Language 表层构造翻译为 knowledge 节点和 factor 节点：
+规范化（lcn → gcn 映射）见 [graph-ir.md](graph-ir.md) §3。
 
-| 源构造 | Knowledge 节点 | Factor 节点 |
-|---|---|---|
-| `#claim` / `#setting` / `#question` / `#action`（无 `from:`） | 一个 knowledge 节点 | 无 |
-| `#claim(from: ...)` / `#action(from: ...)` | 一个 knowledge 节点 | 一个 reasoning factor |
-| `#relation(type: "contradiction", between: ...)` | 一个 contradiction 节点 | 一个 mutex_constraint factor |
-| `#relation(type: "equivalence", between: ...)` | 一个 equivalence 节点 | 一个 equiv_constraint factor |
-| Schema 展开（参数化节点） | Instance 节点 | 每对 schema-instance 一个 instantiation factor |
+### 图哈希
 
-Knowledge 节点 schema 见 [knowledge-nodes.md](knowledge-nodes.md)。Factor 节点 schema 和类型定义见 [factor-nodes.md](factor-nodes.md)。
+LocalCanonicalGraph 有确定性哈希 `graph_hash = SHA-256(canonical JSON)`，用于编译完整性校验——审查引擎重新编译并验证匹配。GlobalCanonicalGraph 是增量变化的，不使用整体哈希。
 
-## Factor 节点
+## 二、Parameterization — 参数
 
-Factor 在三个身份层之间共享——仅节点 ID 命名空间不同。每个 factor 编码了 knowledge 节点之间的一个推理链接或结构约束。Factor 结构在 [factor-nodes.md](factor-nodes.md) 中统一定义；计算语义（potential 函数）在 [../bp/potentials.md](../bp/potentials.md) 中定义。
+Parameterization 是 GlobalCanonicalGraph 上的概率参数层。它由**原子记录**构成，不同 review 来源（不同模型、不同策略）产出不同的记录。
 
-## 参数化
+### 存储层
 
-Graph IR 有意将结构与参数分离。先验概率和条件概率存在于通过哈希引用图的覆盖层对象中，而非内联在图中。见 [parameterization.md](parameterization.md)。
+```json
+// PriorRecord（每条一个节点）
+{"gcn_id": "gcn_8b1c...", "value": 0.7, "source_id": "src_001", "created_at": "..."}
+{"gcn_id": "gcn_8b1c...", "value": 0.8, "source_id": "src_002", "created_at": "..."}
 
-## 规范化
+// FactorParamRecord（每条一个 factor）
+{"factor_id": "f_d2c8...", "probability": 0.85, "source_id": "src_001", "created_at": "..."}
 
-跨身份层映射节点（从 raw 到 local canonical 到 global canonical）的过程在 [canonicalization.md](canonicalization.md) 中描述。
+// ParameterizationSource（记录产出上下文）
+{"source_id": "src_001", "model": "gpt-5-mini", "policy": "conservative", "created_at": "..."}
+{"source_id": "src_002", "model": "claude-opus", "policy": null, "created_at": "..."}
+```
+
+### BP 运行时组装
+
+BP 运行前按 resolution policy 从原子记录中选择每个节点/factor 的值，**现算不持久化**：
+
+| policy | 说明 |
+|--------|------|
+| `latest` | 每个节点/factor 取最新记录 |
+| `source:<source_id>` | 指定使用某个 source 的记录 |
+
+关键规则：
+
+- **node_priors**：只有 `type=claim` 的节点有记录。
+- **factor_params**：所有 category（infer/toolcall/proof）都有 probability。
+- **Cromwell's rule**：所有概率钳制到 `[ε, 1-ε]`，ε = 1e-3。
+- 组装时使用 `prior_cutoff` 时间戳过滤记录，确保可重现。
+- 组装结果必须覆盖所有 claim 节点和所有 factor，否则 BP 拒绝运行。
+
+详细设计见 [parameterization.md](parameterization.md)。
+
+## 三、BeliefState — 信念
+
+BeliefState 是 BP 在 GlobalCanonicalGraph 上的纯输出——后验信念值。它记录 resolution policy 使结果可重现。
+
+### 整体结构
+
+```json
+{
+  "bp_run_id": "uuid-...",
+  "timestamp": "2026-03-24T12:00:00Z",
+  "resolution_policy": "latest",
+  "prior_cutoff": "2026-03-24T12:00:00Z",
+  "beliefs": {
+    "gcn_8b1c...": 0.82,
+    "gcn_9d2a...": 0.71
+  },
+  "converged": true,
+  "iterations": 23,
+  "max_residual": 4.2e-7
+}
+```
+
+关键规则：
+
+- **beliefs**：只有 `type=claim` 的节点有 belief。
+- **可重现**：`resolution_policy` + `prior_cutoff` 完整定义参数组装条件，可重跑 BP。
+- **可多次运行**：同一 resolution policy 可以有多次 BP 运行。
+
+详细设计见 [belief-state.md](belief-state.md)。
+
+## 完备性
+
+一个完整的 Gaia 知识体系需要以下信息：
+
+| 对象 | 内容 | 变化频率 |
+|------|------|---------|
+| **LocalCanonicalGraph** | 包内 knowledge 节点 + factor 节点（含 steps）+ 完整文本 | 每次 build 更新 |
+| **GlobalCanonicalGraph** | 跨包 knowledge 节点（引用 lcn）+ 全局 factor 节点（无 steps） | 每次 ingest/curation 更新 |
+| **CanonicalBinding** | lcn → gcn 映射记录 | 每次 ingest 更新 |
+| **PriorRecord** | 全局 claim 的 prior（每条记录携带 source） | 每次 review 追加 |
+| **FactorParamRecord** | 全局 factor 的 probability（每条记录携带 source） | 每次 review 追加 |
+| **ParameterizationSource** | review 来源信息（模型、策略、配置） | 每次 review 创建 |
+| **BeliefState** | 全局 claim 的后验信念 + resolution policy | 每次 global BP 创建 |
 
 ## 源代码
 
-- `libs/graph_ir/models.py` -- `RawGraph`, `LocalCanonicalGraph`, `FactorNode`
-- `libs/graph_ir/typst_compiler.py` -- `compile_v4_to_raw_graph()`
-- `libs/graph_ir/build_utils.py` -- `build_singleton_local_graph()`
-- `libs/graph_ir/adapter.py` -- 从 local canonical graph 构建 `FactorGraph`
-- `libs/storage/models.py` -- `FactorNode`, `CanonicalBinding`, `GlobalCanonicalNode`
+- `libs/graph_ir/models.py` -- `LocalCanonicalGraph`, `FactorNode`, `LocalParameterization`
+- `libs/storage/models.py` -- `GlobalCanonicalNode`, `CanonicalBinding`, `BeliefSnapshot`
