@@ -27,10 +27,12 @@ KnowledgeNode:
     # ── local 层使用 ──
     content:                str | None       # 知识内容（local 层存储，global 层通常为 None）
 
+    # ── 来源追溯 ──
+    provenance:             list[PackageRef] | None   # 贡献包列表
+
     # ── global 层使用 ──
     representative_lcn:     LocalCanonicalRef | None  # 代表性 local 节点（内容从此获取）
     member_local_nodes:     list[LocalCanonicalRef] | None  # 所有映射到此的 local 节点
-    provenance:             list[PackageRef] | None   # 贡献包列表
 ```
 
 **各层字段使用：**
@@ -39,9 +41,9 @@ KnowledgeNode:
 |------|-------|--------|
 | `id` | `lcn_` 前缀，SHA-256 内容寻址 | `gcn_` 前缀，注册中心分配 |
 | `content` | 有值（唯一存储位置） | 通常为 None（subgraph 中间节点例外） |
+| `provenance` | 有值（来源包） | 有值（贡献包列表） |
 | `representative_lcn` | None | 有值（引用 local 节点获取内容） |
 | `member_local_nodes` | None | 有值（所有映射到此的 local 节点） |
-| `provenance` | None | 有值（贡献包列表） |
 
 **身份规则**：local 层 `id = SHA-256(type + content + sorted(parameters))`，相同类型、内容和参数的声明共享同一 ID。
 
@@ -137,7 +139,7 @@ metadata:
 
 开放的命题模式，含自由变量。不直接参与 BP。核心作用是**桥梁**：将 setting 或 question 包装为 claim，使其获得概率语义。Template 到 claim 的实例化是 entailment 的特例（probability=1.0）。
 
-示例：`falls_at_rate(x, medium)`、`{method} can be applied in this {context}`、`∀x. wave(x) → diffraction(x)`。
+示例：`falls_at_rate({x}, {medium})`、`{method} can be applied in this {context}`、`∀{x}. wave({x}) → diffraction({x})`。
 
 ---
 
