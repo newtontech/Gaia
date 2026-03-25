@@ -79,9 +79,8 @@ gaia/
 
 ```
 lkm/
-  ingest.py        ← LKM 专有写入逻辑
-  pipelines/       ← 薄层：批量离线入口
-  services/        ← 薄层：FastAPI API 入口
+  pipelines/       ← 薄层：编排 core/ 算法 + libs/storage/ 持久化
+  services/        ← 薄层：FastAPI API 入口（调用 pipelines/ 同样的函数）
 ```
 
 **依赖流向：**
@@ -89,16 +88,13 @@ lkm/
 ```
 lkm/pipelines/ ──┐
                   ├──→ core/ ──→ libs/ + bp/
-lkm/services/  ──┘
+lkm/services/  ──┘       ↓
+                    libs/storage/
 ```
 
 - pipelines/ 和 services/ 都是薄编排层
-- 具体业务逻辑全在 core/
+- 具体业务逻辑全在 core/，持久化操作在 libs/storage/
 - 现有 `services/gateway/` 整合进 `lkm/services/`
-
-**LKM 专有逻辑（不放 core/）：**
-- `ingest.py` — 绑定 StorageManager 的三写入流程
-- 批量编排和 API 路由
 
 ### 2.5 存储层
 
@@ -269,19 +265,29 @@ lkm/services/  ──┘
 
 ### 3.5 端到端编排
 
-`lkm/ingest.py` 编排模块 1-3，`core/global_bp.py` 是模块 4：
+所有编排逻辑统一在 `lkm/pipelines/` 中：
 
 ```
-ingest_package(local_graph, local_params, package_id, version, storage, embedding_model):
+# lkm/pipelines/run_ingest.py — 编排模块 1-3
+async def run_ingest(local_graph, local_params, package_id, version, storage, embedding_model):
   模块 1: persist_local(local_graph, package_id, version, storage)
-  模块 2: result = canonicalize(local_graph, local_params, global_graph, package_id, version, embedding_model)
+  模块 2: result = canonicalize(local_graph, local_params, global_graph, ...)
   模块 3: persist_global(result, storage)
   return result
 
-run_global_bp(storage, policy):
+# lkm/pipelines/run_global_bp.py — 编排模块 4
+async def run_global_bp(storage, policy):
   模块 4: belief_state = global_bp(global_graph, prior_records, factor_records, policy)
   return belief_state
+
+# lkm/pipelines/run_full.py — 全流程
+async def run_full(input_dir, storage, embedding_model, policy):
+  for package in input_dir:
+    await run_ingest(...)
+  await run_global_bp(storage, policy)
 ```
+
+`lkm/pipelines/` 是薄编排层，调用 `core/` 的算法模块和 `libs/storage/` 的持久化操作。`lkm/services/routes/` 的 API handler 调用同样的 pipeline 函数。
 
 ### 3.6 关于 LocalParameterization
 
@@ -336,11 +342,10 @@ gaia/
 
   lkm/
     __init__.py
-    ingest.py                  # 验证 + 三写入 + canonicalize
     pipelines/
       __init__.py
-      run_ingest.py            # 批量 ingest
-      run_global_bp.py         # 批量 global BP
+      run_ingest.py            # 编排模块 1-3: persist_local → canonicalize → persist_global
+      run_global_bp.py         # 编排模块 4: global BP
       run_full.py              # 全流程编排
     services/
       __init__.py
