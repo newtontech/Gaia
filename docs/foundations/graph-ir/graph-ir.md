@@ -162,6 +162,9 @@ FactorNode:
     # ── 推理内容 ──
     steps:            list[Step]         # 推理过程的分步描述
 
+    # ── 子图分解 ──
+    subgraph:         list[FactorNode] | None  # 升格为 permanent 时的细粒度分解
+
     # ── 追溯 ──
     source_ref:       SourceRef | None
     metadata:         dict | None        # 包含 context: list[str]（弱相关 knowledge node IDs）等
@@ -277,7 +280,45 @@ Factor 身份是确定性的：`f_{sha256[:16]}` 由源构造计算得出。Fact
 
 **Context**：在 metadata 中，不参与图结构，不参与 BP。
 
-### 2.6 关于撤回（retraction）
+### 2.6 子图分解（Subgraph）
+
+当 candidate factor 经过 agent 验证升格为 permanent 时，agent 可以同时提供一个 `subgraph`——将粗粒度的推理关系分解为更细粒度的 factor 组合。
+
+**Induction 分解示例：**
+
+```
+原始 factor（permanent induction）：
+  premises: [A1, A2, A3]  →  conclusion: B
+
+subgraph:
+  - FactorNode(entailment, premises: [B], conclusion: A1)  # instantiation
+  - FactorNode(entailment, premises: [B], conclusion: A2)  # instantiation
+  - FactorNode(entailment, premises: [B], conclusion: A3)  # instantiation
+```
+
+归纳的本质是：如果 B 成立，它应当能蕴含每个具体观测。subgraph 将这个关系展开为 B 到每个 Aᵢ 的 entailment。
+
+**Abduction 分解示例：**
+
+```
+原始 factor（permanent abduction）：
+  premises: [hypothesis]  →  conclusion: observation
+
+subgraph（引入中间节点 prediction）：
+  - FactorNode(entailment, premises: [hypothesis], conclusion: prediction)
+  - FactorNode(equivalent, premises: [prediction, observation])
+```
+
+溯因的本质是：假说蕴含一个预测，该预测与观测等价。subgraph 将这个关系展开为 entailment + equivalent。
+
+**规则：**
+
+- `subgraph` 在 candidate 和 initial 阶段为 None，仅在升格为 permanent 时由 agent 填充
+- subgraph 中的 factor 可以引用外层图中已有的 knowledge 节点，也可以引用新创建的中间节点（如 prediction）
+- subgraph 中的 factor 本身也有 category、stage、reasoning_type，且可以递归包含 subgraph
+- subgraph 不复制到 global 层（与 steps 相同，保留在 local 层）
+
+### 2.7 关于撤回（retraction）
 
 Graph IR 中没有 retraction factor 类型。撤回是一个**操作**：为目标 knowledge 节点关联的所有 factor 添加新的 FactorParamRecord，probability 设为 Cromwell 下界 ε。该节点实质上变成孤岛，belief 回到 prior。图结构不变——图是不可变的。
 
