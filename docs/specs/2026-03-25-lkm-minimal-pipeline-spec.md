@@ -285,13 +285,24 @@ run_global_bp(storage, policy):
 
 ### 3.6 关于 LocalParameterization
 
-本期不含 review pipeline，但 ingest 的输入仍需要 `LocalParameterization`：
+`LocalParameterization` 不属于 Graph IR 契约（不在 `gaia/libs/models/` 中），是 CLI 端的**临时传输容器**，不需要持久化。定义放在 `gaia/core/` 中：
 
+```python
+# gaia/core/local_params.py
+class LocalParameterization(BaseModel):
+    graph_hash: str                          # 绑定到哪个 local graph
+    node_priors: dict[str, float] = {}       # lcn_id → prior
+    factor_parameters: dict[str, float] = {} # factor_id → conditional_probability
+```
+
+**用途：** 作为 canonicalize 的输入，在规范化阶段被转换成 global 层的 `PriorRecord`/`FactorParamRecord` 原子记录。转换完即丢弃。
+
+**来源：**
 - **测试/开发中：** fixture builder 生成默认 prior（0.5）和 factor probability（0.8）
 - **批量 pipeline 中：** 从 CLI build 产出的 JSON 文件加载（`.gaia/infer/` 目录）
 - **API 中：** POST 请求包含 local_graph + local_params
 
-将来 review pipeline 完成后，会在 canonicalize 之前运行 review，review 产出的参数直接作为 LocalParameterization 输入。
+将来 review pipeline 完成后，review 产出的参数直接作为 LocalParameterization 输入。
 
 ## 4. 完整目录结构
 
