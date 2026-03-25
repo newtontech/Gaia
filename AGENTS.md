@@ -130,7 +130,7 @@ Usage notes:
 
 ## Documentation Policy
 
-When editing docs under `docs/foundations/`, read `docs/foundations/documentation-policy.md` first.
+When editing docs under `docs/foundations/`, read `docs/documentation-policy.md` first.
 
 Use that file as the canonical rule set for:
 
