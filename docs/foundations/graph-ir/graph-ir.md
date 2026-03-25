@@ -323,9 +323,10 @@ subgraph（创建中间节点 prediction 和 observation）：
 **其他规则：**
 
 - `subgraph` 在 candidate 和 initial 阶段为 None，仅在升格为 permanent 时由 agent 填充
-- subgraph 中的 factor 可以引用外层图中已有的 knowledge 节点，也可以引用新创建的中间节点
+- **subgraph 只在 global 层产生。** 它是 agent 在全局图上做 review/curation 时创建的，不存在于 local 层
+- subgraph 展开时新创建的中间 knowledge 节点（如 prediction）直接写在 GlobalCanonicalGraph 上，content 也直接存在 global 节点上（这是 global 节点存储 content 的唯一例外——因为这些节点没有 local 来源）
+- subgraph 中的 factor 可以引用外层全局图中已有的 knowledge 节点，也可以引用新创建的中间节点
 - subgraph 中的 factor 本身也有完整的 FactorNode schema，可以递归包含 subgraph
-- subgraph 不复制到 global 层（与 steps 相同，保留在 local 层）
 
 ### 2.7 关于撤回（retraction）
 
@@ -409,12 +410,14 @@ CanonicalBinding:
 
 ### 3.6 Global 层的内容引用
 
-Global 层**不存储内容**——无论是 knowledge 的 content 还是 factor 的 steps。
+Global 层**通常不存储内容**——knowledge 的 content 通过 `representative_lcn` 引用 local 层，factor 的 steps 保留在 local 层。
 
 - **GlobalCanonicalNode** 通过 `representative_lcn` 引用 local canonical 节点获取 content。当多个 local 节点映射到同一 global 节点时，选择一个作为代表，所有映射记录在 `member_local_nodes` 中。
 - **Global factor** 不携带 `steps`（§3.5）。推理过程的文本保留在 local 层的 factor 中。
 
-需要查看具体内容时，通过 CanonicalBinding 回溯到 local 层。Global 层是**结构索引**，local 层是**内容仓库**。
+**例外：subgraph 创建的中间节点。** subgraph 展开时新创建的 knowledge 节点（如 prediction）没有 local 来源，其 content 直接存储在 GlobalCanonicalNode 上（见 §2.6）。
+
+需要查看具体内容时，通过 CanonicalBinding 回溯到 local 层。Global 层是**结构索引**，local 层是**内容仓库**——subgraph 中间节点是唯一的例外。
 
 ---
 
