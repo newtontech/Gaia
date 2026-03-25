@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 
 const TYPE_COLORS: Record<string, string> = {
   claim: "#1677ff",
-  schema: "#9254de",  // abstraction nodes from curation
+  abstraction: "#9254de",  // abstraction nodes from curation
   setting: "#52c41a",
   question: "#fa8c16",
   action: "#722ed1",
@@ -21,7 +21,6 @@ const TYPE_COLORS: Record<string, string> = {
 const FACTOR_COLORS: Record<string, string> = {
   infer: "#595959",
   abstraction: "#595959",
-  instantiation: "#8c8c8c",
   contradiction: "#cf1322",
   equivalence: "#08979c",
 };
@@ -71,22 +70,22 @@ function buildVisGraph(data: UnifiedGraphData) {
       `module: ${n.source_module_id}`,
     ].join("\n");
 
-    // Schema (abstraction) nodes get distinct color and larger size
-    const isSchema = n.kind === "schema";
-    const bgColor = isSchema ? TYPE_COLORS.schema : (TYPE_COLORS[n.type] ?? "#aaa");
+    // Abstraction nodes get distinct color and larger size
+    const isAbstraction = n.kind === "abstraction";
+    const bgColor = isAbstraction ? TYPE_COLORS.abstraction : (TYPE_COLORS[n.type] ?? "#aaa");
 
     nodes.push({
       id: n.knowledge_id,
-      label: isSchema ? `⬡ ${label}` : label,
+      label: isAbstraction ? `⬡ ${label}` : label,
       title: tooltip,
       color: {
         background: bgColor,
-        border: isSchema ? "#531dab" : "#555",
+        border: isAbstraction ? "#531dab" : "#555",
       },
-      font: { color: "#fff", size: isSchema ? 12 : 10 },
+      font: { color: "#fff", size: isAbstraction ? 12 : 10 },
       shape: "box",
-      size: isSchema ? 20 : 14,
-      borderWidth: isSchema ? 2 : 1,
+      size: isAbstraction ? 20 : 14,
+      borderWidth: isAbstraction ? 2 : 1,
     });
   }
 

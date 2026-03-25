@@ -183,10 +183,11 @@ class TestCleanupCreateAbstraction:
         result = await execute_cleanup(plan, nodes, factors, audit_log)
         assert len(result.executed) == 1
         assert result.executed[0].operation == "create_abstraction"
-        # Schema node should be added to nodes
+        # Abstracted node should be added to nodes
         assert len(nodes) > 3
-        # Instantiation factors should be created
-        assert len(factors) >= 2
+        # Abstraction factor should be created
+        assert len(factors) == 1
+        assert factors[0].type == "abstraction"
 
     async def test_create_abstraction_too_few_targets(self):
         """create_abstraction with <2 targets → skipped."""
@@ -540,8 +541,8 @@ class TestSchedulerPaths:
         mgr.upsert_global_nodes.assert_called_once()
         mgr.write_factors.assert_called_once()
 
-    async def test_scheduler_schema_nodes_excluded_from_clustering(self):
-        """Schema nodes should be excluded from clustering."""
+    async def test_scheduler_abstraction_nodes_excluded_from_clustering(self):
+        """Abstraction nodes should be excluded from clustering."""
         from libs.curation.scheduler import run_curation
 
         nodes = [
@@ -551,10 +552,10 @@ class TestSchedulerPaths:
                 representative_content="Normal claim",
             ),
             GlobalCanonicalNode(
-                global_canonical_id="gcn_schema",
+                global_canonical_id="gcn_abstraction",
                 knowledge_type="claim",
-                kind="schema",
-                representative_content="Normal claim",  # same content but schema
+                kind="abstraction",
+                representative_content="Normal claim",  # same content but abstraction
             ),
         ]
         mgr = AsyncMock()

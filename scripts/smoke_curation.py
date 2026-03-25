@@ -97,8 +97,8 @@ async def main() -> None:
     logger.info("--- Step 1: Clustering ---")
     t0 = time.monotonic()
     embedding_model = DPEmbeddingModel()
-    # Exclude schema nodes and already-connected pairs
-    clusterable_nodes = [n for n in nodes if n.kind != "schema"]
+    # Exclude abstraction nodes and already-connected pairs
+    clusterable_nodes = [n for n in nodes if n.kind != "abstraction"]
     connected_pairs: set[tuple[str, str]] = set()
     for f in factors:
         for p in f.premises:

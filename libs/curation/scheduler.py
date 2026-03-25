@@ -109,9 +109,9 @@ async def run_curation(
     logger.info("Loaded %d global nodes and %d factors", len(all_nodes), len(all_factors))
 
     # Step 2: Cluster similar nodes
-    # Exclude schema nodes (already abstractions) from clustering
-    clusterable_nodes = [n for n in all_nodes if n.kind != "schema"]
-    # Exclude pairs already connected by factors (instantiation, reasoning, etc.)
+    # Exclude abstraction nodes (already abstractions) from clustering
+    clusterable_nodes = [n for n in all_nodes if n.kind != "abstraction"]
+    # Exclude pairs already connected by factors (abstraction, reasoning, etc.)
     connected_pairs: set[tuple[str, str]] = set()
     for f in all_factors:
         for p in f.premises:

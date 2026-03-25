@@ -344,15 +344,15 @@ class AbstractionAgent:
                     member_ids=current_group.member_node_ids,
                     reason=current_group.reason,
                 )
-                # Attach refine history to schema node metadata
+                # Attach refine history to abstracted node metadata
                 if current_group.refine_history:
-                    meta = dict(abs_result.schema_node.metadata or {})
+                    meta = dict(abs_result.abstracted_node.metadata or {})
                     meta["refine_history"] = current_group.refine_history
-                    abs_result.schema_node = abs_result.schema_node.model_copy(
+                    abs_result.abstracted_node = abs_result.abstracted_node.model_copy(
                         update={"metadata": meta}
                     )
-                result.new_nodes.append(abs_result.schema_node)
-                result.new_factors.extend(abs_result.instantiation_factors)
+                result.new_nodes.append(abs_result.abstracted_node)
+                result.new_factors.extend(abs_result.abstraction_factors)
                 result.suggestions.append(
                     CurationSuggestion(
                         operation="create_abstraction",

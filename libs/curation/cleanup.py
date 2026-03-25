@@ -203,17 +203,17 @@ def _execute_suggestion(
             member_ids=suggestion.target_ids,
             reason=suggestion.reason,
         )
-        # Add schema node and instantiation factors
-        nodes[result.schema_node.global_canonical_id] = result.schema_node
-        factors.extend(result.instantiation_factors)
+        # Add abstracted node and abstraction factors
+        nodes[result.abstracted_node.global_canonical_id] = result.abstracted_node
+        factors.extend(result.abstraction_factors)
 
         return AuditEntry(
             operation="create_abstraction",
             target_ids=list(suggestion.target_ids),
             suggestion_id=suggestion.suggestion_id,
             rollback_data={
-                "schema_node_id": result.schema_node.global_canonical_id,
-                "factor_ids": [f.factor_id for f in result.instantiation_factors],
+                "abstracted_node_id": result.abstracted_node.global_canonical_id,
+                "factor_ids": [f.factor_id for f in result.abstraction_factors],
             },
         )
 
