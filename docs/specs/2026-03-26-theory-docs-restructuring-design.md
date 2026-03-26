@@ -148,7 +148,7 @@ The documents must clearly position BP as "an efficient approximation" rather th
 ### Layer 2: Scientific Ontology (propositions and operators, no factor graphs or BP)
 
 **03 — Propositional Operators** (REWRITE of current 02)
-- **Primitives {¬, ∧, π}**: derived directly from Jaynes' addition/multiplication rules
+- **Minimal ingredients {¬, ∧, π}**: derived directly from Jaynes' addition/multiplication rules
 - **Derived hard constraints**: →, ∨, ↔, ⊗ — all defined via ¬ and ∧, hard constraints as "compound proposition with π=0"
 - **Three relation types** (structural definitions using derived operators):
   - Equivalence (↔): P(A ∧ ¬B) = 0 ∧ P(¬A ∧ B) = 0
@@ -207,7 +207,7 @@ The documents must clearly position BP as "an efficient approximation" rather th
 ```
 Jaynes/Cox (probability is unique)
   → MaxEnt/Min-KL (posteriors from constraints)
-    → Propositional primitives {¬, ∧, π} (from the two rules)
+    → Minimal ingredients {¬, ∧, π} (from the two rules)
       → Derived operators (→, ∨, ↔, ⊗)
       → Plausible implication ↝ (macro view of incomplete formalization)
         → Reasoning strategies (↝ micro-structures + Bayes derivation)
