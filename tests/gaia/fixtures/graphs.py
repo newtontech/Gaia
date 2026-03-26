@@ -1,4 +1,4 @@
-"""Graph fixtures — real scientific examples as LocalCanonicalGraph instances."""
+"""Graph fixtures - real scientific examples as LocalCanonicalGraph instances."""
 
 from gaia.libs.models import (
     FactorCategory,
