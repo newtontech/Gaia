@@ -270,7 +270,7 @@ A ↝ B 带两个参数 (p₁, p₂)，定义条件概率：
 
 ### 4.4 与现有粗推理算子的关系
 
-当前 `03-coarse-reasoning.md` 定义的粗推理算子使用单参数 p，其条件概率表为：
+此前的粗推理算子（已归档至 `archive/foundations-v3/theory/03-coarse-reasoning.md`）使用单参数 p，其条件概率表为：
 
 | M | C | 行为 |
 |---|---|------|
@@ -438,7 +438,7 @@ C ≡ E₁ ∨ E₂ ∨ ... ∨ E_{2ᵏ}
   - [02-maxent-grounding.md](02-maxent-grounding.md) — MaxEnt/Min-KL 从约束到 posterior 的落地；乘积分解的来源。
 - **下游：**
   - `04-reasoning-strategies.md` — 具体推理策略（演绎、归纳、溯因等）如何使用本文档定义的算子。
-  - `05-science-ontology.md` — 科学知识本体论中的知识类型和关系类型。
+  - `04-reasoning-strategies.md` — 推理策略和知识类型定义。
 - **计算层：**
   - `07-belief-propagation.md` — 本文档定义的算子在计算层映射为可执行的数值形式，用于求解边缘后验。本文档只定义概率语义，不涉及计算方法。
 
