@@ -13,12 +13,12 @@
 > 本文档定义如何将科学论述形式化为命题网络，并论证形式化后的条件概率 p 可以趋向客观。
 > 前置依赖：
 > - [01-plausible-reasoning.md](01-plausible-reasoning.md) — 为什么用概率（Cox 定理、Jaynes 框架）
-> - [03-propositional-operators.md](03-propositional-operators.md) — 四种逻辑原语算子与 ↝（似然蕴含）
+> - [03-propositional-operators.md](03-propositional-operators.md) — 最小原料 {¬, ∧, π}、派生算子与 ↝（似然蕴含）
 > - [04-reasoning-strategies.md](04-reasoning-strategies.md) — 知识类型、关系类型、七种推理策略
 
 ## 1. 问题：p 是唯一的主观参数
 
-↝（似然蕴含）算子文档（参见 [03-propositional-operators.md](03-propositional-operators.md)）指出，整个推理系统中唯一的自由参数是作者给出的**条件概率 p** — "这条推理的形式化完整程度"。其他一切要么由逻辑真值表唯一确定（四种逻辑原语算子），要么随网络证据积累而递减（节点先验 π），要么由知识内容本身决定（网络结构）。
+↝（似然蕴含）算子文档（参见 [03-propositional-operators.md](03-propositional-operators.md)）指出，整个推理系统中唯一的自由参数是作者给出的**条件概率 p** — "这条推理的形式化完整程度"。其他一切要么由逻辑真值表唯一确定（确定性派生算子 →、↔、⊗、⊕ 及基础运算 ¬、∧），要么随网络证据积累而递减（节点先验 π），要么由知识内容本身决定（网络结构）。
 
 这引出一个根本问题：**p 能否客观化？** 如果不能，那么整个系统的输出就依赖于个人判断，与传统的专家打分无异。如果能，Gaia 就是一个从科学文本到客观信念的机械推理系统。
 
@@ -60,11 +60,11 @@
 
 对 Step 2 中的 weakpoint（以及任何 p 显著小于 1 的 ↝ 连接），使用**子网络模式**进一步分解。每种弱点对应一个可复用的子网络模式，由 entailment + observation + equivalence 组合而成。分解后所有链的 p ≈ 1，不确定性从"推理链的强度"转移到"命题是否为真"。
 
-以下三种子网络模式对应 [04-reasoning-strategies.md](04-reasoning-strategies.md) §3 中定义的推理策略的细命题网络展开。
+以下三种子网络模式对应 [04-reasoning-strategies.md](04-reasoning-strategies.md) §2 中定义的推理策略的细命题网络展开。
 
 #### Abduction 模式（溯因）
 
-认识论上，溯因是"观测到 B'，推断最佳解释 A"（参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §3.2）。在命题网络中分解为：
+认识论上，溯因是"观测到 B'，推断最佳解释 A"（参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §2.2）。在命题网络中分解为：
 
 ```mermaid
 graph LR
@@ -87,7 +87,7 @@ graph LR
 
 #### Induction 模式（归纳）
 
-归纳是"从多个实例推断一般规律"（参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §3.3）。本质上是**重复的 abduction** — 一般规律是"假说"，每个实例是一个"预测+观测"对：
+归纳是"从多个实例推断一般规律"（参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §2.3）。本质上是**重复的 abduction** — 一般规律是"假说"，每个实例是一个"预测+观测"对：
 
 ```mermaid
 graph TD
@@ -107,7 +107,7 @@ graph TD
 #### Analogy 模式（类比）
 
 类比不是在同一参数空间内做极限外推；那属于 induction / abduction 之后的 entailment。
-类比是把源域中已经建立的结构规律迁移到目标域（参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §3.4）。其关键不是连续性，而是一个显式的桥梁主张 `M`：
+类比是把源域中已经建立的结构规律迁移到目标域（参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §2.4）。其关键不是连续性，而是一个显式的桥梁主张 `M`：
 
 > 在某个变量映射 `φ` 下，源域中真正起作用的关系在目标域中也保持成立。
 
@@ -295,7 +295,7 @@ graph TD
 
 ### 3.4 Step 3 — 细化 weakpoint（将 ↝ 连接展开为子网络）
 
-#### W₁：日常观测 → A（Induction 模式，参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §3.3）
+#### W₁：日常观测 → A（Induction 模式，参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §2.3）
 
 A 是"假说"；在本文当前的 claim 粒度下，`O_daily` 作为聚合后的日常观测节点，是它的预测+观测对：
 
@@ -310,7 +310,7 @@ graph TD
 
 推理效果：`O_daily` 的高 belief 通过 equivalence + 反向消息提升 A。这里不再把 `O_daily` 进一步拆成石头/羽毛、铁球/木球等更细实例，而是保持与 Step 1、粗命题网络一致的节点粒度。
 
-#### W₂：介质观测 → V（Abduction + Entailment，参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §3.2）
+#### W₂：介质观测 → V（Abduction + Entailment，参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §2.2）
 
 W₂ 分解为 abduction + entailment 两步。
 
@@ -351,7 +351,7 @@ graph LR
 
 **G 与 O_daily 的关系：** 语义上，G 也能解释 `O_daily` 中"日常里重物略快"的现象；但这条连接不属于 3.3 粗命题网络里 `W₂` 的输入，因此 3.5 的组装图不额外画出该路径。本文在此只保留从粗网络到细网络所必需的替换关系。
 
-#### W₃：斜面实验 → V（Induction 模式，参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §3.3）
+#### W₃：斜面实验 → V（Induction 模式，参见 [04-reasoning-strategies.md](04-reasoning-strategies.md) §2.3）
 
 V 是"假说"，每个斜面实验条件是一个预测+观测对：
 

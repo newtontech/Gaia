@@ -15,11 +15,12 @@
 
 **本文档是 theory/ 层的基础文件。** 下游文档在此基础上逐步引入形式结构和算法：
 
-1. [03-propositional-operators.md](03-propositional-operators.md) — 命题算子和逻辑结构
-2. [02-maxent-grounding.md](02-maxent-grounding.md) — 从约束到 posterior 的 MaxEnt / Min-KL 落地
+1. [02-maxent-grounding.md](02-maxent-grounding.md) — 从约束到 posterior 的 MaxEnt / Min-KL 落地
+2. [03-propositional-operators.md](03-propositional-operators.md) — 命题算子和逻辑结构
 3. [04-reasoning-strategies.md](04-reasoning-strategies.md) — 推理策略
-4. [07-belief-propagation.md](07-belief-propagation.md) — BP 消息传递算法
-5. [05-formalization-methodology.md](05-formalization-methodology.md) — 科学推理形式化
+4. [05-formalization-methodology.md](05-formalization-methodology.md) — 科学推理形式化
+5. [06-factor-graphs.md](06-factor-graphs.md) — 因子图（命题网络的计算表示）
+6. [07-belief-propagation.md](07-belief-propagation.md) — BP 消息传递算法
 
 ## 1. 科学推理的基本模式
 
