@@ -13,8 +13,8 @@ Gaia 的规范参考文档，按架构层级组织。
 - [`02-maxent-grounding.md`](theory/02-maxent-grounding.md) — MaxEnt/Min-KL、从约束到后验
 
 **Layer 2 — 科学本体论（命题与算子，不涉及因子图/BP）：**
-- [`03-propositional-operators.md`](theory/03-propositional-operators.md) — 最小原料 {¬, ∧, π}、派生算子、↝ 似然蕴含、完备性
-- [`04-reasoning-strategies.md`](theory/04-reasoning-strategies.md) — 知识类型、七种推理策略作为 ↝ 微观结构
+- [`03-propositional-operators.md`](theory/03-propositional-operators.md) — 最小原料 {¬, ∧, π}、派生算子、↝ 软蕴含、完备性
+- [`04-reasoning-strategies.md`](theory/04-reasoning-strategies.md) — 知识类型、九种推理策略作为 ↝ 微观结构
 - [`05-formalization-methodology.md`](theory/05-formalization-methodology.md) — 从科学文本到命题网络的方法论
 
 **Layer 3 — 计算方法（因子图 + BP 作为大规模近似）：**

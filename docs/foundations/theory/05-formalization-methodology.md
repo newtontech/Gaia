@@ -14,7 +14,7 @@
 > 前置依赖：
 > - [01-plausible-reasoning.md](01-plausible-reasoning.md) — 为什么用概率（Cox 定理、Jaynes 框架）
 > - [03-propositional-operators.md](03-propositional-operators.md) — 最小原料 {¬, ∧, π}、派生算子与 ↝（软蕴含）
-> - [04-reasoning-strategies.md](04-reasoning-strategies.md) — 知识类型、关系类型、七种推理策略
+> - [04-reasoning-strategies.md](04-reasoning-strategies.md) — 知识类型、关系类型、九种推理策略
 
 ## 1. 问题：软蕴含参数如何客观化
 
