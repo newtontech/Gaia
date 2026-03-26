@@ -2,12 +2,24 @@
 
 Gaia 的规范参考文档，按架构层级组织。
 
-## 理论 — 纯数学，与 Gaia 无关（不会变更）
+## theory/ — 理论基础
 
-- [合情推理](theory/plausible-reasoning.md) — Jaynes、Cox 定理、概率即逻辑
-- [推理超图](theory/reasoning-hypergraph.md) — 科学对象模型、算子分类、因子图结构
-- [Belief Propagation](theory/belief-propagation.md) — 势函数模型（noisy-AND + leak）、和积算法、收敛性
-- [科学知识的形式化](theory/science-formalization.md) — 从自然语言到超图的分步精炼、p 的客观化
+推导链：plausible-reasoning → maxent-grounding → propositional-operators → reasoning-strategies → formalization-methodology → factor-graphs → belief-propagation
+
+**三层结构：**
+
+**Layer 1 — Jaynes 理论（纯理论，不涉及因子图/BP）：**
+- [`01-plausible-reasoning.md`](theory/01-plausible-reasoning.md) — Cox 定理、概率唯一性、弱三段论
+- [`02-maxent-grounding.md`](theory/02-maxent-grounding.md) — MaxEnt/Min-KL、从约束到后验
+
+**Layer 2 — 科学本体论（命题与算子，不涉及因子图/BP）：**
+- [`03-propositional-operators.md`](theory/03-propositional-operators.md) — 最小原料 {¬, ∧, π}、派生算子、↝ 软蕴含、完备性
+- [`04-reasoning-strategies.md`](theory/04-reasoning-strategies.md) — 知识类型、九种推理策略作为 ↝ 微观结构
+- [`05-formalization-methodology.md`](theory/05-formalization-methodology.md) — 从科学文本到命题网络的方法论
+
+**Layer 3 — 计算方法（因子图 + BP 作为大规模近似）：**
+- [`06-factor-graphs.md`](theory/06-factor-graphs.md) — 命题网络到因子图的映射、势函数
+- [`07-belief-propagation.md`](theory/07-belief-propagation.md) — BP 近似推理算法
 
 ## 设计理念 — 设计哲学（极少变更）
 

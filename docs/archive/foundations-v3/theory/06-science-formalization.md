@@ -4,13 +4,15 @@
 >
 > 本文档定义如何将科学论述形式化为推理超图，并论证形式化后的条件概率 p 可以趋向客观。
 > 前置依赖：
-> - [plausible-reasoning.md](plausible-reasoning.md) — 为什么用概率（Cox 定理、Jaynes 框架）
-> - [reasoning-hypergraph.md](reasoning-hypergraph.md) — 推理超图的结构（命题、算子、因子图）
-> - [belief-propagation.md](belief-propagation.md) — 如何在超图上计算信念（noisy-AND、BP 算法）
+> - [01-plausible-reasoning.md](01-plausible-reasoning.md) — 为什么用概率（Cox 定理、Jaynes 框架）
+> - [02-reasoning-factor-graph.md](02-reasoning-factor-graph.md) — 因子图结构与四种逻辑原语算子
+> - [03-coarse-reasoning.md](03-coarse-reasoning.md) — 粗推理算子、粗/细因子图、细化工作流
+> - [05-science-ontology.md](05-science-ontology.md) — 知识类型、关系类型、七种推理策略
+> - [04-belief-propagation.md](04-belief-propagation.md) — 因子图上的置信传播（BP）算法
 
 ## 1. 问题：p 是唯一的主观参数
 
-BP 文档（参见 [belief-propagation.md](belief-propagation.md)）指出，整个推理系统中唯一的主观判断是作者给出的**条件概率 p** — "这条推理有多强"。其他一切要么由理论唯一确定（noisy-AND 模型、Cromwell 下界 ε），要么随网络证据积累而递减（节点先验 π），要么由知识内容本身决定（图结构）。
+粗推理算子文档（参见 [03-coarse-reasoning.md](03-coarse-reasoning.md)）指出，整个推理系统中唯一的因子级自由参数是作者给出的**条件概率 p** — "这条推理的形式化完整程度"。其他一切要么由逻辑真值表唯一确定（四种逻辑原语算子），要么随网络证据积累而递减（节点先验 π），要么由知识内容本身决定（图结构）。
 
 这引出一个根本问题：**p 能否客观化？** 如果不能，那么整个系统的输出就依赖于个人判断，与传统的专家打分无异。如果能，Gaia 就是一个从科学文本到客观信念的机械推理系统。
 
@@ -52,9 +54,11 @@ BP 文档（参见 [belief-propagation.md](belief-propagation.md)）指出，整
 
 对 Step 2 中的 weakpoint（以及任何 p 显著小于 1 的因子），使用**子图模式**进一步分解。每种弱点对应一个可复用的子图模式，由 entailment + observation + equivalence 组合而成。分解后所有链的 p ≈ 1，不确定性从"推理链的强度"转移到"命题是否为真"。
 
+以下三种子图模式对应 [05-science-ontology.md](05-science-ontology.md) §3 中定义的推理策略的细因子图展开。
+
 #### Abduction 模式（溯因）
 
-认识论上，溯因是"观测到 B'，推断最佳解释 A"。在因子图中分解为：
+认识论上，溯因是"观测到 B'，推断最佳解释 A"（参见 [05-science-ontology.md](05-science-ontology.md) §3.2）。在因子图中分解为：
 
 ```mermaid
 graph LR
@@ -77,7 +81,7 @@ BP 效果：B' 的高 belief 通过 equivalence 传递给 B，再通过 entailme
 
 #### Induction 模式（归纳）
 
-归纳是"从多个实例推断一般规律"。本质上是**重复的 abduction** — 一般规律是"假说"，每个实例是一个"预测+观测"对：
+归纳是"从多个实例推断一般规律"（参见 [05-science-ontology.md](05-science-ontology.md) §3.3）。本质上是**重复的 abduction** — 一般规律是"假说"，每个实例是一个"预测+观测"对：
 
 ```mermaid
 graph TD
@@ -97,7 +101,7 @@ graph TD
 #### Analogy 模式（类比）
 
 类比不是在同一参数空间内做极限外推；那属于 induction / abduction 之后的 entailment。
-类比是把源域中已经建立的结构规律迁移到目标域。其关键不是连续性，而是一个显式的桥梁主张 `M`：
+类比是把源域中已经建立的结构规律迁移到目标域（参见 [05-science-ontology.md](05-science-ontology.md) §3.4）。其关键不是连续性，而是一个显式的桥梁主张 `M`：
 
 > 在某个变量映射 `φ` 下，源域中真正起作用的关系在目标域中也保持成立。
 
@@ -124,17 +128,31 @@ graph LR
 
 如果目标域后来获得了观测，还可以继续加入 `V_target ≡ O_target`，让目标域证据反过来约束 `M`。
 
-### 2.4 组装：noisy-AND 主链 + 约束
+### 2.4 组装：粗因子图与细因子图
 
-Step 3 的子图输出（A、G、V 等）作为后续推理链的 premise，汇入 noisy-AND 结构的因子图。再加上：
+Step 2 产生的粗因子图已经具有推理价值——它捕捉了推理骨架，标注了哪些步骤已充分形式化（entailment，p ≈ 1）、哪些尚未充分形式化（weakpoint，p < 1）。粗因子图上可以直接运行 BP，产生有意义的 belief 值（参见 [03-coarse-reasoning.md](03-coarse-reasoning.md) §6）。
+
+Step 3 将粗因子图中的 weakpoint 逐一展开为子图模式，用逻辑算子组合 + 中间命题替代粗推理算子，形成细因子图。再加上：
 
 - **Contradiction**：互斥命题之间的约束
 - **Equivalence**：不同路径得出相同结论时的约束（包括跨包引用）
 - **多条独立路径**：同一命题被多条路径支撑
 
-当所有链的 p ≈ 1 后，系统中剩余的自由度只有原子命题的先验 π。Cox 定理保证：给定网络结构和 p 值，存在唯一的一致性 belief 赋值。当 equivalence 和 contradiction 足够多时，π 的初始选择变得无关紧要（参见 [belief-propagation.md](belief-propagation.md) §5）。
+当所有链的 p ≈ 1 后，系统中剩余的自由度只有原子命题的先验 π。Cox 定理保证：给定网络结构和 p 值，存在唯一的一致性 belief 赋值。当 equivalence 和 contradiction 足够多时，π 的初始选择变得无关紧要（参见 [04-belief-propagation.md](04-belief-propagation.md) §3）。
 
 因此：**充分形式化 + 充分约束 → 客观信念**。
+
+### 2.5 形式化工作流——从粗到细
+
+科学知识的形式化是一个**从粗到细**的渐进过程，而非一步到位的精确建模。
+
+**第一步：构建粗因子图。** 从科学文本中提取命题和推理关系（Step 1-2），用粗推理算子（p < 1）连接尚未充分形式化的推理步骤。粗因子图忠实反映当前的形式化程度——哪些步骤是确定性蕴含，哪些是有待分解的弱点。
+
+**第二步：细化为细因子图。** 选择关键的粗推理算子（weakpoint），将其展开为逻辑算子组合 + 中间命题（Step 3 的子图模式）。每次细化都是**局部操作**——只替换一个粗推理算子，不影响图的其余部分。
+
+**关键认识：粗因子图本身有推理价值。** 粗因子图不是"不完整的"因子图——它是对知识现状的忠实表示。当推理过程确实没有被完全分解时，用 p < 1 的粗推理算子来表示比强行使用 p = 1 的逻辑算子更诚实、更有用。细化是提高推理精度的**持续改进过程**，不需要一步到位。
+
+关于粗因子图与细因子图的形式定义及细化的局部性质，参见 [03-coarse-reasoning.md](03-coarse-reasoning.md) §6。
 
 ## 3. 走通例子：伽利略的落体
 
@@ -271,7 +289,7 @@ graph TD
 
 ### 3.4 Step 3 — 细化 weakpoint（将 factor node 展开为子图）
 
-#### W₁：日常观测 → A（Induction 模式）
+#### W₁：日常观测 → A（Induction 模式，参见 [05-science-ontology.md](05-science-ontology.md) §3.3）
 
 A 是"假说"；在本文当前的 claim 粒度下，`O_daily` 作为聚合后的日常观测节点，是它的预测+观测对：
 
@@ -286,7 +304,7 @@ graph TD
 
 BP 效果：`O_daily` 的高 belief 通过 equivalence + 反向消息提升 A。这里不再把 `O_daily` 进一步拆成石头/羽毛、铁球/木球等更细实例，而是保持与 Step 1、粗因子图一致的节点粒度。
 
-#### W₂：介质观测 → V（Abduction + Entailment）
+#### W₂：介质观测 → V（Abduction + Entailment，参见 [05-science-ontology.md](05-science-ontology.md) §3.2）
 
 W₂ 分解为 abduction + entailment 两步。
 
@@ -327,7 +345,7 @@ graph LR
 
 **G 与 O_daily 的关系：** 语义上，G 也能解释 `O_daily` 中“日常里重物略快”的现象；但这条连接不属于 3.3 粗因子图里 `W₂` 的输入，因此 3.5 的组装图不额外画出该路径。本文在此只保留从粗图到细图所必需的替换关系。
 
-#### W₃：斜面实验 → V（Induction 模式）
+#### W₃：斜面实验 → V（Induction 模式，参见 [05-science-ontology.md](05-science-ontology.md) §3.3）
 
 V 是"假说"，每个斜面实验条件是一个预测+观测对：
 
@@ -435,7 +453,7 @@ graph TD
 
 ### 4.2 Cox 定理 + 充分约束 → 唯一 belief
 
-Cox 定理（参见 [plausible-reasoning.md](plausible-reasoning.md)）保证：在满足一致性条件的前提下，给定信息 I，每个命题的合理性 P(A|I) 是唯一确定的。
+Cox 定理（参见 [01-plausible-reasoning.md](01-plausible-reasoning.md)）保证：在满足一致性条件的前提下，给定信息 I，每个命题的合理性 P(A|I) 是唯一确定的。
 
 当推理超图中：
 
@@ -443,7 +461,7 @@ Cox 定理（参见 [plausible-reasoning.md](plausible-reasoning.md)）保证：
 2. **存在足够多的 equivalence 和 contradiction**（科学知识的内在约束）
 3. **存在多条独立路径指向同一命题**（科学验证的标准实践）
 
-那么 π 的影响被因子消息淹没（参见 [belief-propagation.md](belief-propagation.md) §5），belief 收敛到由网络拓扑唯一决定的值。**充分的形式化消除了参数选择的任意性，使得 belief 成为知识结构的客观函数。**
+那么 π 的影响被因子消息淹没（参见 [04-belief-propagation.md](04-belief-propagation.md) §3），belief 收敛到由网络拓扑唯一决定的值。**充分的形式化消除了参数选择的任意性，使得 belief 成为知识结构的客观函数。**
 
 ### 4.3 与科学实践的对应
 
