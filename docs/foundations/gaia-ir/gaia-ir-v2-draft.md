@@ -298,7 +298,7 @@ Strategy 的参数化模型由 `type` 决定。概率参数存储在 [parameteri
 
 未分类的通用推理。k 个前提需要 2^k 个参数。按 MaxEnt 原则，默认值全为 0.5。
 
-实践中很少使用——大多数推理会被分类为 `noisy_and` 或命名策略。`infer` 是理论上的完整形式，parameterization 层需要扩展才能存储 2^k 参数（当前 `FactorParamRecord` 只存单参数）。
+实践中很少使用——大多数推理会被分类为 `noisy_and` 或命名策略。`StrategyParamRecord.conditional_probabilities: list[float]` 已支持变长列表，可存储 2^k 参数。
 
 #### `noisy_and`（∧ + 单参数 p）
 
