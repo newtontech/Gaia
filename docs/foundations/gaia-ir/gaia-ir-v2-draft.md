@@ -195,4 +195,321 @@ Operator 可以出现在两个位置：
 
 ---
 
-<!-- §3 Strategy（推理声明）将在下一轮讨论后编写 -->
+## 3. Strategy（推理声明）
+
+Strategy 表示推理声明——前提通过某种推理支持结论。Strategy 是不确定性的载体：**所有概率参数都在 Strategy 层**（通过 [parameterization](parameterization.md)），Operator 层纯确定性。
+
+### 3.1 基本概念
+
+一个基本 Strategy 就是一条软蕴含链：
+
+```
+premises  ——↝(p)——→  conclusion
+```
+
+其中 ↝ 表示"前提以概率 p 支持结论"。这是 factor graph 中的因子节点。
+
+Strategy 有三种形态（类层级），支持多分辨率 BP：
+
+| 形态 | 说明 | 独有字段 |
+|------|------|---------|
+| **Strategy**（基类，可实例化） | 叶子推理，编译为 ↝ | — |
+| **CompositeStrategy**(Strategy) | 含子策略，可递归嵌套 | `sub_strategies` |
+| **FormalStrategy**(Strategy) | 含确定性 Operator 展开 | `formal_expr` |
+
+所有形态折叠时均编译为 ↝（参数来自 parameterization 层）。展开时进入内部结构。
+
+### 3.2 Schema
+
+**Strategy（基类）**：
+
+```
+Strategy:
+    strategy_id:    str              # lcs_ 或 gcs_ 前缀
+    scope:          str              # "local" | "global"
+    type:           str              # 见 §3.3
+
+    # ── 连接 ──
+    premises:       list[str]        # claim Knowledge IDs（全部参与 BP）
+    conclusion:     str | None       # 单个输出 Knowledge（必须是 claim）
+    background:     list[str] | None # 上下文 Knowledge IDs（任意类型，不参与 BP）
+
+    # ── local 层 ──
+    steps:          list[Step] | None  # 推理过程的分步描述
+
+    # ── 追溯 ──
+    metadata:       dict | None
+```
+
+**CompositeStrategy(Strategy)**——新增：
+
+```
+CompositeStrategy(Strategy):
+    sub_strategies:  list[Strategy]  # 子策略（可包含 Strategy / CompositeStrategy / FormalStrategy）
+```
+
+**FormalStrategy(Strategy)**——新增：
+
+```
+FormalStrategy(Strategy):
+    formal_expr:     FormalExpr      # 确定性 Operator 展开（必填）
+
+FormalExpr:
+    operators:       list[Operator]  # 只包含确定性 Operator
+```
+
+FormalExpr 中的中间 Knowledge 不需要显式列出——从 operators 的 variables 推导：`{所有 Knowledge ID} - {premises} - {conclusion}`。
+
+**各层字段使用：**
+
+| 字段 | Local | Global |
+|------|-------|--------|
+| `strategy_id` | `lcs_` 前缀 | `gcs_` 前缀 |
+| `premises`/`conclusion` | `lcn_` ID | `gcn_` ID |
+| `steps` | 有值 | None（保留在 local 层） |
+
+**身份规则**：`strategy_id = {lcs_|gcs_}_{SHA-256(scope + type + sorted(premises) + conclusion)[:16]}`。
+
+### 3.3 类型字段
+
+| type | 参数化模型 | 形态 |
+|------|-----------|------|
+| **`infer`** | 完整 CPT：2^k 参数（默认 MaxEnt 0.5） | Strategy |
+| **`noisy_and`** | ∧ + 单参数 p | Strategy |
+| **`deduction`** | 确定性（p₁=1） | FormalStrategy |
+| **`abduction`** | 非确定性 | CompositeStrategy（含 FormalStrategy 子部分） |
+| **`induction`** | 非确定性 | CompositeStrategy（含 FormalStrategy 子部分） |
+| **`analogy`** | 非确定性 | CompositeStrategy（含 FormalStrategy 子部分） |
+| **`extrapolation`** | 非确定性 | CompositeStrategy（含 FormalStrategy 子部分） |
+| **`reductio`** | 确定性（p₁=1） | FormalStrategy |
+| **`elimination`** | 确定性（p₁=1） | FormalStrategy |
+| **`mathematical_induction`** | 确定性（p₁=1） | FormalStrategy |
+| **`case_analysis`** | 确定性（p₁=1） | FormalStrategy |
+| **`toolcall`** | 另行定义 | Strategy |
+| **`proof`** | 另行定义 | Strategy |
+
+> **设计决策：** `independent_evidence` 和 `contradiction` 不作为 Strategy 类型——它们是结构关系，直接用 Operator（equivalence / contradiction）表达。原 `soft_implication` 合并到 `noisy_and`（k=1 的特例）。原 `None` 合并到 `infer`。
+
+### 3.4 参数化语义
+
+Strategy 的参数化模型由 `type` 决定。概率参数存储在 [parameterization](parameterization.md) 层，不在 IR 中。
+
+#### `infer`（通用 CPT）
+
+未分类的通用推理。k 个前提需要 2^k 个参数。按 MaxEnt 原则，默认值全为 0.5。
+
+实践中很少使用——大多数推理会被分类为 `noisy_and` 或命名策略。`infer` 是理论上的完整形式，parameterization 层需要扩展才能存储 2^k 参数（当前 `FactorParamRecord` 只存单参数）。
+
+#### `noisy_and`（∧ + 单参数 p）
+
+**最常用的 Strategy 类型。** 所有前提先 AND（联合必要条件），再以概率 p 推出结论：
+
+```
+P(C=1 | all Aᵢ=1) = p
+P(C=1 | any Aᵢ=0) = ε    （Cromwell leak）
+```
+
+对应 theory 的 ∧ + ↝ 语义。单参数 p 表达推理本身的可信度，前提的可信度由各自的 prior 表达。
+
+**适用范围：前提是联合必要条件的推理。** 包括演绎（所有前提必须成立）、类比（source + bridge 都必须成立）等。
+
+**不适用于：** 归纳和溯因——它们的前提是独立贡献的，不是全有全无。少一个实例/证据不会让支持归零。这些策略必须用 CompositeStrategy 分解为并行子结构（见 §3.6）。
+
+### 3.5 三种形态
+
+#### 3.5.1 基本 Strategy（叶子 ↝）
+
+最简单的形态——直接编译为一个 BP 因子。参数化模型取决于 type（`infer` → 2^k CPT，`noisy_and` → 单参数 p）。
+
+```
+Strategy(type=noisy_and, premises=[A₁, A₂], conclusion=C)
+    → BP 编译为: noisy-AND factor(A₁, A₂ → C, p)
+```
+
+#### 3.5.2 CompositeStrategy（嵌套子策略）
+
+将一个推理分解为多个子策略。`sub_strategies` 可以包含任意形态（Strategy / CompositeStrategy / FormalStrategy），支持递归嵌套。
+
+折叠时（不展开）：编译为单个 ↝ 因子。展开时：递归编译每个子策略。
+
+#### 3.5.3 FormalStrategy + FormalExpr（确定性展开）
+
+用于有已知确定性微观结构的命名策略。`formal_expr` 只包含 Operator（确定性），不包含不确定的 ↝。
+
+**关键约束：FormalExpr 内部没有概率参数——不确定性转移到中间 Knowledge 的先验 π 上。**
+
+### 3.6 命名策略的组装方式
+
+#### 确定性策略 → 纯 FormalStrategy
+
+前提联合必要，推理过程确定性。
+
+**演绎（deduction）**：`premises=[A₁,...,Aₖ], conclusion=C`
+```
+FormalStrategy(type=deduction):
+  formal_expr:
+    - conjunction([A₁,...,Aₖ, M], conclusion=M)
+    - implication([M, C], conclusion=C)
+```
+
+**数学归纳（mathematical_induction）**：`premises=[Base, Step], conclusion=Law`
+```
+FormalStrategy(type=mathematical_induction):
+  formal_expr:
+    - conjunction([Base, Step, M], conclusion=M)
+    - implication([M, Law], conclusion=Law)
+```
+结构与演绎相同。语义区分：Base=P(0), Step=∀n(P(n)→P(n+1)), Law=∀n.P(n)。
+
+**归谬（reductio）**：`premises=[R], conclusion=¬P`
+```
+FormalStrategy(type=reductio):
+  formal_expr:
+    - implication([P, Q], conclusion=Q)
+    - contradiction([Q, R])
+    - complement([P, ¬P])
+```
+
+**排除（elimination）**：`premises=[E₁, E₂, Exhaustiveness], conclusion=H₃`
+```
+FormalStrategy(type=elimination):
+  formal_expr:
+    - contradiction([H₁, E₁])
+    - contradiction([H₂, E₂])
+    - complement([H₁, ¬H₁])
+    - complement([H₂, ¬H₂])
+    - conjunction([¬H₁, ¬H₂, M], conclusion=M)
+    - implication([M, H₃], conclusion=H₃)
+```
+
+**分情况讨论（case_analysis）**：`premises=[Exhaustiveness, P₁,...,Pₖ], conclusion=C`
+```
+FormalStrategy(type=case_analysis):
+  formal_expr:
+    - disjunction([A₁,...,Aₖ])
+    - conjunction([A₁, P₁, M₁], conclusion=M₁), implication([M₁, C], conclusion=C)
+    - conjunction([A₂, P₂, M₂], conclusion=M₂), implication([M₂, C], conclusion=C)
+    - ...（每个 case 一对 conjunction + implication）
+```
+
+#### 非确定性策略 → CompositeStrategy（含 FormalStrategy 子部分）
+
+前提独立贡献或推理过程非确定性。不确定的 ↝ 部分用 Strategy 子节点表达，确定的结构用 FormalStrategy 子节点表达。
+
+**溯因（abduction）**：`premises=[supporting_knowledge], conclusion=H`
+
+溯因的不确定性在于"假说是否是最佳解释"。确定部分是 H→O 和 O↔Obs 的逻辑结构。
+
+```
+CompositeStrategy(type=abduction, premises=[supporting_knowledge], conclusion=H):
+  sub_strategies:
+    - Strategy(type=noisy_and, premises=[H], conclusion=O)        ← 不确定的 ↝
+    - FormalStrategy(formal_expr:
+        - implication([H, O], conclusion=O)
+        - equivalence([O, Obs])
+      )                                                            ← 确定的结构
+```
+
+**归纳（induction）**：`premises=[Obs₁,...,Obsₙ], conclusion=Law`
+
+归纳的每个实例独立贡献支持——不是联合必要。分解为并行的子推理，每个都是溯因结构。
+
+```
+CompositeStrategy(type=induction, premises=[Obs₁,...,Obsₙ], conclusion=Law):
+  sub_strategies:
+    - FormalStrategy(formal_expr:
+        - implication([Law, Instance₁], conclusion=Instance₁)
+        - equivalence([Instance₁, Obs₁])
+      )
+    - FormalStrategy(formal_expr:
+        - implication([Law, Instance₂], conclusion=Instance₂)
+        - equivalence([Instance₂, Obs₂])
+      )
+    - ...（每个观测一组 implication + equivalence）
+```
+
+累积效应由 BP 消息传播实现——多条独立证据的消息在 Law 节点汇聚，belief 自然上升。单个反例（Obs 与 Instance 不一致）通过 equivalence Operator 传播，削弱 Law 的 belief。
+
+**类比（analogy）**：`premises=[SourceLaw, BridgeClaim], conclusion=Target`
+
+前提联合必要（source 和 bridge 都要成立），但 bridge 的可信度本身是不确定的。
+
+```
+CompositeStrategy(type=analogy, premises=[SourceLaw, BridgeClaim], conclusion=Target):
+  sub_strategies:
+    - Strategy(type=noisy_and, premises=[SourceLaw, BridgeClaim], conclusion=Target)
+    - FormalStrategy(formal_expr:
+        - conjunction([SourceLaw, BridgeClaim, M], conclusion=M)
+        - implication([M, Target], conclusion=Target)
+      )
+```
+
+不确定性集中在 BridgeClaim 的先验 π(BridgeClaim)。
+
+**外推（extrapolation）**：`premises=[KnownLaw, ContinuityClaim], conclusion=Extended`
+
+与类比结构相同。不确定性在 ContinuityClaim 的先验。
+
+```
+CompositeStrategy(type=extrapolation, premises=[KnownLaw, ContinuityClaim], conclusion=Extended):
+  sub_strategies:
+    - Strategy(type=noisy_and, premises=[KnownLaw, ContinuityClaim], conclusion=Extended)
+    - FormalStrategy(formal_expr:
+        - conjunction([KnownLaw, ContinuityClaim, M], conclusion=M)
+        - implication([M, Extended], conclusion=Extended)
+      )
+```
+
+### 3.7 多分辨率 BP 编译规则
+
+BP 编译接受 `expand_set`（需要展开的 Strategy ID 集合），支持同一图在不同粒度做推理：
+
+```
+compile(strategy, expand_set):
+    if strategy.id not in expand_set:
+        → 折叠：编译为 ↝ 因子（参数来自 StrategyParamRecord）
+    elif isinstance(strategy, CompositeStrategy):
+        for sub in strategy.sub_strategies:
+            compile(sub, expand_set)    # 递归
+    elif isinstance(strategy, FormalStrategy):
+        for op in strategy.formal_expr.operators:
+            → 确定性因子（ψ∈{0,1}）
+    else:
+        → 叶子：编译为 ↝ 因子
+```
+
+### 3.8 Lifecycle
+
+Strategy 的形态即状态——不需要 `initial` / `candidate` / `permanent` 阶段标签：
+
+```
+Strategy(type=infer)                          ← 初始：通用推理
+  ├── reviewer 分类为命名策略 → CompositeStrategy / FormalStrategy
+  ├── reviewer 确认为 noisy_and → type=noisy_and
+  ├── reviewer 分解 → CompositeStrategy + sub_strategies
+  └── 保持 type=infer
+```
+
+IR 中所有 Strategy 都是已确认的结构——候选项由 review 层管理。
+
+### 3.9 Premise / Background / Refs
+
+| 字段 | 类型约束 | 参与 BP | 说明 |
+|------|---------|---------|------|
+| **premises** | 仅 claim | 是 | 推理的形式前提，全部参与 BP 消息传递 |
+| **background** | 任意类型 | 否 | 上下文依赖（setting、全称 claim 实例化的绑定等） |
+| **refs** (metadata) | 任意 | 否 | 弱相关来源引用 |
+
+### 3.10 不变量
+
+1. `premises` 中的 Knowledge 类型必须是 `claim`
+2. `conclusion` 的 Knowledge 类型必须是 `claim`（如果非 None）
+3. `background` 中的 Knowledge 类型可以是任意（claim / setting / question）
+4. FormalStrategy 的 `formal_expr` 必填；CompositeStrategy 的 `sub_strategies` 必填且非空
+5. `sub_strategies` 和 `formal_expr` 不同时出现（形态互斥由类层级保证）
+6. FormalExpr 只包含 Operator（不包含 Strategy）
+7. `noisy_and` 仅用于前提联合必要的场景；归纳/溯因必须用 CompositeStrategy 分解
+
+---
+
+<!-- §4 规范化、§5 撤回、§6 映射与设计决策 待后续编写 -->
