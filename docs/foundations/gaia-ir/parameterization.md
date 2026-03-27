@@ -2,15 +2,15 @@
 
 > **Status:** Target design
 >
-> **⚠️ Protected Contract Layer** — 本目录定义 CLI↔LKM 结构契约。变更需要独立 PR 并经负责人审查批准。详见 [documentation-policy.md](../../documentation-policy.md#12-变更控制)。
+> **⚠️ Protected Contract Layer** — 本目录定义 CLI↔LKM 结构契约。变更需要独立 PR 并经负责人审查批准。
 
-Parameterization 是 GlobalCanonicalGraph 上的概率参数层。它由一组**原子记录**构成——每条记录是一个 Knowledge 的 prior 或一个 Strategy 的 conditional probabilities。不同 review 来源（不同模型、不同策略）产出不同的记录，BP 运行前按 resolution policy 组装成完整参数集。
+Parameterization 是 Gaia IR 上的概率参数层。它由一组**原子记录**构成——每条记录是一个 Knowledge 的先验概率或一个 Strategy 的条件概率。不同 review 来源（不同模型、不同策略）产出不同的记录，推理运行前按 resolution policy 组装成完整参数集。
 
-Gaia IR 结构定义见 [gaia-ir.md](gaia-ir.md)。BP 输出见 [belief-state.md](belief-state.md)。三者的关系见 [overview.md](overview.md)。
+Gaia IR 结构定义见 [gaia-ir.md](gaia-ir.md)。推理输出见 [belief-state.md](belief-state.md)。三者的关系见 [overview.md](overview.md)。
 
 ## 存储层：原子记录
 
-数据库中存储的是独立的参数记录，每条记录携带来源信息：
+数据库中存储独立的参数记录，每条记录携带来源信息：
 
 ```
 PriorRecord:
@@ -20,10 +20,10 @@ PriorRecord:
     created_at:         str              # ISO 8601
 
 StrategyParamRecord:
-    strategy_id:            str              # 全局 Strategy ID (gcs_ 前缀)
-    conditional_probabilities: list[float]   # None(通用): 2^K; infer(noisy-AND): [q]; soft_implication: [p₁, p₂]
-    source_id:              str              # 哪个 ParameterizationSource 产出的
-    created_at:             str              # ISO 8601
+    strategy_id:                str          # 全局 Strategy ID (gcs_ 前缀)
+    conditional_probabilities:  list[float]  # 参数数量由 type 决定（见下表）
+    source_id:                  str          # 哪个 ParameterizationSource 产出的
+    created_at:                 str          # ISO 8601
 
 ParameterizationSource:
     source_id:          str              # 唯一 ID
@@ -35,16 +35,28 @@ ParameterizationSource:
 
 **关键规则：**
 
-- **PriorRecord 只对 Claim**：只有 `type=claim` 的 Knowledge 有记录。Setting/Question/Template 不参与 BP。
-- **所有形态的 Strategy 都有 conditional_probabilities**（折叠模式下的 ↝ 参数），因此所有推理类 Strategy 都需要 StrategyParamRecord。
-- **FormalStrategy（9 种命名策略）展开时**，参数化通过中间 Knowledge 的 PriorRecord 实现；折叠时仍使用 conditional_probabilities。
-- **Operator 是纯确定性的（ψ ∈ {0, 1}），不需要参数记录。**
-- **一个 Knowledge/Strategy 可以有多条记录**（来自不同 source），BP 运行时选择用哪条。
+- **PriorRecord 只对 claim**：只有 `type=claim` 的 Knowledge 有记录。Setting 和 question 不携带概率。
+- **所有 Strategy 都有 conditional_probabilities**（折叠模式下的条件概率参数），因此所有推理类 Strategy 都需要 StrategyParamRecord。
+- **FormalStrategy 展开时**，参数化通过中间 Knowledge 的 PriorRecord 实现；折叠时仍使用 conditional_probabilities。
+- **Operator 是纯确定性的（真值表完全确定），不需要参数记录。**
+- **一个 Knowledge/Strategy 可以有多条记录**（来自不同 source），推理运行时选择用哪条。
 - **Cromwell's rule**：所有值钳制到 `[ε, 1-ε]`，ε = 1e-3。
 
-## BP 运行时：Resolution Policy
+## 参数模型
 
-BP 运行前，按 resolution policy 从原子记录中为每个 Knowledge/Strategy 选择一个值，组装成完整参数集：
+`conditional_probabilities` 的长度和含义由 Strategy 的 `type` 决定：
+
+| type | conditional_probabilities | 说明 |
+|------|--------------------------|------|
+| **`infer`** | `[p₁, p₂, ..., p_{2^k}]`（2^k 个） | 完整条件概率表，每种前提真值组合一个参数。默认 MaxEnt 0.5 |
+| **`noisy_and`** | `[p]`（1 个） | P(conclusion=true \| all premises=true) = p。前提不全真时 leak=ε |
+| **9 种命名策略** | `[p]`（1 个，折叠参数） | 折叠时视为单条 ↝ 的条件概率 |
+| **`toolcall`** | 另行定义 | 可根据计算的可复现性打分 |
+| **`proof`** | 另行定义 | 有效证明可设为 1.0 - ε |
+
+## Resolution Policy
+
+推理运行前，按 resolution policy 从原子记录中为每个 Knowledge/Strategy 选择一个值，组装成完整参数集：
 
 | policy | 说明 |
 |--------|------|
@@ -53,21 +65,22 @@ BP 运行前，按 resolution policy 从原子记录中为每个 Knowledge/Strat
 
 组装过程是**现算的**，不持久化。组装时使用 `prior_cutoff` 时间戳过滤记录——只取该时间点之前的记录，确保结果可重现（见 [belief-state.md](belief-state.md)）。
 
-### 多分辨率 BP 编译路径
+## 多分辨率支持
 
-BP 编译接受 `expand_set`（需要展开的 Strategy ID 集合），根据 Strategy 形态和展开决策选择路径：
+Strategy 的三种形态（基本 Strategy、CompositeStrategy、FormalStrategy）支持多分辨率推理。Parameterization 层为此提供两套参数：
 
-- **Strategy 未在 expand_set 中 → 折叠**：使用 StrategyParamRecord.conditional_probabilities 编译为 ↝
-- **CompositeStrategy 在 expand_set 中 → 展开**：递归编译 sub_strategies
-- **FormalStrategy 在 expand_set 中 → 展开**：BP 在 Operator 层运行（参数在中间 Knowledge 的 PriorRecord）
+- **折叠参数**：StrategyParamRecord.conditional_probabilities——每个 Strategy 都有，用于将 Strategy 视为单条 ↝ 时的条件概率。
+- **展开参数**：FormalExpr 中间 Knowledge 的 PriorRecord——FormalStrategy 展开时，确定性 Operator 无参数，不确定性转移到中间 Knowledge 的先验上。
 
-### 完整性检查
+哪些 Strategy 展开、哪些折叠，由推理引擎的 `expand_set` 决定。具体的推理算法见 [bp/](../bp/) 层。
 
-BP 引擎在运行前验证组装结果的完整性：
+## 完整性检查
 
-- GlobalCanonicalGraph 中每个 `type=claim` 的 Knowledge 都必须有对应的 PriorRecord
-- 所有推理类 Strategy 都必须有 StrategyParamRecord（折叠参数）
-- FormalStrategy 的 FormalExpr 展开的中间 Knowledge（如果是 claim）也必须有 PriorRecord（仅在展开模式下需要）
+推理运行前验证组装结果的完整性：
+
+- 全局图中每个 `type=claim` 的 Knowledge 都必须有对应的 PriorRecord
+- 所有 Strategy 都必须有 StrategyParamRecord（折叠参数）
+- 展开模式下，FormalExpr 的中间 Knowledge（如果是 claim）也必须有 PriorRecord
 
 否则拒绝运行。
 
@@ -75,17 +88,16 @@ BP 引擎在运行前验证组装结果的完整性：
 
 每个 global claim Knowledge 的 prior 由 review 赋值。不存在聚合逻辑——canonicalization 对 premise Knowledge 直接复用已有 global Knowledge（prior 不变），对 conclusion Knowledge 创建新的 global Knowledge（prior 由 review 独立赋值）。
 
-## Strategy probability 来源
+## Strategy 条件概率来源
 
-- `None`（通用）：完整 CPT（2^K 参数），默认 MaxEnt 0.5，由 review 赋值
-- `infer`（noisy-AND）：单参数 [q]，由 review 赋值，反映推理本身的可信度
-- `soft_implication`：[p₁, p₂]，由 review 赋值
-- `independent_evidence`：[q]，声明 premises 之间独立支持关系（conclusion=None），确认后编译为 Operator
-- `contradiction`：[q]，声明两个 premises 矛盾（conclusion=None），确认后编译为 Operator
-- `toolcall` / `proof`：可根据计算的可复现性打分（具体策略后续定义）
-- Canonicalization 确认的 equivalence Operator 是独立结构关系（顶层 operators），不需要 StrategyParamRecord
+| type | 条件概率来源 |
+|------|-------------|
+| `infer` | Review 赋值。完整 CPT（2^k 参数），默认 MaxEnt 0.5 |
+| `noisy_and` | Review 赋值。单参数 p，反映推理本身的可信度 |
+| 9 种命名策略 | Review 赋值折叠参数。展开时参数转移到中间 Knowledge 的 PriorRecord |
+| `toolcall` / `proof` | 可根据可复现性/验证结果打分（具体策略后续定义） |
 
 ## 源代码
 
 - `libs/graph_ir/models.py` -- `LocalParameterization`, `StrategyParamRecord`
-- `libs/inference/factor_graph.py` -- `CROMWELL_EPS`, Cromwell 钳制
+- `gaia/libs/models/parameterization.py` -- `PriorRecord`, `FactorParamRecord`, `ResolutionPolicy`
