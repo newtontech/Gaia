@@ -336,6 +336,6 @@ Review Server（LLM/agent）评估推理逻辑的可靠性
 
 ## 相关文档
 
-- [04-decentralized-architecture.md](04-decentralized-architecture.md) — 架构总纲，参与者和交互关系
-- [07-review-and-curation.md](07-review-and-curation.md) — Review Server 审核流程 + LKM curation 的两阶段流程
-- [06-registry-operations.md](06-registry-operations.md) — 注册、去重、推理链激活
+- [03-decentralized-architecture.md](03-decentralized-architecture.md) — 架构总纲，参与者和交互关系
+- [06-review-and-curation.md](06-review-and-curation.md) — Review Server 审核流程 + LKM curation 的两阶段流程
+- [05-registry-operations.md](05-registry-operations.md) — 注册、去重、推理链激活

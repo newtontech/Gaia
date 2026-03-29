@@ -17,7 +17,7 @@ Start with the [Quick Start](for-users/quick-start.md), then read the [Language 
 ### I want to develop Gaia
 > You're a developer working on the codebase.
 
-Start with the [Architecture Overview](foundations/rationale/02-architecture-overview.md), then explore:
+Start with the [Architecture Overview](foundations/gaia-ir/00-pipeline-overview.md), then explore:
 - [CLI surface](foundations/cli/) — local authoring, compilation, inference
 - [LKM surface](foundations/lkm/) — server-side review, curation, global inference
 - [Gaia IR contract](foundations/gaia-ir/) — the shared intermediate representation
@@ -29,7 +29,7 @@ The [Foundations](foundations/README.md) directory contains Gaia's canonical ref
 | Layer | What it answers | Changes |
 |-------|----------------|---------|
 | [Theory](foundations/theory/) | Why does Gaia reason this way? | Never |
-| [Rationale](foundations/rationale/) | What are Gaia's design choices? | Rarely |
+| [Ecosystem](foundations/ecosystem/) | What are Gaia's design choices? | Rarely |
 | [Gaia IR](foundations/gaia-ir/) | What is the structural contract? | Sometimes |
 | [BP](foundations/bp/) | How does inference work? | Sometimes |
 | [CLI](foundations/cli/) | How does local authoring work? | Often |

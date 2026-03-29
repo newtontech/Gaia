@@ -259,7 +259,7 @@ CI 验证 → 等待期 → 合并 → 增量推理
 
 ## 相关文档
 
-- [04-decentralized-architecture.md](04-decentralized-architecture.md) — 架构总纲，LKM Repo 的定义和参与者交互
-- [06-registry-operations.md](06-registry-operations.md) — 注册流程、去重（embedding 匹配为粗筛，LKM curation 为补充）
-- [08-belief-flow-and-quality.md](08-belief-flow-and-quality.md) — 多级推理、错误修正场景中 curation 包的具体影响
-- [05-authoring-and-publishing.md](05-authoring-and-publishing.md) — 作者视角：浏览 LKM Repo 发现研究机会
+- [03-decentralized-architecture.md](03-decentralized-architecture.md) — 架构总纲，LKM Repo 的定义和参与者交互
+- [05-registry-operations.md](05-registry-operations.md) — 注册流程、去重（embedding 匹配为粗筛，LKM curation 为补充）
+- [07-belief-flow-and-quality.md](07-belief-flow-and-quality.md) — 多级推理、错误修正场景中 curation 包的具体影响
+- [04-authoring-and-publishing.md](04-authoring-and-publishing.md) — 作者视角：浏览 LKM Repo 发现研究机会

@@ -200,7 +200,7 @@ Current specs live in `docs/foundations/` organized by architectural layer:
 
 ```
 docs/foundations/theory/       → Pure theory (Jaynes, BP algorithm) — never changes
-docs/foundations/rationale/    → Design philosophy, product scope — rarely changes
+docs/foundations/ecosystem/    → Business ecosystem — product scope, decentralized architecture, workflows
 docs/foundations/gaia-ir/     → Gaia IR structural contract (CLI↔LKM shared layer)
 docs/foundations/gaia-lang/    → Gaia Language (authoring DSL, shared by CLI and LKM)
 docs/foundations/bp/           → BP computation semantics on Gaia IR
@@ -222,7 +222,7 @@ The `docs/foundations/` directory mirrors Gaia's three-layer compilation pipelin
 | Layer | Responsibility | What belongs here |
 |-------|---------------|-------------------|
 | **theory/** | External theory (Jaynes, BP algorithm) | Definitions that exist independent of Gaia |
-| **rationale/** | Gaia design philosophy, product scope | Why Gaia makes the choices it does |
+| **ecosystem/** | Business ecosystem — product scope, decentralized architecture, workflows | Why Gaia makes the choices it does, how participants interact |
 | **gaia-ir/** | Gaia IR structural contract | Node schemas, factor types, canonicalization — defined ONCE here |
 | **gaia-lang/** | Gaia Language (authoring DSL) | Language spec, knowledge types, package model — shared by CLI and LKM |
 | **bp/** | BP computation on Gaia IR | Factor potentials, inference algorithm, local vs global |

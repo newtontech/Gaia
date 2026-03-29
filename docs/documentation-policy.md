@@ -5,7 +5,7 @@
 | 版本 | 0.1 |
 | 日期 | 2026-03-22 |
 | 状态 | **Current canonical** |
-| 关联文档 | [README.md](../README.md), [01-product-scope.md](01-product-scope.md) |
+| 关联文档 | [README.md](../README.md), [01-product-scope.md](foundations/ecosystem/01-product-scope.md) |
 
 ## 1. 目的
 
@@ -307,7 +307,7 @@ Gaia 基础文档应归入以下四个主要层次之一。
 |----|---------|---------|
 | theory/ | **冻结** | 不应变更（外部定义） |
 | gaia-ir/ | **受保护** | 需要独立 PR + 负责人显式批准 |
-| rationale/ | **受保护** | 语义变更需审查；措辞澄清可直接编辑 |
+| ecosystem/ | **受保护** | 语义变更需审查；措辞澄清可直接编辑 |
 | 其他层 | 正常 | 遵循标准 PR 流程 |
 
 **受保护层的变更流程：**

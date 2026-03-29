@@ -21,11 +21,16 @@ Gaia 的规范参考文档，按架构层级组织。
 - [`06-factor-graphs.md`](theory/06-factor-graphs.md) — 命题网络到因子图的映射、势函数
 - [`07-belief-propagation.md`](theory/07-belief-propagation.md) — BP 近似推理算法
 
-## 设计理念 — 设计哲学（极少变更）
+## 生态系统 — 设计哲学（极少变更）
 
-- [产品范围](rationale/01-product-scope.md) — Gaia 是什么、为何存在
-- [架构概览](rationale/02-architecture-overview.md) — 三层管线、CLI↔LKM 契约
-- [领域词汇表](rationale/03-domain-vocabulary.md) — Knowledge、Chain、Module、Package
+- [产品范围](ecosystem/01-product-scope.md) — Gaia 是什么、为何存在
+- [架构概览](gaia-ir/00-pipeline-overview.md) — 三层管线、CLI↔LKM 契约
+- [领域词汇表](ecosystem/02-domain-vocabulary.md) — Knowledge、Chain、Module、Package
+- [去中心化架构](ecosystem/03-decentralized-architecture.md) — 去中心化包管理和推理架构
+- [包的创建与发布](ecosystem/04-authoring-and-publishing.md) — 作者从创建包到发布的旅程
+- [Registry 运作](ecosystem/05-registry-operations.md) — 注册、去重、推理链激活
+- [审核与策展](ecosystem/06-review-and-curation.md) — Review Server + LKM curation
+- [多级推理与质量涌现](ecosystem/07-belief-flow-and-quality.md) — 三级推理、错误修正
 - [文档维护策略](../documentation-policy.md) — 文档维护规则
 
 ## Gaia IR — CLI 与 LKM 之间的共享契约

@@ -269,32 +269,32 @@ CI 验证 → 等待期 → 合并 → 增量推理
 
 | 步骤 | 描述 | 详见 |
 |------|------|------|
-| ① 创建包 | 作者创建知识包到 Package Repo | [05-authoring-and-publishing.md](05-authoring-and-publishing.md) |
-| ② 请求审核 | 作者向 Review Server 提交包的审核请求 | [07-review-and-curation.md](07-review-and-curation.md) |
-| ③ review report | Review Server 审核推理逻辑，给条件概率初始值，存入包内 | [07-review-and-curation.md](07-review-and-curation.md) |
-| ④ 注册 | 作者带着 review report 向 Official Registry 请求注册 | [06-registry-operations.md](06-registry-operations.md) |
+| ① 创建包 | 作者创建知识包到 Package Repo | [04-authoring-and-publishing.md](04-authoring-and-publishing.md) |
+| ② 请求审核 | 作者向 Review Server 提交包的审核请求 | [06-review-and-curation.md](06-review-and-curation.md) |
+| ③ review report | Review Server 审核推理逻辑，给条件概率初始值，存入包内 | [06-review-and-curation.md](06-review-and-curation.md) |
+| ④ 注册 | 作者带着 review report 向 Official Registry 请求注册 | [05-registry-operations.md](05-registry-operations.md) |
 
 **LKM 流：**
 
 | 步骤 | 描述 | 详见 |
 |------|------|------|
-| ⑤ 发布 research task | LKM 在 LKM Repo 创建 Issue，发布候选发现 | [07-review-and-curation.md](07-review-and-curation.md) |
-| ⑥ 创建 curation 包 | 候选确认后，LKM 创建 curation 包到 Package Repo | [07-review-and-curation.md](07-review-and-curation.md) |
-| ⑦ curation 包审核 | 同作者流——经 Review Server 审核 | [07-review-and-curation.md](07-review-and-curation.md) |
-| ⑧ 回写可信度 | LKM 全局推理结果回写到 Registry | [08-belief-flow-and-quality.md](08-belief-flow-and-quality.md) |
+| ⑤ 发布 research task | LKM 在 LKM Repo 创建 Issue，发布候选发现 | [06-review-and-curation.md](06-review-and-curation.md) |
+| ⑥ 创建 curation 包 | 候选确认后，LKM 创建 curation 包到 Package Repo | [06-review-and-curation.md](06-review-and-curation.md) |
+| ⑦ curation 包审核 | 同作者流——经 Review Server 审核 | [06-review-and-curation.md](06-review-and-curation.md) |
+| ⑧ 回写可信度 | LKM 全局推理结果回写到 Registry | [07-belief-flow-and-quality.md](07-belief-flow-and-quality.md) |
 
 **共同流：**
 
 | 步骤 | 描述 | 详见 |
 |------|------|------|
-| 去重 + 增量推理 | Registry CI 去重、验证、增量推理 | [06-registry-operations.md](06-registry-operations.md)，[08-belief-flow-and-quality.md](08-belief-flow-and-quality.md) |
+| 去重 + 增量推理 | Registry CI 去重、验证、增量推理 | [05-registry-operations.md](05-registry-operations.md)，[07-belief-flow-and-quality.md](07-belief-flow-and-quality.md) |
 
 各环节的详细业务逻辑：
 
-- [包的创建与发布](05-authoring-and-publishing.md) — 作者从创建包到审核、发布的完整旅程
-- [Official Repo 的运作](06-registry-operations.md) — 注册、去重、推理链激活
-- [审核与策展](07-review-and-curation.md) — Review Server 审核 + LKM curation 的业务逻辑
-- [多级推理与质量涌现](08-belief-flow-and-quality.md) — 三级推理、错误修正、质量如何涌现
+- [包的创建与发布](04-authoring-and-publishing.md) — 作者从创建包到审核、发布的完整旅程
+- [Official Repo 的运作](05-registry-operations.md) — 注册、去重、推理链激活
+- [审核与策展](06-review-and-curation.md) — Review Server 审核 + LKM curation 的业务逻辑
+- [多级推理与质量涌现](07-belief-flow-and-quality.md) — 三级推理、错误修正、质量如何涌现
 
 ## 设计原则
 
@@ -316,5 +316,5 @@ CI 验证 → 等待期 → 合并 → 增量推理
 
 ## 参考文献
 
-- [02-architecture-overview.md](02-architecture-overview.md) — 三层编译管线（Gaia Lang → Gaia IR → BP）
+- [00-pipeline-overview.md](../gaia-ir/00-pipeline-overview.md) — 三层编译管线（Gaia Lang → Gaia IR → BP）
 - [01-product-scope.md](01-product-scope.md) — 产品定位（CLI 优先，服务器增强）

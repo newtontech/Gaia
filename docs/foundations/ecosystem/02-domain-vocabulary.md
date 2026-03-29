@@ -40,27 +40,27 @@ Gaia Lang 与 BP 之间的结构中间表示。一个一等提交制品，具有
 
 ## Review Server
 
-独立部署的 LLM/agent 审核服务。审核包内部推理过程的逻辑可靠性，给出条件概率初始值。不判断前提本身是否正确。可多实例，需在 Official Registry 注册。详见 [07-review-and-curation.md](07-review-and-curation.md)。
+独立部署的 LLM/agent 审核服务。审核包内部推理过程的逻辑可靠性，给出条件概率初始值。不判断前提本身是否正确。可多实例，需在 Official Registry 注册。详见 [06-review-and-curation.md](06-review-and-curation.md)。
 
 ## Official Registry
 
-所有已注册包的聚合索引，采用 Julia General registry 模型（一个 git 仓库，一切通过 PR）。注册包、reviewer、LKM 的元数据，存储推理结果。可 fork、可联邦。详见 [06-registry-operations.md](06-registry-operations.md)。
+所有已注册包的聚合索引，采用 Julia General registry 模型（一个 git 仓库，一切通过 PR）。注册包、reviewer、LKM 的元数据，存储推理结果。可 fork、可联邦。详见 [05-registry-operations.md](05-registry-operations.md)。
 
 ## LKM Repo
 
-LKM Server 的运营仓库。通过 Issues 管理 research tasks——LKM 在全局推理中发现的候选关系（equivalence、contradiction、connection）的发布、调查和分拣。人类研究者可浏览和参与。详见 [04-decentralized-architecture.md](04-decentralized-architecture.md)。
+LKM Server 的运营仓库。通过 Issues 管理 research tasks——LKM 在全局推理中发现的候选关系（equivalence、contradiction、connection）的发布、调查和分拣。人类研究者可浏览和参与。详见 [03-decentralized-architecture.md](03-decentralized-architecture.md)。
 
 ## Research Task
 
-LKM 在全局推理过程中发现的候选关系，以 Issue 形式发布到 LKM Repo。三类：equivalence（两个命题语义接近）、contradiction（两个命题互相冲突）、connection（隐含跨包依赖）。确认后由 LKM 创建 curation 包走标准流程。详见 [07-review-and-curation.md](07-review-and-curation.md)。
+LKM 在全局推理过程中发现的候选关系，以 Issue 形式发布到 LKM Repo。三类：equivalence（两个命题语义接近）、contradiction（两个命题互相冲突）、connection（隐含跨包依赖）。确认后由 LKM 创建 curation 包走标准流程。详见 [06-review-and-curation.md](06-review-and-curation.md)。
 
 ## Curation Package
 
-LKM 或人类研究者创建的知识包，声明跨包关系（等价、矛盾、连接）。和普通知识包走完全相同的流程：Review Server 审核 → 注册到 Official Registry。详见 [07-review-and-curation.md](07-review-and-curation.md)。
+LKM 或人类研究者创建的知识包，声明跨包关系（等价、矛盾、连接）。和普通知识包走完全相同的流程：Review Server 审核 → 注册到 Official Registry。详见 [06-review-and-curation.md](06-review-and-curation.md)。
 
 ## Open Question
 
-人类/agent 在 Official Registry Issues 上提出的研究问题或知识空白（如"Y 领域缺少 Z 方面的包"）。与 LKM Repo 的 research task（结构化候选）互补，是社区协作发现研究方向的机制。详见 [06-registry-operations.md](06-registry-operations.md)。
+人类/agent 在 Official Registry Issues 上提出的研究问题或知识空白（如"Y 领域缺少 Z 方面的包"）。与 LKM Repo 的 research task（结构化候选）互补，是社区协作发现研究方向的机制。详见 [05-registry-operations.md](05-registry-operations.md)。
 
 ## 参考文献
 
