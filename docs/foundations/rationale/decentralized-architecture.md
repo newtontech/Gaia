@@ -63,16 +63,18 @@ graph TB
         IBP["增量推理<br/><i>局部子图重算<br/>秒级响应</i>"]
     end
 
-    %% ── Package（用户侧）────────────────────────────
-    subgraph L0["<b>Package（用户侧 · 完全自治）</b>"]
+    %% ── 人类 / Agent ─────────────────────────────────
+    Author["👤 作者（人类或 AI agent）"]
+
+    %% ── Git Repo（Package）──────────────────────────
+    subgraph L0["<b>Git Repo（Package）</b>"]
         direction TB
-        Author["👤 作者<br/><i>人类或 AI agent</i>"]
-        PKG["包仓库（git repo）<br/><i>源码 · 编译产物<br/>依赖 · review report</i>"]
+        PKG["包仓库<br/><i>源码 · 编译产物<br/>依赖 · review report</i>"]
         Build["gaia build<br/><i>确定性编译<br/>源码 → 推理图</i>"]
         Infer["gaia infer<br/><i>本地概率推理<br/>可信度预览</i>"]
     end
 
-    %% ── Package 内部流 ──────────────────────────────
+    %% ── 作者 ↔ Package 流 ───────────────────────────
     Author -->|"创建 · 编写"| PKG
     PKG -->|"源码 + 依赖"| Build
     Build -->|"推理图"| Infer
