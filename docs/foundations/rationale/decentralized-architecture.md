@@ -63,10 +63,10 @@ graph TD
 
     %% ═══════ 第 3 层：Git Server 包含三个 Repo ═══════
     subgraph GIT["🌐 Git Server（GitHub / GitLab / Gitea）"]
-        PKG(["📦 Package Repo<br/>源码 · 编译产物 · review report"])
-        LKMR(["🔬 LKM Repo<br/>research tasks（Issues）<br/>equivalence · contradiction · connection"])
-        REG(["📋 Official Registry<br/>packages/ · reviewers/ · lkm/ · beliefs/"])
-        PKG ~~~ LKMR ~~~ REG
+        direction LR
+        PKG(["📦 Package Repo<br/>源码 · 编译产物<br/>review report"])
+        LKMR(["🔬 LKM Repo<br/>research tasks（Issues）<br/>equivalence · contradiction<br/>connection"])
+        REG(["📋 Official Registry<br/>packages/ · reviewers/<br/>lkm/ · beliefs/"])
     end
 
     %% ─── 作者流 ───
@@ -88,7 +88,7 @@ graph TD
     REG -. "拉取最新可信度" .-> PKG
 
     %% ═══════ 样式 ═══════
-    style GIT fill:#f5f5f5,stroke:#9e9e9e,stroke-width:2px,stroke-dasharray:8 4,color:#000
+    style GIT fill:none,stroke:#bdbdbd,stroke-width:1px,stroke-dasharray:6 3,color:#616161
     style Author fill:#fff,stroke:#333,stroke-width:2px,color:#000
     style LKM fill:#fce4ec,stroke:#c62828,stroke-width:2px,color:#000
     style RS fill:#fff3e0,stroke:#e65100,stroke-width:2px,stroke-dasharray:5 5,color:#000
