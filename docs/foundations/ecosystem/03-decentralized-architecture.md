@@ -2,66 +2,37 @@
 
 > **Status:** Current canonical
 
-本文档是 Gaia 去中心化包管理和推理架构的总纲。具体的业务流程见各子文档。
+本文档是 Gaia 去中心化架构的总纲——参与者、基础设施、以及从包创建到证据汇聚的完整业务流转。各环节的展开详见 04-07。
 
-## 参与者
+## 参与者与基础设施
 
-| 参与者 | 性质 | 职责 |
-|--------|------|------|
-| **作者**（人类或 AI agent） | 贡献者 | 创建知识包，声明依赖，编译，本地推理，发布 |
-| **LKM Server** | 贡献者 + 全局推理 | 十亿节点全局推理；构建全局图时发现跨包关系，以 research task 发布候选，确认后以 curation 包贡献 |
-| **Review Server** | 独立部署 | LLM/agent 自动审核员。审核包内部推理逻辑，给出条件概率初始值。可多实例 |
-| **Git Repo（Package）** | 用户侧 | 托管知识包源码、编译产物和 review report |
-| **Git Repo（LKM Repo）** | LKM 侧 | LKM 的运营仓库，通过 Issues 管理 research tasks（候选发现的发布、调查、分拣） |
-| **Git Repo（Official Registry）** | 注册中心 | 注册包、reviewer、LKM 的元数据，存储推理结果；通过 Issues 管理社区 open questions |
+| 实体 | 角色 | 职责概述 |
+|------|------|---------|
+| **作者**（人类 / AI agent） | 贡献者 | 创建知识包，声明依赖，编译，本地推理，发布 |
+| **LKM Server** ×N | 贡献者 + 全局推理 | 全局推理；发现跨包关系后以 curation 包贡献 |
+| **Review Server** ×N | 审核员 | 审核包内推理逻辑，给条件概率初始值 |
+| **Knowledge Repo** | 基础设施 | 托管包源码、编译产物、review report |
+| **Official Registry** | 基础设施 | 注册包 / reviewer / LKM，存储推理结果，去重 |
+| **LKM Repo** ×N | 基础设施 | 各 LKM 各自的运营仓库，Issues 管理其 research tasks |
 
-### 两类贡献者
+两个关键设计点：
 
-Gaia 有两类并列的贡献者，走同样的流程（创建包 → review → 注册）：
+- **LKM 和人类是并列贡献者**，走完全相同的流程（创建包 → 审核 → 注册），没有捷径。LKM 的特殊之处在于它能看到整个知识网络，因此能发现跨包关系——但它的发现仍然要走标准流程。
+- **一切通过 git 交互**——commit、PR、Issues。本文档以 GitHub 为例，但架构只依赖 git + PR 语义，GitLab、Gitea 等同样适用。
 
-| | 人类 / AI agent | LKM Server |
-|---|---|---|
-| **创建什么** | 知识包（从研究中得出的命题和推理链） | Curation 包（从全局图分析中发现的跨包关系） |
-| **知识来源** | 实验、理论、分析 | 全局图构建过程中的发现（等价、矛盾、隐含连接），先以 research task 发布，确认后创建 curation 包 |
-| **审核** | Review Server 审核推理逻辑 | 同样经 Review Server 审核 |
-| **注册** | 向 Official Registry 提交 PR | 同样向 Official Registry 提交 PR |
-| **特权** | 无 | 无——和普通贡献者走同样的流程 |
-
-**LKM 是特殊地位的 research agent：** 它能看到整个知识网络（这是普通作者看不到的），因此能发现跨包关系。但它的发现仍然要走标准流程——创建 curation 包，经 Review Server 审核，注册到 Official Registry。没有捷径。
-
-### Review Server 的定位
-
-Review Server 是独立部署的 LLM/agent 审核员，为所有贡献者服务：
-
-- **为人类/agent 的包审核推理逻辑，给条件概率**
-- **同样为 LKM 的 curation 包审核**
-- **可多实例：** 不同机构可以各自部署
-- **无特权：** 通过标准流程贡献
-- **格式约束：** 只要 review report 符合格式，任何实现都可以
-
-## Git 作为通用交互面
-
-所有参与者通过 git 交互——一切都是 git commit，一切通过 PR（merge request），一切可审计。本文档以 GitHub 为例描述流程，但架构本身只依赖 git + PR 语义，不绑定 GitHub。私有部署的 GitLab、Gitea 等同样适用——只需将 "GitHub Actions" 替换为对应的 CI 系统（GitLab CI、Drone 等），"GitHub App" 替换为对应的 webhook/bot 机制。
-
-| 参与者 | 交互方式 |
-|--------|---------|
-| 作者 | git push 到自己的包仓库；浏览 LKM Repo 的 research tasks 寻找研究机会；在 Official Registry 提交 open question（Issues）；向 Official Registry 请求注册 |
-| LKM Server | 在 LKM Repo 发布 research task（Issues）；创建 curation 包；向 Official Registry 请求注册 |
-| Review Server | 审核包内部推理 → review report 存入包仓库 |
-
-## 整体架构图
+## 架构图
 
 ```mermaid
 flowchart TB
     Author(["👤 作者 / AI agent"]):::actor
     RS(["⚙ Review Server ×N"]):::review
-    LKM(["🖥 LKM Server"]):::lkm
+    LKM(["🖥 LKM Server ×N"]):::lkm
     Author ~~~ RS ~~~ LKM
 
     subgraph GIT["🌐 Git Server（GitHub / GitLab / Gitea）"]
         PKG["📦 Knowledge Repo"]:::repo
         REG["📋 Official Registry"]:::repo
-        LKMR["🔬 LKM Repo"]:::repo
+        LKMR["🔬 LKM Repo ×N"]:::repo
         PKG ~~~ REG ~~~ LKMR
     end
 
@@ -99,220 +70,114 @@ flowchart TB
 | 虚线 | Registry → LKM | LKM 拉取全局图数据 |
 | 虚线 | Registry → Knowledge Repo | 下游包拉取最新可信度 |
 | 虚线 | 作者 → LKM Repo | 浏览 research tasks，寻找研究机会 |
-| 虚线 | 作者 → Official Registry | 提交 open question（Issues），如"X 领域缺少 Y 方面的包" |
+| 虚线 | 作者 → Official Registry | 提交 open question（Issues） |
 
 ## 架构分层
 
-| 层 | 组成 | 性质 |
-|----|------|------|
-| **Package** | 作者或 LKM 的 git 仓库 | 完全自治，可离线工作 |
-| **LKM Repo** | LKM 的 git 仓库 | 通过 Issues 管理 research tasks，候选发现的发布、调查、分拣 |
-| **Official Registry** | Git 仓库 | 可选的聚合层，注册包、reviewer、LKM，存储推理结果；Issues 管理社区 open questions |
-| **Review Server** | 独立部署的 LLM/agent 审核员 | 可多实例，审核所有来源的包 |
-| **LKM Server** | 全局推理 + curation | 全局 BP + 发现跨包关系，发布 research task，确认后以 curation 包贡献 |
+每一层都是可选增强。用户可以只用包层完全离线工作，逐层加入获得更多能力。
 
-- **Package** 是基础——两个人各建一个包，互相引用，就能在本地推理中让可信度流动。
-- **Review Server** 审核所有包（人类的和 LKM 的），给出条件概率初始值。
-- **Official Registry** 提供跨包的去重、审核记录和增量推理。Registry 的 Issues 还承载社区 open questions——人类/agent 提出的研究问题、包需求、知识空白等。
-- **LKM Repo** 是 LKM 的运营仓库，research tasks 以 Issues 形式管理——轻量级、支持讨论、labels 分类、自动关闭过期候选。
-- **LKM Server** 提供全局推理，同时在构建全局图的过程中发现跨包关系，先发布到 LKM Repo，确认后以 curation 包的形式贡献。
+### 纯包层：两个 git 仓库就能推理
 
-每一层都是可选增强。用户可以只用 Package 层完全离线工作。
+最简单的场景：作者创建一个知识包（git 仓库），用 Gaia Lang 编写命题和推理链，声明对其他包的依赖。两个包互相引用，就能在本地编译和推理中让可信度沿依赖图流动。
 
-## 注册
+依赖的指向方式取决于对方是否已注册：
 
-Official Registry 注册三类实体，全部采用相同的 PR 模型：
+- **已注册** → 引用 Official Registry 中的包标识（推荐，有全局身份和可信度数据）
+- **未注册** → 直接引用 git 仓库 URL + tag（纯去中心化，不依赖任何中心服务）
 
-### 注册结构
+**能力：** 本地推理、版本化、完全离线、两个人就能协作。
+**局限：** 只看到直接依赖图，没有跨包去重，没有独立审核，独立证据无法汇聚。
 
-```
-official-registry/
-├── packages/              # 知识包注册（人类和 LKM 的包都在这里）
-│   ├── my-research/
-│   │   ├── Package.toml
-│   │   ├── Versions.toml
-│   │   └── Deps.toml
-│   └── curation-ybco-merge/      # LKM 提交的 curation 包
-│       ├── Package.toml
-│       ├── Versions.toml
-│       └── Deps.toml
-├── reviewers/             # Review Server 注册
-│   ├── review-server-alpha/
-│   │   └── Reviewer.toml
-│   └── review-server-beta/
-│       └── Reviewer.toml
-├── lkm/                   # LKM Server 注册
-│   └── lkm-gaia-official/
-│       └── LKM.toml
-├── reviews/               # 审核记录
-├── beliefs/               # 推理结果
-├── merges/                # 合并记录
-└── .github/workflows/
-```
+### + Review Server：推理链获得可信参数
 
-### Reviewer.toml
+Review Server 是独立部署的 LLM/agent 审核员。它审核包内部推理过程的逻辑可靠性——不判断前提本身是否正确，只评估"假设前提成立，推理过程有多可靠？"，并给出条件概率初始值。不同机构可以各自部署 Review Server，作者可以自由选择。
 
-```toml
-[reviewer]
-id = "uuid"
-github = "review-server-alpha"
-name = "Alpha Review Server"
-operator = "MIT Physics Department"
-registered = 2026-03-15
+没有 review 的推理链也可以注册到 Registry，但推理引擎会跳过它们——相当于注册了但未激活。作者可以先注册后审，也可以先审后注册，顺序灵活。
 
-[specialization]
-domains = ["condensed-matter", "superconductivity"]
+**新增能力：** 独立的逻辑审核，推理链有可信的条件概率参数。
+**局限：** 仍然只看到直接依赖图，不同包中相同结论的独立证据无法汇聚。
 
-[endorsement]
-endorsed_by = ["review-server-beta"]
-```
+### + Official Registry：证据开始汇聚
 
-### LKM.toml
+Official Registry 是所有已注册包的聚合索引。包注册后，Registry 对其中的命题进行去重——区分"引用已有命题"和"独立推导出相同结论"。前者只是引用关系，后者是真正的新证据，建立等价关系后让独立证据汇聚增强可信度。
 
-```toml
-[lkm]
-id = "uuid"
-github = "lkm-gaia-official"
-name = "Gaia Official LKM"
-operator = "Gaia Foundation"
-registered = 2026-03-15
+带 review 的推理链注册后立即激活，触发增量推理——只在受影响的局部子图上重算，秒级响应。Registry 可以 fork、可以联邦：不同学科或机构可以维护自己的 Registry，没有单一的"真理权威"。
 
-[capabilities]
-global_inference = true
-curation = true           # 是否提交 curation 包
+**新增能力：** 跨包去重、独立证据汇聚、增量推理、社区 open questions（Registry Issues）。
+**局限：** 去重靠 embedding 匹配，可能漏掉语义重复；看不到跨 Registry 的关系。
 
-[repo]
-research_tasks = "https://github.com/gaia-foundation/lkm-gaia-official"
-```
+### + LKM Server：全局推理与跨包关系发现
 
-### 注册流程（对所有实体通用）
+LKM Server 拉取 Registry 的全局图，运行十亿节点级的全局推理，处理增量推理无法覆盖的长链传播和跨 Registry 关系。同时，在构建全局图的过程中，LKM 自然会发现跨包关系——两个命题语义等价、互相矛盾、或存在未声明的隐含连接。
 
-```
-提交 PR：添加对应目录下的 TOML 文件
-  ↓
-CI 验证：格式合法、身份有效、担保方已注册
-  ↓
-等待期（社区审查）
-  ↓
-合并 → 该实体的贡献被 CI 认可
-```
+这些发现以 research task（Issues）的形式发布到该 LKM 自己的 LKM Repo，供社区浏览和参与调查。确认后，LKM 创建 curation 包，经 Review Server 审核，注册到 Registry——和人类作者走完全相同的流程。
 
-## LKM 的 Curation 流程
+**新增能力：** 全局推理收敛、跨包关系自动发现、弥补注册时去重的遗漏。
 
-LKM 在构建全局图的过程中，自然会发现跨包关系。这些发现经过**两阶段流程**：先作为 research task 发布到 LKM Repo 的 Issues，确认后再以 curation 包的形式走标准流程。
+## 端到端业务流转
 
-### LKM Repo
+以下用一个具体场景串联完整流程：作者 Alice 发布了一个超导研究包，之后 LKM 发现她的结论和另一个包的结论高度相似。
 
-LKM 拥有自己的 git 仓库（LKM Repo），research tasks 通过 **Issues** 管理：
+### 主线：包从创建到证据汇聚
 
-- **Issue 模板：** 三类候选各有结构化模板，LKM 自动创建
-- **Labels 两个维度：**
-  - 类型：`equivalence` / `contradiction` / `connection`
-  - 状态：`open` / `investigating` / `confirmed` / `rejected`
-- **批量发现：** 一次全局推理可能发现多个候选，可以一个 issue 列一批同类发现
-- **社区参与：** 人类研究者可以浏览 issues、参与调查、在评论区讨论
-- **自动关闭：** 超过一定时间没人调查的低置信度候选自动 close
+**① Alice 创建包。** 她用 Gaia Lang 编写命题和推理链，声明对已注册包的依赖（引用 Registry 包标识）。包是一个 git 仓库，她拥有完全的控制权。
+→ 详见 [04 包的创建与发布](04-authoring-and-publishing.md)
 
-**为什么用 Issues 而非 git 文件：** Research tasks 是待跟踪的工作项，有生命周期（open → investigating → confirmed/rejected）。Issues 天然支持状态管理、讨论、labels 过滤，且不会因高频发现污染 git 树。一万个 issues 对 GitHub/GitLab 完全没有压力（大量 open source 项目有 10 万+ issues），关键是 open 的 issue 数量可控——大部分候选会被快速确认或拒绝后 close。
+**② 编译 + 本地推理预览。** `gaia build` 将源码确定性地编译为结构化推理图。`gaia infer` 在本地运行推理，让 Alice 在发布前预览可信度——如果结论可信度很低，可能需要补充论证。
+→ 详见 [04 包的创建与发布](04-authoring-and-publishing.md)
 
-### Official Registry 的 Open Questions
+**③ Review Server 审核。** Alice 向 Review Server 提交审核请求。Review Server 逐条检查推理链的逻辑有效性，给出条件概率初始值，生成 review report 存入包内。Alice 如果不同意可以 rebuttal；僵局时可以换一个 Review Server 或提起仲裁。
+→ 详见 [06 审核与策展](06-review-and-curation.md)
 
-Official Registry 的 Issues 还承载另一类社区协作：**open questions**——人类/agent 提出的研究问题和知识空白。
+**④ 向 Registry 注册。** Alice 带着 review report 向 Official Registry 请求注册。CI 自动验证编译重现、依赖可解析、review report 合规。等待期（新包 3 天，版本更新 1 小时）后自动合并。
+→ 详见 [05 Registry 的运作](05-registry-operations.md)
 
-| | LKM Repo Issues | Official Registry Issues |
-|---|---|---|
-| **谁发** | 主要是 LKM 自动发现 | 人类 / agent |
-| **内容** | 结构化的候选：具体的命题对（A≈B、P⊥Q） | 更自由的 open question："有没有人验证过 X？"、"Y 领域缺少 Z 方面的包" |
-| **自动化程度** | 高（模板化、批量、自动关闭） | 低（人工为主） |
-| **Labels** | 类型 + 状态（equivalence/contradiction/connection × open/investigating/confirmed/rejected） | `open-question` / `package-request` / `gap-analysis` 等 |
+**⑤ 去重 + 推理链激活 + 增量推理。** Registry 识别 Alice 包中的命题和已有命题的关系：引用已有命题的直接绑定，独立推导出相同结论的建立等价关系让证据汇聚。带 review 的推理链立即激活，触发增量推理更新受影响命题的可信度。
+→ 详见 [05 Registry 的运作](05-registry-operations.md)
 
-**为什么放在 Registry 而非单独建 repo：** Registry 是所有包的聚合索引，拥有全局命题视角——"这个知识网络还缺什么"正是 Registry 能回答的问题。Issues 不污染 git 树中的注册数据。如果以后量大了，可以随时拆到独立 repo。
+**⑥ LKM 发现跨包关系。** LKM 拉取全局图运行全局推理，发现 Alice 的结论和 Bob 包中的一个结论语义高度相似，但注册时的 embedding 匹配没有捕捉到。LKM 在自己的 LKM Repo 创建 equivalence issue（research task）。
+→ 详见 [06 审核与策展](06-review-and-curation.md)
 
-### 阶段一：发现 → Research Task（Issues）
+**⑦ Curation 包走标准流程。** 调查确认后，LKM 创建 curation 包声明两者的关系（duplicate / independent evidence / refinement），经 Review Server 审核，注册到 Registry。合并后触发增量推理，更新受影响命题的可信度。
+→ 详见 [06 审核与策展](06-review-and-curation.md)，[07 多级推理与质量涌现](07-belief-flow-and-quality.md)
 
-LKM 全局推理过程中发现的候选关系，以 Issues 发布到 LKM Repo。三类候选：
+### 支线：社区协作
 
-| 候选类型 | 触发条件 | 调查后的可能结论 |
-|---------|---------|----------------|
-| **equivalence** | 两个命题语义接近 | duplicate（应合并）/ independent evidence（独立证据汇聚）/ refinement（细化关系） |
-| **contradiction** | 两个命题互相冲突 | 确认矛盾 → 推理引擎压低双方可信度 |
-| **connection** | 一个包的结论高度相关另一个包的前提，但未声明依赖 | 确认连接 → 建立跨包依赖 |
+- **浏览 research tasks：** 作者可以浏览各 LKM Repo 的 Issues，认领调查任务或基于发现创建自己的知识包。
+- **提交 open question：** 作者在 Official Registry Issues 提出研究问题或知识空白（如"Y 领域缺少 Z 方面的包"），供社区讨论。
+- **填补空白：** 其他作者看到 open question 或 research task，创建新包填补知识网络中的空白。
 
-**关键区分：** equivalence 候选的调查结论决定了完全不同的处理方式——duplicate 应该合并（去重），independent evidence 不应合并而是识别为证据汇聚（增强可信度），refinement 建立细化关系。候选阶段只描述"发现了什么"，具体判定是 curation 包审核时的事。
+### 错误修正
 
-### 阶段二：确认 → Curation 包 → 标准流程
+系统不假设所有输入正确。发现错误后的策略是**回退到保守状态 → 重新评估 → 恢复**，全过程可审计：
 
-```
-LKM 在 LKM Repo 创建 Issue（research task）
-  ↓
-调查（LKM 自动分析 + 人类研究者在 issue 评论区讨论）
-  ↓
-确认 → LKM 创建 curation 包：
-  - 声明发现的关系和调查结论
-  - 附带检测依据和置信度
-  - Issue 中贴上 curation 包链接，close
-  ↓
-curation 包经 Review Server 审核
-  ↓
-带 review report 注册到 Official Registry
-  ↓
-CI 验证 → 等待期 → 合并 → 增量推理
-```
+- **迟发现的重复命题** → 合并，暂停受影响推理链的参数（防止 double counting），re-review 后恢复
+- **矛盾发现** → 推理引擎自动保证矛盾双方不会同时具有高可信度，证据决定谁更可信
+- **推理链撤回** → 标记撤回（不删除），重算下游可信度
+- **依赖包重大更新** → 通知下游维护者，下游自主决定是否更新（去中心化，无强制）
 
-**LKM 没有捷径。** Research task 是轻量级的发现记录，不直接生效。确认后的关系必须走完建包 → 审核 → 注册的完整流程。这保证了所有知识变更都有审计记录，且经过独立审核。
-
-## 业务流程总览
-
-架构图中的编号对应以下主流程：
-
-**人类/Agent 流：**
-
-| 步骤 | 描述 | 详见 |
-|------|------|------|
-| ① 创建包 | 作者创建知识包到 Package Repo | [04-authoring-and-publishing.md](04-authoring-and-publishing.md) |
-| ② 请求审核 | 作者向 Review Server 提交包的审核请求 | [06-review-and-curation.md](06-review-and-curation.md) |
-| ③ review report | Review Server 审核推理逻辑，给条件概率初始值，存入包内 | [06-review-and-curation.md](06-review-and-curation.md) |
-| ④ 注册 | 作者带着 review report 向 Official Registry 请求注册 | [05-registry-operations.md](05-registry-operations.md) |
-
-**LKM 流：**
-
-| 步骤 | 描述 | 详见 |
-|------|------|------|
-| ⑤ 发布 research task | LKM 在 LKM Repo 创建 Issue，发布候选发现 | [06-review-and-curation.md](06-review-and-curation.md) |
-| ⑥ 创建 curation 包 | 候选确认后，LKM 创建 curation 包到 Package Repo | [06-review-and-curation.md](06-review-and-curation.md) |
-| ⑦ curation 包审核 | 同作者流——经 Review Server 审核 | [06-review-and-curation.md](06-review-and-curation.md) |
-| ⑧ 回写可信度 | LKM 全局推理结果回写到 Registry | [07-belief-flow-and-quality.md](07-belief-flow-and-quality.md) |
-
-**共同流：**
-
-| 步骤 | 描述 | 详见 |
-|------|------|------|
-| 去重 + 增量推理 | Registry CI 去重、验证、增量推理 | [05-registry-operations.md](05-registry-operations.md)，[07-belief-flow-and-quality.md](07-belief-flow-and-quality.md) |
-
-各环节的详细业务逻辑：
-
-- [包的创建与发布](04-authoring-and-publishing.md) — 作者从创建包到审核、发布的完整旅程
-- [Official Repo 的运作](05-registry-operations.md) — 注册、去重、推理链激活
-- [审核与策展](06-review-and-curation.md) — Review Server 审核 + LKM curation 的业务逻辑
-- [多级推理与质量涌现](07-belief-flow-and-quality.md) — 三级推理、错误修正、质量如何涌现
+→ 各场景的详细流程见 [07 多级推理与质量涌现](07-belief-flow-and-quality.md)
 
 ## 设计原则
 
 | 原则 | 体现 |
 |------|------|
 | 包即 git 仓库 | 不依赖任何中心服务 |
-| Git 是通用协议 | 作者、LKM、Review Server 全部通过 PR / git 交互；兼容 GitHub、GitLab、Gitea |
-| Official Registry 可选 | 增值服务，不是基础设施；可 fork 可联邦 |
-| 两类贡献者并列 | 人类/agent 和 LKM 走同样的流程，LKM 没有捷径 |
-| LKM = research agent | 全局推理 + curation 是同一个过程的两个产出 |
-| Research tasks 公开透明 | LKM 的发现以 Issues 发布在 LKM Repo，人类可浏览、参与、认领 |
-| 社区 open questions | Registry Issues 承载研究问题和知识空白，降低参与门槛 |
-| Review 在包级别 | 审核发生在提交 Registry 之前，report 存入包内 |
-| Review Server 就是 reviewer | LLM/agent 自动审核，作者可 rebuttal |
-| 所有实体需注册 | 包、reviewer、LKM 都在 Registry 注册，审计可追溯 |
+| Git 是通用协议 | 所有参与者通过 commit / PR / Issues 交互 |
+| 每一层可选增强 | 纯包可离线工作，Registry 和 LKM 是增值层 |
+| 两类贡献者并列 | 人类/agent 和 LKM 走同样的流程，无特权 |
+| 依赖优先引用 Registry | 已注册包通过 Registry 标识引用，未注册直接引用 git URL |
+| Review 在包级别 | 审核发生在注册之前，report 存入包内 |
 | 新推理链需有参数才生效 | 没有 review = 没有条件概率 = 推理引擎跳过 |
 | 多级推理 | 包级 + Registry 增量 + LKM 全局 |
-| 错误可修正 | 合并重复命题 + 暂停受影响的推理 + re-review |
+| 错误可修正 | 暂停 → re-review → 恢复，全程可审计 |
+
+## 各环节详解
+
+- [04 包的创建与发布](04-authoring-and-publishing.md) — 作者从创建包到审核、发布的完整旅程
+- [05 Registry 的运作](05-registry-operations.md) — 注册、去重、推理链激活、增量推理
+- [06 审核与策展](06-review-and-curation.md) — Review Server 审核 + LKM curation 的业务逻辑
+- [07 多级推理与质量涌现](07-belief-flow-and-quality.md) — 三级推理、错误修正、质量如何涌现
 
 ## 参考文献
 
