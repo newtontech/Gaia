@@ -91,6 +91,8 @@ Review Server 回应：
 
 **Rebuttal 历史的价值：** 完整的 rebuttal 记录随包发布，其他人可以看到审核过程中讨论了什么、为什么最终选择了这个参数值。这增加了透明度和可审计性。
 
+**Rebuttal 僵局：** 如果作者和 Review Server 始终无法达成一致，任一方可以提起仲裁——由其他已注册的 Review Server 介入评估。仲裁机制的具体设计待定（deferred），但核心原则是：不存在单一审核者可以无限否决贡献的局面。作者始终可以换一个 Review Server 重新审核。
+
 ### 审核后的产出
 
 Review report 包含：
@@ -138,6 +140,17 @@ LKM 和人类/agent 是两类并列的贡献者。区别在于知识来源：
 ### Research Tasks：发现与分拣
 
 LKM 的 curation 流程分两阶段。第一阶段是**发现**——LKM 在全局推理过程中识别出候选关系，以 **Issues** 的形式发布到 LKM Repo。这是轻量级的发现记录，不直接生效。Issues 支持状态管理（labels：`open` → `investigating` → `confirmed`/`rejected`）、社区讨论（评论区）和批量发现（一个 issue 列一批同类候选）。
+
+### 跨包关系的两种发现路径
+
+跨包关系不只是 LKM 自动发现。作者也可以参与：
+
+1. **在自己的包中声明：** 如果作者的研究本身涉及对已有命题的反驳或验证，可以在包中直接声明矛盾/等价/连接关系。这个声明随包一起经 Review Server 审核和注册——和普通推理链走同样的流程。
+2. **在 LKM Repo 提交 Issue：** 如果作者在研究过程中发现其他包之间可能存在的关系（不涉及自己的包），可以在 LKM Repo 提交 issue，和 LKM 发现的 research task 走相同的调查流程。
+
+LKM 的价值在于它能系统性地扫描全局图，发现人类不容易注意到的关系。但人类的洞察力同样重要——两种发现路径互补。
+
+### Research Tasks 的三类候选
 
 三类候选：
 
@@ -243,3 +256,10 @@ CI 验证 → 等待期 → 合并 → 增量推理
 | **权限** | 无特权 | 无特权 |
 
 两者互补：Review Server 保证每个包的内部推理质量（条件概率），LKM 保证全局知识网络的一致性（发现跨包关系、矛盾、重复）。
+
+## 相关文档
+
+- [decentralized-architecture.md](decentralized-architecture.md) — 架构总纲，LKM Repo 的定义和参与者交互
+- [registry-operations.md](registry-operations.md) — 注册流程、去重（embedding 匹配为粗筛，LKM curation 为补充）
+- [belief-flow-and-quality.md](belief-flow-and-quality.md) — 多级推理、错误修正场景中 curation 包的具体影响
+- [authoring-and-publishing.md](authoring-and-publishing.md) — 作者视角：浏览 LKM Repo 发现研究机会
