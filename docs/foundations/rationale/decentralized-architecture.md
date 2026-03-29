@@ -61,11 +61,13 @@ graph TD
     %% ═══════ 第 2 层：Review Server ═══════
     RS(["⚙ Review Server ×N<br/>审核推理逻辑 · 给条件概率"])
 
-    %% ═══════ 第 3 层：三个 Git Repo ═══════
-    PKG(["📦 Package Repo<br/>源码 · 编译产物 · review report"])
-    LKMR(["🔬 LKM Repo<br/>research tasks（Issues）<br/>equivalence · contradiction · connection"])
-    REG(["📋 Official Registry<br/>packages/ · reviewers/ · lkm/ · beliefs/"])
-    PKG ~~~ LKMR ~~~ REG
+    %% ═══════ 第 3 层：Git Server 包含三个 Repo ═══════
+    subgraph GIT["🌐 Git Server（GitHub / GitLab / Gitea）"]
+        PKG(["📦 Package Repo<br/>源码 · 编译产物 · review report"])
+        LKMR(["🔬 LKM Repo<br/>research tasks（Issues）<br/>equivalence · contradiction · connection"])
+        REG(["📋 Official Registry<br/>packages/ · reviewers/ · lkm/ · beliefs/"])
+        PKG ~~~ LKMR ~~~ REG
+    end
 
     %% ─── 作者流 ───
     Author -- "① 创建包" --> PKG
@@ -86,6 +88,7 @@ graph TD
     REG -. "拉取最新可信度" .-> PKG
 
     %% ═══════ 样式 ═══════
+    style GIT fill:#f5f5f5,stroke:#9e9e9e,stroke-width:2px,stroke-dasharray:8 4,color:#000
     style Author fill:#fff,stroke:#333,stroke-width:2px,color:#000
     style LKM fill:#fce4ec,stroke:#c62828,stroke-width:2px,color:#000
     style RS fill:#fff3e0,stroke:#e65100,stroke-width:2px,stroke-dasharray:5 5,color:#000
@@ -99,9 +102,11 @@ graph TD
 ```
 第 1 层    👤 作者（人类/Agent）         ║    🖥 LKM Server
                     ↘                         ↙
-第 2 层              ⚙ Review Server ×N（为两者服务）
+第 2 层              ⚙ Review Server ×N（为两者服���）
                     ↓
-第 3 层    📦 Package Repo    ║    🔬 LKM Repo    ║    📋 Official Registry
+         ┌─────── 🌐 Git Server（GitHub / GitLab / Gitea）───────┐
+第 3 层  │  📦 Package Repo  ║  🔬 LKM Repo  ���  📋 Registry  │
+         └──────────────────────────────────────────────────────┘
 ```
 
 - 实线 = 数据推送，虚线 = 数据拉取
