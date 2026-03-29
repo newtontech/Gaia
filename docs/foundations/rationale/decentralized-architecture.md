@@ -101,21 +101,21 @@ graph TB
     OR -.->|"下游拉取<br/>最新可信度"| Infer
 
     %% ── 样式 ────────────────────────────────────────
-    style L0 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
-    style L1 fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-    style LKM fill:#fce4ec,stroke:#c62828,stroke-width:2px
-    style RSBox fill:#fff3e0,stroke:#e65100,stroke-width:2px,stroke-dasharray: 5 5
-    style CSBox fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,stroke-dasharray: 5 5
-    style Author fill:#fff,stroke:#388e3c
-    style PKG fill:#fff,stroke:#388e3c
-    style Build fill:#fff,stroke:#388e3c
-    style Infer fill:#fff,stroke:#388e3c
-    style OR fill:#fff,stroke:#1565c0
-    style CI fill:#fff,stroke:#1565c0
-    style IBP fill:#fff,stroke:#1565c0
-    style RS fill:#fff,stroke:#e65100
-    style CS fill:#fff,stroke:#6a1b9a
-    style GBP fill:#fff,stroke:#c62828
+    style L0 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
+    style L1 fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
+    style LKM fill:#fce4ec,stroke:#c62828,stroke-width:2px,color:#000
+    style RSBox fill:#fff3e0,stroke:#e65100,stroke-width:2px,stroke-dasharray: 5 5,color:#000
+    style CSBox fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,stroke-dasharray: 5 5,color:#000
+    style Author fill:#fff,stroke:#333,color:#000
+    style PKG fill:#fff,stroke:#333,color:#000
+    style Build fill:#fff,stroke:#333,color:#000
+    style Infer fill:#fff,stroke:#333,color:#000
+    style OR fill:#fff,stroke:#333,color:#000
+    style CI fill:#fff,stroke:#333,color:#000
+    style IBP fill:#fff,stroke:#333,color:#000
+    style RS fill:#fff,stroke:#333,color:#000
+    style CS fill:#fff,stroke:#333,color:#000
+    style GBP fill:#fff,stroke:#333,color:#000
 ```
 
 **图例：** 实线 = 数据/控制流，虚线 = 辅助/拉取。虚线框 = 独立部署（可多实例），橙色 = Review Server，紫色 = Curation Server。
