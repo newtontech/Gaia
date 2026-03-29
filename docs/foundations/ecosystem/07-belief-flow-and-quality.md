@@ -15,15 +15,15 @@ Gaia 采用三级推理，每级处理不同粒度的更新，逐层放大：
 
 ```
 Level 0: 包级推理（作者本地，gaia infer）
-Level 1: 增量推理（Official Repo CI，合并触发）
-Level 2: 全局推理（LKM 服务器，定期 + 事件触发）
+Level 1: 增量推理（Official Registry CI，合并触发）
+Level 2: 全局推理（LKM Server，定期 + 事件触发）
 ```
 
 ## Level 0：包级推理（本地）
 
 ### 什么时候运行
 
-作者在本地运行 `gaia infer`，通常在编译（`gaia build`）之后。
+作者在本地运行 `gaia infer`，通常在编译（`gaia build`）之后。编译和推理的详细流程见 [04 包的创建与发布](04-authoring-and-publishing.md)。
 
 ### 做什么
 
@@ -44,15 +44,16 @@ Level 2: 全局推理（LKM 服务器，定期 + 事件触发）
 - 可信度基于依赖包的已发布结果，可能不是最新的
 - 没有跨包去重，相同命题在不同包中是独立实体
 
-## Level 1：增量推理（Official Repo）
+## Level 1：增量推理（Official Registry）
 
 ### 什么时候运行
 
-当 Official Repo 发生以下事件时，CI 自动触发增量推理：
+当 Official Registry 发生以下事件时，CI 自动触发增量推理：
 
-1. **Review 合并** — reviewer 审核通过一条推理链，赋予了参数
-2. **合并重复命题** — LKM 发现两个命题是同一个，合并后需要重算
-3. **矛盾确认** — 两个命题被确认互相矛盾
+1. **带 review 的包注册合并** — 包注册时已附带 review report，推理链立即激活
+2. **后补 review PR 合并** — 先注册后审的包，review report 通过后续 PR 补充，推理链此时激活
+3. **合并重复命题** — LKM 发现两个命题是同一个，curation 包合并后需要重算
+4. **矛盾确认** — 两个命题被确认互相矛盾
 
 ### 做什么
 
@@ -90,17 +91,17 @@ Level 2: 全局推理（LKM 服务器，定期 + 事件触发）
 增量推理完成后：
 
 1. 受影响命题的可信度已更新
-2. 更新后的可信度发布到 Official Repo（其他包的 `gaia infer` 可以拉取最新值）
+2. 更新后的可信度发布到 Official Registry（其他包的 `gaia infer` 可以拉取最新值）
 3. 如果可信度变化超过阈值，通知下游包的维护者
 
-## Level 2：全局推理（LKM 服务器）
+## Level 2：全局推理（LKM Server）
 
 ### 什么时候运行
 
-LKM 服务器上的全局推理在以下时机运行：
+LKM Server上的全局推理在以下时机运行：
 
 1. **定期全量：** 每隔一段时间（如每天）对整个知识网络重新运行一次推理
-2. **事件触发增量：** 和 Level 1 类似，但覆盖范围更广——可以跨越 Official Repo 的边界
+2. **事件触发增量：** 和 Level 1 类似，但覆盖范围更广——可以跨越 Official Registry 的边界
 
 ### 做什么
 
@@ -108,18 +109,18 @@ LKM 服务器上的全局推理在以下时机运行：
 
 - **跨 Registry 的可信度传播：** 不同 Registry（如物理学、化学、生物学）之间的命题可能有关系，但各自的增量推理看不到对方
 - **长链传播收敛：** 增量推理每次只处理局部，长依赖链的可信度变化可能需要多轮传播才能收敛。全局推理一次性处理所有节点
-- **十亿节点级别：** LKM 服务器有专门的计算资源，可以处理 Official Repo CI 无法承受的大规模图
+- **十亿节点级别：** LKM Server有专门的计算资源，可以处理 Official Registry CI 无法承受的大规模图
 
 ### 全局推理 vs 增量推理
 
 | | 增量推理（Level 1） | 全局推理（Level 2） |
 |---|---|---|
-| **运行环境** | GitHub Actions CI | LKM 服务器 |
+| **运行环境** | GitHub Actions CI | LKM Server |
 | **触发方式** | 事件驱动（PR 合并） | 定期 + 事件 |
 | **范围** | 受影响的局部子图 | 整个知识网络 |
 | **延迟** | 低（秒到分钟） | 高（分钟到小时） |
 | **必要性** | 保证每次合并后结果一致 | 处理长链传播和跨 Registry 关系 |
-| **可用性** | 只要 GitHub Actions 可用 | 依赖 LKM 服务器 |
+| **可用性** | 只要 GitHub Actions 可用 | 依赖 LKM Server |
 
 ### 两级推理的协作
 
@@ -229,7 +230,7 @@ Reviewer 提交撤回 PR
 ```
 上游包发布 MAJOR 版本
   ↓
-Official Repo 记录新版本
+Official Registry 记录新版本
   ↓
 通知下游包的维护者：
   "你的包依赖 X v3.0.0，X 已发布 v4.0.0（MAJOR 更新）"
@@ -287,7 +288,7 @@ Review Server（LLM/agent）评估推理逻辑的可靠性
 逻辑不可靠的推理链拿不到高的条件概率 → 对全局结果影响很小
 ```
 
-**为什么��效：** 这在"开放贡献"和"质量��证"之间取得了平衡。任何人都可以贡献证据（低门槛），但推理链必须通过 Review Server 的逻辑审核才能获得参数并参与推理（质量门槛）。审核在包级别发生（提交 Official Repo 之前），rebuttal 过程保证了透明度。
+**为什么有效：** 这在"开放贡献"和"质量保证"之间取得了平衡。任何人都可以贡献证据（低门槛），但推理链必须通过 Review Server 的逻辑审核才能获得参数并参与推理（质量门槛）。审核在包级别发生（提交 Official Registry 之前），rebuttal 过程保证了透明度。
 
 ### 机制 4：可 fork 的 Registry
 
@@ -325,14 +326,14 @@ Review Server（LLM/agent）评估推理逻辑的可靠性
 
 | | Level 0（包级） | Level 1（增量） | Level 2（全局） |
 |---|---|---|---|
-| **运行环境** | 作者本地 | Official Repo CI | LKM 服务器 |
+| **运行环境** | 作者本地 | Official Registry CI | LKM Server |
 | **触发** | `gaia infer` | PR 合并 | 定期 + 事件 |
 | **范围** | 本包 + 直接依赖 | 受影响的局部子图 | 整个知识网络 |
 | **Review Server** | 包发布前审核推理逻辑，给出条件概率 | review report 随包注册，参数激活推理链 | 不直接触发 |
 | **LKM** | 不涉及 | curation 包合并触发增量推理 | 全局推理 + curation（发现跨包关系） |
-| **可用性** | 完全离线 | 需要 GitHub | 需要 LKM 服务器 |
+| **可用性** | 完全离线 | 需要 GitHub | 需要 LKM Server |
 
-每一层都是可选增强。用户可以只用 Level 0（完全离线），加入 Level 1（通过 Official Repo 获得跨包证据汇聚），再加入 Level 2（获得全局收敛和跨 Registry 传播）。
+每一层都是可选增强。用户可以只用 Level 0（完全离线），加入 Level 1（通过 Official Registry 获得跨包证据汇聚），再加入 Level 2（获得全局收敛和跨 Registry 传播）。
 
 ## 相关文档
 
