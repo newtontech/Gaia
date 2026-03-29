@@ -40,74 +40,94 @@ Review Server 和 Curation Server **不是 LKM Server 的组件**，而是独立
 
 ```mermaid
 graph TB
-    %% ── LKM Server ──────────────────────────────────
-    subgraph LKM["<b>LKM Server（全局推理）</b>"]
-        GBP["全局推理引擎<br/><i>十亿节点 · 定期全量<br/>跨 Registry 传播</i>"]
+    %% ═══════════════════════════════════════════════════
+    %% 上层：作者（左）  Review Server（右）
+    %% ═══════════════════════════════════════════════════
+    subgraph row_top[" "]
+        direction LR
+        Author["👤 <b>作者</b><br/>人类 / AI agent"]
+        subgraph RSBox["Review Server ×N"]
+            RS["LLM/agent 审核员<br/>审核推理逻辑<br/>给条件概率初始值"]
+        end
     end
 
-    %% ── Review Server（独立部署）─────────────────────
-    subgraph RSBox["<b>Review Server ×N（独立部署）</b>"]
-        RS["LLM/agent 审核员<br/><i>审核推理逻辑<br/>给条件概率初始值</i>"]
+    %% ═══════════════════════════════════════════════════
+    %% 中层：Package Repo（左）  Registry Repo（右）
+    %% ═══════════════════════════════════════════════════
+    subgraph row_mid[" "]
+        direction LR
+        subgraph L0["Git Repo（Package）"]
+            PKG["源码 · 编译产物<br/>依赖 · review report"]
+            Build["gaia build"]
+            Infer["gaia infer"]
+        end
+        subgraph L1["Git Repo（Official Registry）"]
+            OR["packages/ · reviewers/<br/>reviews/ · beliefs/"]
+            CI["CI Workflows"]
+            IBP["增量推理"]
+        end
     end
 
-    %% ── Curation Server（独立部署）────────────────────
-    subgraph CSBox["<b>Curation Server ×N（独立部署）</b>"]
-        CS["关系扫描机器人<br/><i>语义重复 · 矛盾<br/>跨包连接</i>"]
+    %% ═══════════════════════════════════════════════════
+    %% 下层：LKM Server（左）  Curation Server（右）
+    %% ═══════════════════════════════════════════════════
+    subgraph row_bot[" "]
+        direction LR
+        subgraph LKM["LKM Server"]
+            GBP["全局推理引擎<br/>十亿节点 · 定期全量"]
+        end
+        subgraph CSBox["Curation Server ×N"]
+            CS["关系扫描机器人<br/>语义重复 · 矛盾 · 跨包连接"]
+        end
     end
 
-    %% ── Official Repo ────────────────────────────────
-    subgraph L1["<b>Official Repo（GitHub 仓库）</b>"]
-        direction TB
-        OR["Official Repo<br/><i>packages/ · reviewers/<br/>reviews/ · beliefs/ · merges/</i>"]
-        CI["CI Workflows<br/><i>register.yml · review.yml<br/>incremental-bp.yml</i>"]
-        IBP["增量推理<br/><i>局部子图重算<br/>秒级响应</i>"]
-    end
+    %% ═══════════════════════════════════════════════════
+    %% 连线
+    %% ═══════════════════════════════════════════════════
 
-    %% ── 人类 / Agent ─────────────────────────────────
-    Author["👤 作者（人类或 AI agent）"]
-
-    %% ── Git Repo（Package）──────────────────────────
-    subgraph L0["<b>Git Repo（Package）</b>"]
-        direction TB
-        PKG["包仓库<br/><i>源码 · 编译产物<br/>依赖 · review report</i>"]
-        Build["gaia build<br/><i>确定性编译<br/>源码 → 推理图</i>"]
-        Infer["gaia infer<br/><i>本地概率推理<br/>可信度预览</i>"]
-    end
-
-    %% ── 作者 ↔ Package 流 ───────────────────────────
+    %% 作者 ↔ Package
     Author -->|"创建 · 编写"| PKG
-    PKG -->|"源码 + 依赖"| Build
-    Build -->|"推理图"| Infer
-    Infer -->|"可信度预览"| Author
+    PKG --> Build --> Infer
+    Infer -.->|"可信度预览"| Author
 
-    %% ── Review 流（包级别）──────────────────────────
+    %% 作者 ↔ Review Server
     Author -->|"① 请求审核"| RS
-    RS -->|"② review report<br/>+ 条件概率初始值"| PKG
+    RS -->|"② review report"| PKG
     Author -.->|"rebuttal"| RS
 
-    %% ── 注册流 ──────────────────────────────────────
-    Author -->|"③ 请求注册<br/>（含 review report）"| OR
-    OR -->|"CI 验证<br/>编译重现 · reviewer 合法"| CI
-    CI -->|"等待期 → 合并"| OR
-    OR -->|"④ 去重<br/>embedding 匹配"| IBP
-    IBP -->|"⑤ 增量推理<br/>更新可信度"| OR
+    %% 注册流
+    Author -->|"③ 注册（含 review）"| OR
+    OR --> CI -->|"验证通过"| OR
+    OR -->|"④ 去重"| IBP
+    IBP -->|"⑤ 增量推理"| OR
 
-    %% ── Curation 流 ─────────────────────────────────
-    CS -->|"⑥ 发现关系 →<br/>提交 curation PR"| OR
+    %% Curation → Registry
+    CS -->|"⑥ curation PR"| OR
 
-    %% ── 全局推理 ────────────────────────────────────
-    OR -->|"推理结果同步"| GBP
-    GBP -->|"⑦ 全局可信度<br/>更新回写"| OR
+    %% 全局推理
+    OR -->|"同步"| GBP
+    GBP -->|"⑦ 全局可信度"| OR
 
-    %% ── 可信度回流 ──────────────────────────────────
-    OR -.->|"下游拉取<br/>最新可信度"| Infer
+    %% 可信度回流
+    OR -.->|"拉取最新可信度"| Infer
 
-    %% ── 样式 ────────────────────────────────────────
+    %% ═══════════════════════════════════════════════════
+    %% 样式
+    %% ═══════════════════════════════════════════════════
+
+    %% 行容器透明
+    style row_top fill:none,stroke:none
+    style row_mid fill:none,stroke:none
+    style row_bot fill:none,stroke:none
+
+    %% 实体框
     style L0 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px,color:#000
     style L1 fill:#e3f2fd,stroke:#1565c0,stroke-width:2px,color:#000
     style LKM fill:#fce4ec,stroke:#c62828,stroke-width:2px,color:#000
-    style RSBox fill:#fff3e0,stroke:#e65100,stroke-width:2px,stroke-dasharray: 5 5,color:#000
-    style CSBox fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,stroke-dasharray: 5 5,color:#000
+    style RSBox fill:#fff3e0,stroke:#e65100,stroke-width:2px,stroke-dasharray:5 5,color:#000
+    style CSBox fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px,stroke-dasharray:5 5,color:#000
+
+    %% 节点
     style Author fill:#fff,stroke:#333,color:#000
     style PKG fill:#fff,stroke:#333,color:#000
     style Build fill:#fff,stroke:#333,color:#000
@@ -120,7 +140,7 @@ graph TB
     style GBP fill:#fff,stroke:#333,color:#000
 ```
 
-**图例：** 实线 = 数据/控制流，虚线 = 辅助/拉取。虚线框 = 独立部署（可多实例），橙色 = Review Server，紫色 = Curation Server。
+**布局：** 上层 = 人与审核交互，中层 = 两个 git 仓库（包 / 注册中心），下层 = 后台服务。实线 = 数据流，虚线 = 拉取/辅助。虚线框 = 独立部署（可多实例）。
 
 ## 架构分层
 
@@ -224,7 +244,7 @@ CI 验证：格式合法、GitHub handle 有效、担保方已注册
 | 原则 | 体现 |
 |------|------|
 | 包即 git 仓库 | 不依赖任何中心服务 |
-| GitHub 是通用协议 | 作者、机器人全部通过 PR / git 交互 |
+| Git 是通用协议 | 作者、机器人全部通过 PR / git 交互；兼容 GitHub、GitLab、Gitea |
 | Official Repo 可选 | 增值服务，不是基础设施；可 fork 可联邦 |
 | Review 在包级别 | 审核发生在提交 Official Repo 之前，report 存入包内 |
 | Review Server 就是 reviewer | LLM/agent 自动审核，作者可 rebuttal |
