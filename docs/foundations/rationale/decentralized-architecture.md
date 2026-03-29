@@ -61,33 +61,30 @@ graph TD
     %% ═══════ 第 2 层：Review Server ═══════
     RS(["⚙ Review Server ×N<br/>审核推理 · 给条件概率"])
 
-    %% ═══════ 第 3 层：Git Server 包含三个 Repo ═══════
+    %% ═══════ 第 3 层：Git Server 包含三个 Repo（左中右对齐）═══════
     subgraph GIT["🌐 Git Server（GitHub / GitLab / Gitea）"]
         direction LR
-        PKG(["📦 Package Repo"])
-        LKMR(["🔬 LKM Repo<br/>research tasks"])
-        REG(["📋 Official Registry"])
+        PKG(["📦 Knowledge Repo<br/>用户知识包"])
+        REG(["📋 Official Registry<br/>注册中心"])
+        LKMR(["🔬 LKM Repo<br/>研究任务"])
+        PKG ~~~ REG ~~~ LKMR
     end
 
-    %% ─── 作者流 ───
+    %% ─── 作者流（偏左）───
     Author -- "① 创建包" --> PKG
     Author -- "② 请求审核" --> RS
     RS -- "③ review report" --> PKG
     PKG -- "④ 注册" --> REG
+    Author -. "浏览研究任务" .-> LKMR
 
-    %% ─── 作者浏览 research tasks ───
-    Author -. "浏览 research tasks" .-> LKMR
-
-    %% ─── LKM 流 ───
+    %% ─── LKM 流（偏右）───
     LKM -- "⑤ 发布 research task" --> LKMR
     LKM -- "⑥ 创建 curation 包" --> PKG
     LKM -- "⑦ curation 包审核" --> RS
-
-    %% ─── LKM ↔ Registry ───
-    REG -. "全局图数据" .-> LKM
     LKM -- "⑧ 回写可信度" --> REG
+    REG -. "全局图数据" .-> LKM
 
-    %% ─── 可信度回流 ───
+    %% ─── Repo 间数据流 ───
     REG -. "拉取可信度" .-> PKG
 
     %% ═══════ 样式 ═══════
@@ -103,13 +100,13 @@ graph TD
 **布局说明：**
 
 ```
-第 1 层    👤 作者              ║    🖥 LKM Server
-                ↘                      ↙
-第 2 层         ⚙ Review Server ×N
-                ↓
-        ┌── 🌐 Git Server（GitHub / GitLab / Gitea）──┐
-第 3 层 │  📦 Package  ║  🔬 LKM Repo  ║  📋 Registry │
-        └─────────────────────────────────────────────┘
+第 1 层    👤 作者                ║    🖥 LKM Server
+                 ↘                       ↙
+第 2 层           ⚙ Review Server ×N
+                  ↓
+        ┌───── 🌐 Git Server（GitHub / GitLab / Gitea）─────┐
+第 3 层 │  📦 Knowledge Repo  ║  📋 Registry  ║  🔬 LKM Repo │
+        └──────────────────────────────────────────────────┘
 ```
 
 - 实线 = 数据推送，虚线 = 数据拉取
