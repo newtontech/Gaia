@@ -13,7 +13,7 @@
 - 包作为 git 仓库独立存在，不依赖中心服务
 - 概率（beliefs）通过依赖图在包级别自然流动；Registry 提供增量 BP 作为快速反馈；LKM 保留全局 BP 能力
 - Registry 是可选的聚合层，提供增值服务
-- 证据的独立性判断归 review 层，不归 canonicalization
+- Canonicalization 做确定性去重（content hash 匹配直接合并）；模糊语义判断（独立性、重复性）归 review 层
 
 ## 2. 基础架构：三层分离
 
@@ -234,9 +234,9 @@ CI 验证（review.yml）：content_hash 存在、value ∈ [ε, 1-ε]（Cromwel
 
 Registry 就是 git 仓库，任何人可以 fork 出自己的 registry，有自己的 review 标准和 belief。不同学科、不同机构可以运营不同的 registry。
 
-## 6. Canonicalization（纯机械，不做判断）
+## 6. Canonicalization（确定性去重，不做模糊匹配）
 
-Canonicalization 在 CI 中自动执行。只用 content hash，不用 embedding。
+Canonicalization 在 CI 中自动执行。Content hash 匹配的直接合并（这是事实，不是判断）；不用 embedding 或 TF-IDF 做模糊语义匹配。
 
 ### 6.1 Knowledge 处理
 
@@ -455,8 +455,8 @@ CompositeStrategy 折叠/展开支持多分辨率 BP：
 | 包即 git 仓库 | 不依赖任何中心服务 |
 | 身份 content-addressed | Knowledge hash 去中心化去重 |
 | Registry 可选 | 增值服务，不是基础设施 |
-| Canonicalization 纯机械 | 只做 hash 去重 + CompositeStrategy 归类 |
-| 判断归 review | 独立性、重复性、细化关系全由 reviewer 决定 |
+| Canonicalization 确定性去重 | content hash 匹配直接合并 + CompositeStrategy 归类；不做模糊语义匹配 |
+| 模糊判断归 review | 独立性、重复性、细化关系等需要语义理解的判断由 reviewer 决定 |
 | 新证据默认静默 | 无参数 = 不参与 BP，reviewer 确认后激活 |
 | CompositeStrategy 归类 | 每个结论一个入口，折叠/展开支持多分辨率 |
 | 多级 BP | 包级 local BP + Registry 增量 BP + LKM 全局 BP，各层各司其职 |
