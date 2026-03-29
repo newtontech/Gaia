@@ -52,59 +52,36 @@ Review Server 是独立部署的 LLM/agent 审核员，为所有贡献者服务�
 ## 整体架构图
 
 ```mermaid
-graph TB
-    subgraph Row1[" "]
-        direction LR
-        Author["作者 / AI agent"]:::author
-        PKG["Knowledge Repo"]:::pkg
-        REG["Official Registry"]:::registry
-        LKMR["LKM Repo"]:::lkmrepo
-    end
+flowchart TB
+    Author(["👤 作者 / AI agent"]):::actor
+    RS(["⚙ Review Server ×N"]):::review
+    LKM(["🖥 LKM Server"]):::lkm
+    Author ~~~ RS ~~~ LKM
 
-    subgraph Row2[" "]
-        direction LR
-        GhostL[" "]:::ghost
-        RS["Review Server"]:::review
-        LKM["LKM Server"]:::lkm
-        GhostR[" "]:::ghost
+    subgraph GIT["🌐 Git Server（GitHub / GitLab / Gitea）"]
+        PKG["📦 Knowledge Repo"]:::repo
+        REG["📋 Official Registry"]:::repo
+        LKMR["🔬 LKM Repo"]:::repo
+        PKG ~~~ REG ~~~ LKMR
     end
-
-    Author --- PKG
-    PKG --- REG
-    REG --- LKMR
-    GhostL --- RS
-    RS --- LKM
-    LKM --- GhostR
 
     Author -->|"①"| PKG
-    Author -->|"②"| RS
-    RS -->|"③"| PKG
+    Author -.->|"②"| RS
+    RS -.->|"③"| PKG
     PKG -->|"④"| REG
-
     Author -.->|"浏览"| LKMR
     Author -.->|"提问"| REG
     LKM -->|"⑤"| LKMR
     LKM -->|"⑥"| PKG
-    LKM -->|"⑦"| RS
+    LKM -.->|"⑦"| RS
     LKM -->|"⑧"| REG
-
-    REG -.->|"全局图"| LKM
+    REG -.->|"数据"| LKM
     REG -.->|"可信度"| PKG
 
-    classDef author fill:#DBEAFE,stroke:#2563EB,stroke-width:2px,color:#0F172A;
-    classDef review fill:#FEF3C7,stroke:#D97706,stroke-width:2px,color:#0F172A;
-    classDef lkm fill:#CCFBF1,stroke:#0F766E,stroke-width:2px,color:#0F172A;
-    classDef pkg fill:#E0F2FE,stroke:#0284C7,stroke-width:2px,color:#0F172A;
-    classDef registry fill:#DCFCE7,stroke:#16A34A,stroke-width:2px,color:#0F172A;
-    classDef lkmrepo fill:#FFEDD5,stroke:#EA580C,stroke-width:2px,color:#0F172A;
-    classDef ghost fill:transparent,stroke:transparent,color:transparent;
-
-    style Row1 fill:transparent,stroke:transparent
-    style Row2 fill:transparent,stroke:transparent
-
-    linkStyle 0,1,2,3,4,5 stroke:transparent
-    linkStyle 13,14,15 stroke:#94A3B8,stroke-width:1.8px
-    linkStyle 6,7,8,9,10,11,12 stroke:#475569,stroke-width:1.8px
+    classDef actor fill:#DBEAFE,stroke:#2563EB,stroke-width:2px,color:#1E3A5F
+    classDef review fill:#FEF9C4,stroke:#CA8A04,stroke-width:2px,color:#854D0E
+    classDef lkm fill:#CCFBF1,stroke:#0D9488,stroke-width:2px,color:#134E4A
+    classDef repo fill:#F1F5F9,stroke:#94A3B8,stroke-width:1.5px,color:#475569
 ```
 
 **连线说明：**
