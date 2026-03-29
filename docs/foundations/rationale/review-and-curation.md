@@ -2,7 +2,7 @@
 
 > **Status:** Current canonical
 
-本文档描述 Review Server 和 Curation Server 的业务逻辑——推理链如何在包级别被审核，跨包关系如何被自动发现和维护。
+本文档描述 Review Server 和 LKM Curation 的业务逻辑——推理链如何在包级别被审核，跨包关系如何被自动发现和维护。
 
 ## Review Server
 
@@ -124,13 +124,7 @@ Review report 包含：
 
 ### 为什么 curation 是 LKM 的一部分
 
-Review Server 处理的是单个包内部的推理质量。但有些跨包关系需要在全局视角下才能发现：
-
-1. **语义重复命题**——两个命题措辞不同但含义相同，注册时 embedding 匹配漏掉了
-2. **跨包连接**——两个包讨论相关话题但互相不知道对方的存在
-3. **矛盾检测**——两个命题互相矛盾，但各自的作者不知道对方
-
-这些发现需要能看到整个知识网络的全局视角——而 LKM 在构建全局图、运行全局推理的过程中，天然具备这个视角。Curation 不是一个独立的服务，而是 LKM 全局推理过程的**副产品**。
+Review Server 处理的是单个包内部的推理质量。但有些跨包关系需要在全局视角下才能发现——而 LKM 在构建全局图、运行全局推理的过程中，天然具备这个视角。Curation 不是一个独立的服务，而是 LKM 全局推理过程的**副产品**。
 
 ### LKM 作为 research agent
 
@@ -141,69 +135,98 @@ LKM 和人类/agent 是两类并列的贡献者。区别在于知识来源：
 
 但两者走**完全相同的流程**：创建包 → Review Server 审核 → 注册到 Official Registry。LKM 没有捷径。
 
-### Curation 包的类型
+### Research Tasks：发现与分拣
 
-LKM 在全局推理过程中可能发现以下关系，每种都以 curation 包的形式提交：
+LKM 的 curation 流程分两阶段。第一阶段是**发现**——LKM 在全局推理过程中识别出候选关系，发布到 Official Registry 的 `lkm/research-tasks/` 目录。这是轻量级的发现记录，不直接生效。
 
-**发现一：语义重复命题**
+三类候选：
+
+**候选一：equivalence（等价候选）**
+
+两个命题语义接近。发现的触发点是相同的，但调查结论可能完全不同：
+
+| 调查结论 | 含义 | 处理方式 |
+|---------|------|---------|
+| **duplicate** | 两个命题说的是同一件事（注册时 embedding 匹配漏掉了） | 合并：引用重定向，暂停参数，re-review |
+| **independent evidence** | 两条独立推理链汇聚到相同结论（真正的独立验证） | 不合并，识别为证据汇聚（增强可信度） |
+| **refinement** | 一个命题是另一个的特化或推广 | 建立细化关系 |
 
 ```
-LKM 构建全局图时发现：
+例：LKM 发现两个命题语义接近
   命题 A（"YBCO 在 92K 以下超导"）≈ 命题 B（"YBa₂Cu₃O₇ 的 Tc 为 92±1K"）
-  注册时的 embedding 匹配漏掉了
     ↓
-LKM 创建 curation 包：
-  - 声明 A 和 B 的等价关系
-  - 附带相似度分数和理由
+发布 equivalence_candidate 到 lkm/research-tasks/equivalence/
     ↓
-curation 包经 Review Server 审核 → 注册到 Official Registry
+调查：A 和 B 来自不同实验室的独立实验？还是同一数据源的不同表述？
     ↓
-合并后的处理：
-  a. B 的所有引用重定向到 A
-  b. B 标记为已合并（保留审计记录）
-  c. 受影响的推理链暂停参数（回退到安全状态）
-  d. 级联 re-review：重新评估受影响推理链的独立性
-  e. 增量推理
+结论：
+  a. 同一数据源 → duplicate → 合并，暂停参数，re-review
+  b. 独立实验 → independent evidence → 不合并，证据汇聚增强可信度
+  c. B 是 A 在特定氧含量条件下的细化 → refinement → 建立细化关系
 ```
 
-**为什么暂停参数：** 合并后，原本指向 A 和 B 两个独立命题的推理链现在都指向 A。如果之前它们被判定为"独立证据"，现在需要重新评估——因为它们可能实际上是在讨论同一个命题，不应该 double counting。暂停参数确保在 re-review 完成前回退到保守状态（可能少算证据，但不会多算）。
+**为什么 duplicate 需要暂停参数：** 合并后，原本指向 A 和 B 两个独立命题的推理链现在都指向 A。如果之前它们被判定为"独立证据"，现在需要重新评估——因为它们可能实际上是在讨论同一个命题，不应该 double counting。暂停参数确保在 re-review 完成前回退到保守状态（可能少算证据，但不会多算）。
 
-**发现二：跨包连接**
+**候选二：contradiction（矛盾候选）**
 
-```
-LKM 构建全局图时发现：
-  Package X 的结论和 Package Y 的前提高度相关
-  但 X 和 Y 之间没有依赖关系
-    ↓
-LKM 创建 curation 包：
-  - 声明 X 的结论和 Y 的前提之间的关系
-  - 可能是等价关系、支持关系或矛盾关系
-    ↓
-curation 包经 Review Server 审核 → 注册到 Official Registry
-```
-
-**发现三：矛盾检测**
+两个命题互相冲突。
 
 ```
-LKM 构建全局图时发现：
+例：LKM 发现：
   命题 P（"Tc = 92K"）和命题 Q（"Tc = 89K"）互相矛盾
     ↓
-LKM 创建 curation 包：
-  - 声明 P 和 Q 的矛盾关系
-  - 附带检测依据
+发布 contradiction_candidate 到 lkm/research-tasks/contradiction/
     ↓
-curation 包经 Review Server 审核 → 注册到 Official Registry
+调查确认 → curation 包声明矛盾关系
     ↓
 确认矛盾 → 推理引擎自动压低双方的可信度
 ```
 
 **矛盾是结构性事实，不是判断。** 一旦确认两个命题矛盾，推理引擎保证它们不会同时具有高可信度——这是逻辑一致性的自动维护。
 
-### Curation 包的关键设计
+**候选三：connection（隐含连接候选）**
 
+一个包的结论高度相关另一个包的前提，但双方都没有声明依赖。
+
+```
+例：LKM 发现：
+  Package X 的结论和 Package Y 的前提高度相关
+  但 X 和 Y 之间没有依赖关系
+    ↓
+发布 connection_candidate 到 lkm/research-tasks/connection/
+    ↓
+调查确认 → curation 包声明跨包连接
+    ↓
+建立跨包依赖 → 可信度沿新连接流动
+```
+
+### 从 Research Task 到 Curation 包
+
+Research task 确认后，进入第二阶段——LKM 创建 curation 包，走标准流程：
+
+```
+Research task 候选（lkm/research-tasks/）
+  ↓
+调查确认（LKM 自动分析 或 人类研究者介入）
+  ↓
+LKM 创建 curation 包：
+  - 声明发现的关系和调查结论
+  - 附带检测依据和置信度
+  ↓
+curation 包经 Review Server 审核
+  ↓
+带 review report 注册到 Official Registry
+  ↓
+CI 验证 → 等待期 → 合并 → 增量推理
+```
+
+### Curation 的关键设计
+
+- **两阶段流程：** research task（轻量级发现记录）→ curation 包（标准的包流程）。发现不直接生效。
 - **以包的形式贡献：** LKM 不直接修改已有包或 Registry 数据，而是创建新的 curation 包。这保持了数据的不可变性和审计性。
 - **经过 Review：** curation 包和人类的知识包一样，需要经过 Review Server 审核才能注册。
 - **LKM 无特权：** LKM 在 Official Registry 注册了身份，但不享有任何快速通道。它的 curation 包和普通包走完全相同的流程。
+- **Research task 对社区可见：** 候选发布在 Registry 中，人类研究者可以浏览、参与调查、或基于候选创建自己的知识包。
 
 ## Review Server 和 LKM 的关系
 
@@ -212,8 +235,8 @@ curation 包经 Review Server 审核 → 注册到 Official Registry
 | **本质** | LLM/agent 审核员 | 全局推理引擎 + research agent |
 | **审核时机** | 包提交 Registry 之前 | 全局推理过程中 |
 | **视角** | 单个包内部的推理逻辑 | 全局知识网络 |
-| **产出** | review report（条件概率初始值） | 全局可信度 + curation 包 |
-| **与 Registry 的交互** | review report 随包提交 | 回写可信度 + 注册 curation 包 |
+| **产出** | review report（条件概率初始值） | 全局可信度 + research tasks + curation 包 |
+| **与 Registry 的交互** | review report 随包提交 | 回写可信度 + 发布 research tasks + 注册 curation 包 |
 | **权限** | 无特权 | 无特权 |
 
 两者互补：Review Server 保证每个包的内部推理质量（条件概率），LKM 保证全局知识网络的一致性（发现跨包关系、矛盾、重复）。

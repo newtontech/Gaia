@@ -9,7 +9,7 @@
 | 参与者 | 性质 | 职责 |
 |--------|------|------|
 | **作者**（人类或 AI agent） | 贡献者 | 创建知识包，声明依赖，编译，本地推理，发布 |
-| **LKM Server** | 贡献者 + 全局推理 | 十亿节点全局推理；构建全局图时发现跨包关系，以 curation 包的形式贡献 |
+| **LKM Server** | 贡献者 + 全局推理 | 十亿节点全局推理；构建全局图时发现跨包关系，以 research task 发布候选，确认后以 curation 包贡献 |
 | **Review Server** | 独立部署 | LLM/agent 自动审核员。审核包内部推理逻辑，给出条件概率初始值。可多实例 |
 | **Git Repo（Package）** | 用户侧 | 托管知识包源码、编译产物和 review report |
 | **Git Repo（Official Registry）** | 注册中心 | 注册包、reviewer、LKM 的元数据，存储推理结果 |
@@ -21,7 +21,7 @@ Gaia 有两类并列的贡献者，走同样的流程（创建包 → review →
 | | 人类 / AI agent | LKM Server |
 |---|---|---|
 | **创建什么** | 知识包（从研究中得出的命题和推理链） | Curation 包（从全局图分析中发现的跨包关系） |
-| **知识来源** | 实验、理论、分析 | 全局图构建过程中的发现（语义重复、矛盾、跨包连接） |
+| **知识来源** | 实验、理论、分析 | 全局图构建过程中的发现（等价、矛盾、隐含连接），先以 research task 发布，确认后创建 curation 包 |
 | **审核** | Review Server 审核推理逻辑 | 同样经 Review Server 审核 |
 | **注册** | 向 Official Registry 提交 PR | 同样向 Official Registry 提交 PR |
 | **特权** | 无 | 无——和普通贡献者走同样的流程 |
@@ -62,7 +62,7 @@ graph TD
 
     %% ═══════ 第 3 层：两个 Git Repo ═══════
     PKG(["📦 Package Repo<br/>源码 · 编译产物 · review report"])
-    REG(["📋 Official Registry<br/>packages/ · reviewers/ · lkm/ · beliefs/"])
+    REG(["📋 Official Registry<br/>packages/ · reviewers/ · lkm/ · research-tasks/ · beliefs/"])
     PKG ~~~ REG
 
     %% ─── 作者流 ───
@@ -143,9 +143,13 @@ official-registry/
 │   │   └── Reviewer.toml
 │   └── review-server-beta/
 │       └── Reviewer.toml
-├── lkm/                   # LKM Server 注册
-│   └── lkm-gaia-official/
-│       └── LKM.toml
+├── lkm/                   # LKM Server 注册 + research tasks
+│   ├── lkm-gaia-official/
+│   │   └── LKM.toml
+│   └── research-tasks/    # LKM 发布的待研究候选
+│       ├── equivalence/   # 等价候选（调查后判定：duplicate / independent evidence / refinement）
+│       ├── contradiction/ # 矛盾候选
+│       └── connection/    # 隐含连接候选
 ├── reviews/               # 审核记录
 ├── beliefs/               # 推理结果
 ├── merges/                # 合并记录
@@ -198,18 +202,31 @@ CI 验证：格式合法、身份有效、担保方已注册
 
 ## LKM 的 Curation 流程
 
-LKM 在构建全局图的过程中，自然会发现跨包关系。这些发现以 curation 包的形式贡献，走和普通包完全一样的流程：
+LKM 在构建全局图的过程中，自然会发现跨包关系。这些发现经过**两阶段流程**：先作为 research task 候选发布，确认后再以 curation 包的形式走标准流程。
+
+### 阶段一：发现 → Research Task
+
+LKM 全局推理过程中发现的候选关系，发布到 `lkm/research-tasks/`。三类候选：
+
+| 候选类型 | 触发条件 | 调查后的可能结论 |
+|---------|---------|----------------|
+| **equivalence** | 两个命题语义接近 | duplicate（应合并）/ independent evidence（独立证据汇聚）/ refinement（细化关系） |
+| **contradiction** | 两个命题互相冲突 | 确认矛盾 → 推理引擎压低双方可信度 |
+| **connection** | 一个包的结论高度相关另一个包的前提，但未声明依赖 | 确认连接 → 建立跨包依赖 |
+
+**关键区分：** equivalence 候选的调查结论决定了完全不同的处理方式——duplicate 应该合并（去重），independent evidence 不应合并而是识别为证据汇聚（增强可信度），refinement 建立细化关系。候选阶段只描述"发现了什么"，具体判定是 curation 包审核时的事。
+
+### 阶段二：确认 → Curation 包 → 标准流程
 
 ```
-LKM 全局推理过程中发现：
-  - 命题 A ≈ 命题 B（语义重复，注册时漏掉了）
-  - 命题 P 和 Q 互相矛盾
-  - Package X 的结论与 Package Y 的前提高度相关
-    ↓
-LKM 创建 curation 包：
-  - 声明发现的关系（等价、矛盾、连接）
+Research task 候选发布到 lkm/research-tasks/
+  ↓
+调查确认（LKM 或人类研究者）
+  ↓
+确认 → LKM 创建 curation 包：
+  - 声明发现的关系和调查结论
   - 附带检测依据和置信度
-    ↓
+  ↓
 curation 包经 Review Server 审核
   ↓
 带 review report 注册到 Official Registry
@@ -217,7 +234,7 @@ curation 包经 Review Server 审核
 CI 验证 → 等待期 → 合并 → 增量推理
 ```
 
-**LKM 没有捷径。** 它发现的关系不会直接生效——必须走完建包 → 审核 → 注册的完整流程。这保证了所有知识变更都有审计记录，且经过独立审核。
+**LKM 没有捷径。** Research task 是轻量级的发现记录，不直接生效。确认后的关系必须走完建包 → 审核 → 注册的完整流程。这保证了所有知识变更都有审计记录，且经过独立审核。
 
 ## 业务流程总览
 
@@ -236,7 +253,7 @@ CI 验证 → 等待期 → 合并 → 增量推理
 | 步骤 | 描述 | 详见 |
 |------|------|------|
 | ④ 全局推理 | LKM 读取全局图，运行十亿节点 BP，回写可信度 | [belief-flow-and-quality.md](belief-flow-and-quality.md) |
-| ⑤ Curation 发现 | LKM 在构建全局图时发现跨包关系，创建 curation 包 | [review-and-curation.md](review-and-curation.md) |
+| ⑤ Research Task + Curation | LKM 在构建全局图时发现跨包关系，发布 research task 候选，确认后创建 curation 包 | [review-and-curation.md](review-and-curation.md) |
 
 **共同流：**
 
