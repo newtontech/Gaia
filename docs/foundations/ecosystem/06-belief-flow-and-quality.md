@@ -23,7 +23,7 @@ Level 2: 全局推理（LKM Server，定期 + 事件触发）
 
 ### 什么时候运行
 
-作者在本地运行 `gaia infer`，通常在编译（`gaia build`）之后。编译和推理的详细流程见 [04 包的创建与发布](04-authoring-and-publishing.md)。
+作者在本地运行 `gaia infer`，通常在编译（`gaia build`）之后。编译和推理的详细流程见 [03 包的创建与发布](03-authoring-and-publishing.md)。
 
 ### 做什么
 
@@ -337,6 +337,6 @@ Review Server（LLM/agent）评估推理逻辑的可靠性
 
 ## 相关文档
 
-- [03-decentralized-architecture.md](03-decentralized-architecture.md) — 架构总纲，参与者和交互关系
-- [06-review-and-curation.md](06-review-and-curation.md) — Review Server 审核流程 + LKM curation 的两阶段流程
-- [05-registry-operations.md](05-registry-operations.md) — 注册、去重、推理链激活
+- [02-decentralized-architecture.md](02-decentralized-architecture.md) — 架构总纲，参与者和交互关系
+- [05-review-and-curation.md](05-review-and-curation.md) — Review Server 审核流程 + LKM curation 的两阶段流程
+- [04-registry-operations.md](04-registry-operations.md) — 注册、去重、推理链激活
