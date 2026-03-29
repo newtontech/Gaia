@@ -24,7 +24,7 @@ Review Server 就是 reviewer——一个用 LLM 或 agent 实现的自动审核
 
 - **独立部署，可多实例：** 不同机构可以运行自己的 Review Server
 - **格式约束：** 只要 review report 符合规定格式，任何 Review Server 都可以
-- **在 Official Repo 注册：** Review Server 需要在 Official Repo 注册身份，其 review report 才被 CI 认可
+- **在 Official Registry 注册：** Review Server 需要在 Official Registry 注册身份，其 review report 才被 CI 认可
 
 ### 审核什么
 
@@ -36,7 +36,7 @@ Review Server 审核包内部的推理结构：
 
 Review Server **不**审核：
 - 前提命题本身是否正确（那是上游包的事）
-- 该推理链和 Official Repo 中其他推理链的关系（那是去重和策展的事）
+- 该推理链和 Official Registry 中其他推理链的关系（那是去重和策展的事）
 
 ### 审核的具体流程
 
@@ -64,7 +64,7 @@ Review Server **不**审核：
          review-<reviewer-id>-<timestamp>.json
   ↓
 ⑤ 作者查看 review report：
-   a. 同意 → review 完成，准备提交 Official Repo
+   a. 同意 → review 完成，准备提交 Official Registry
    b. 不同意 → 进入 rebuttal 流程
 ```
 
@@ -110,11 +110,11 @@ Review report 包含：
   - reviewer 身份（哪个 Review Server 实例）
 ```
 
-这些条件概率初始值在包注册到 Official Repo 后，成为推理引擎使用的参数。
+这些条件概率初始值在包注册到 Official Registry 后，成为推理引擎使用的参数。
 
 ### 没有 review 的包
 
-**包可以不经过 review 就注册到 Official Repo。** 但是：
+**包可以不经过 review 就注册到 Official Registry。** 但是：
 
 - 没有 review report 的推理链没有条件概率参数
 - 没有参数 = 推理引擎跳过这些推理链
@@ -139,14 +139,14 @@ LKM 和人类/agent 是两类并列的贡献者。区别在于知识来源：
 
 ### Research Tasks：发现与分拣
 
-LKM 的 curation 流程分两阶段。第一阶段是**发现**——LKM 在全局推理过程中识别出候选关系，以 **Issues** 的形式发布到 LKM Repo。这是轻量级的发现记录，不直接生效。Issues 支持状态管理（labels：`open` → `investigating` → `confirmed`/`rejected`）、社区讨论（评论区）和批量发现（一个 issue 列一批同类候选）。
+LKM 的 curation 流程分两阶段。第一阶段是**发现**——各 LKM Server 在全局推理过程中识别出候选关系，以 **Issues** 的形式发布到各自的 LKM Repo。这是轻量级的发现记录，不直接生效。Issues 支持状态管理（labels：`open` → `investigating` → `confirmed`/`rejected`）、社区讨论（评论区）和批量发现（一个 issue 列一批同类候选）。
 
 ### 跨包关系的两种发现路径
 
 跨包关系不只是 LKM 自动发现。作者也可以参与：
 
 1. **在自己的包中声明：** 如果作者的研究本身涉及对已有命题的反驳或验证，可以在包中直接声明矛盾/等价/连接关系。这个声明随包一起经 Review Server 审核和注册——和普通推理链走同样的流程。
-2. **在 LKM Repo 提交 Issue：** 如果作者在研究过程中发现其他包之间可能存在的关系（不涉及自己的包），可以在 LKM Repo 提交 issue，和 LKM 发现的 research task 走相同的调查流程。
+2. **在 LKM Repo 提交 Issue：** 如果作者在研究过程中发现其他包之间可能存在的关系（不涉及自己的包），可以在对应的 LKM Repo 提交 issue，和 LKM 发现的 research task 走相同的调查流程。
 
 LKM 的价值在于它能系统性地扫描全局图，发现人类不容易注意到的关系。但人类的洞察力同样重要——两种发现路径互补。
 
@@ -245,14 +245,14 @@ CI 验证 → 等待期 → 合并 → 增量推理
 
 ## Review Server 和 LKM 的关系
 
-| | Review Server | LKM Server |
+| | Review Server ×N | LKM Server ×N |
 |---|---|---|
 | **本质** | LLM/agent 审核员 | 全局推理引擎 + research agent |
 | **审核时机** | 包提交 Registry 之前 | 全局推理过程中 |
 | **视角** | 单个包内部的推理逻辑 | 全局知识网络 |
-| **产出** | review report（条件概率初始值） | 全局可信度 + research tasks（LKM Repo Issues）+ curation 包 |
+| **产出** | review report（条件概率初始值） | 全局可信度 + research tasks（各自 LKM Repo Issues）+ curation 包 |
 | **与 Registry 的交互** | review report 随包提交 | 回写可信度 + 注册 curation 包 |
-| **与 LKM Repo 的交互** | — | 发布 research tasks（Issues），调查、确认、close |
+| **与 LKM Repo 的交互** | — | 各自维护 LKM Repo，发布 research tasks，调查、确认、close |
 | **权限** | 无特权 | 无特权 |
 
 两者互补：Review Server 保证每个包的内部推理质量（条件概率），LKM 保证全局知识网络的一致性（发现跨包关系、矛盾、重复）。
