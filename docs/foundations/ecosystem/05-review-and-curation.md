@@ -2,7 +2,7 @@
 
 > **Status:** Current canonical
 
-本文档描述 Review Server 和 LKM / 人类 curation 的业务逻辑——官方 prior / strategy 如何产生，跨包关系如何被发现、调查和确认。
+本文档描述 Review Server 和 LKM / 人类 curation 的业务逻辑——review reports 如何产生并进入包，官方 prior / strategy 如何在注册时生效，跨包关系如何被发现、调查和确认。
 
 ## Review Server
 
@@ -16,16 +16,16 @@ Review Server 就是 reviewer——一个用 LLM 或 agent 实现的自动审核
 |---|---|---|
 | **职责** | 新命题的初始 prior、推理过程的逻辑可靠性 | 上游前提是否重新判真、跨包结构是否直接改写 |
 | **例子** | "这个新结论初始可信度应是多少？"；"从这些前提出发，这个推理步骤站得住吗？" | "我要现在就把 A 和 B 合并吗？"；"我要替作者改依赖图吗？" |
-| **产出** | claim priors、推理链条件概率、疑似跨包关系 findings | binding / equivalence / dedup / package dependency 变更 |
+| **产出** | review report（claim priors、推理链条件概率、疑似跨包关系 findings） | binding / equivalence / dedup / package dependency 变更 |
 
-**为什么这样分工：** 已有前提的可靠性来自它们自己版本对应的官方 review / 你所选 LKM snapshot。Review Server 在当前包版本里做的事，是给新命题提供初始 prior，并评估"假设前提成立，这条推理链有多可靠"。
+**为什么这样分工：** 已有前提的可靠性来自它们自己版本对应的已入库 review reports / 你所选 LKM snapshot。Review Server 在当前包版本里做的事，是给新命题提供初始 prior，并评估"假设前提成立，这条推理链有多可靠"。
 
 ### Review Server 的部署
 
 - **独立部署，可多实例：** 不同机构可以运行自己的 Review Server
-- **格式约束：** 只要 review PR 的 payload 符合规定格式，任何 Review Server 都可以
-- **在 Official Registry 注册：** Review Server 需要在 Official Registry 注册身份，其 review PR 才被 CI 认可
-- **官方资格由 Registry 决定：** 只有 Registry 指派或明确认可的 reviewer，其 review PR 才能成为官方参数来源
+- **格式约束：** 只要 review report 符合规定格式，任何 Review Server 都可以输出
+- **在 Official Registry 注册：** Review Server 需要在 Official Registry 注册身份，其 report 才能在入库时被 CI 认可
+- **官方资格由 Registry 验收：** 只有满足入库 policy 的 review report 集合，才能成为官方参数来源
 
 ### 审核什么
 
@@ -45,9 +45,9 @@ Review Server **不**审核：
 ### 审核的具体流程
 
 ```
-作者完成 gaia build + gaia infer，push/tag 并请求 Official Registry 注册
+作者完成 gaia build + gaia infer，push/tag 到自己的 Knowledge Repo
   ↓
-① Official Registry 受理该包版本，并指派若干 Review Server
+① 作者向一个或多个 Review Server 请求审核
   ↓
 ② Review Server 分析包内部的推理结构：
    - 评估新命题的初始 prior
@@ -55,21 +55,22 @@ Review Server **不**审核：
    - 评估每条推理链的条件概率
    - 检查是否有逻辑缺陷和可疑跨包关系
   ↓
-③ Review Server 向 Official Registry 提交 review PR：
+③ Review Server 向作者仓库提交 review report PR：
+   - 写入 `.gaia/reviews/review-<reviewer>-<timestamp>.json`
    - 新命题的 prior（遵守 Cromwell's rule：不允许 0 和 1）
    - 每条推理链的条件概率
    - 发现的问题、建议、以及 findings
   ↓
-④ 作者在 review PR 中查看结果并 rebuttal
+④ 作者在这个 PR 中查看结果并 rebuttal
   ↓
-⑤ Official Registry 接受 review PR：
-   a. 同意该参数集 → 成为该包版本的官方参数来源
-   b. 僵局未解 → Registry 追加 reviewer 或转交仲裁
+⑤ 作者合并足够的 review report PR：
+   a. review reports 达到 Registry 的 minimal policy
+   b. 之后该版本才能请求 Official Registry 注册
 ```
 
 ### Rebuttal 流程
 
-作者和 Review Server 可以在 Official Registry 的 review PR 中来回 rebuttal，直到达成一致：
+作者和 Review Server 可以在作者仓库里的 review report PR 中来回 rebuttal，直到达成一致：
 
 ```
 作者对 review 中的某条评估提出异议：
@@ -83,18 +84,18 @@ Review Server 回应：
   ↓
 继续 rebuttal 直到双方达成一致
   ↓
-最终被接受的 review PR 保留完整 rebuttal 历史
+最终被合并到包内的 review report 保留完整 rebuttal 历史
 ```
 
 **为什么需要 rebuttal：** Review Server 是 LLM/agent，不是绝对权威。作者对自己的推理过程最了解，可能有 Review Server 没考虑到的上下文。Rebuttal 让双方的判断都能被记录和考量。
 
-**Rebuttal 历史的价值：** 完整的 rebuttal 记录随 review PR 保留，其他人可以看到审核过程中讨论了什么、为什么最终选择了这个参数值。这增加了透明度和可审计性。
+**Rebuttal 历史的价值：** 完整的 rebuttal 记录随 review report 一起保留在包仓库中，其他人可以看到审核过程中讨论了什么、为什么最终选择了这个参数值。这增加了透明度和可审计性。
 
-**Rebuttal 僵局：** 如果作者和 Review Server 始终无法达成一致，由 Official Registry 追加 reviewer 或发起仲裁。核心原则是：不存在单一审核者可以无限否决贡献，也不存在作者自行绕开指派 reviewer 去挑一个更宽松的 reviewer。
+**Rebuttal 僵局：** 如果作者和 Review Server 始终无法达成一致，作者可以继续请求其他 Review Server 提供额外 report。是否满足官方最小标准，最终由 Official Registry 的入库 policy 决定，而不是由单个 reviewer 决定。
 
 ### 审核后的产出
 
-review PR 的内容包含：
+review report 的内容包含：
 
 ```
 对每条推理链：
@@ -111,17 +112,17 @@ review PR 的内容包含：
   - reviewer 身份（哪个 Review Server 实例）
 ```
 
-这些被 Official Registry 接受的 prior / strategy，会成为各 LKM 发布 belief snapshot 时采用的官方输入。
+这些随包进入 Registry、并通过校验的 prior / strategy，会成为各 LKM 发布 belief snapshot 时采用的官方输入。
 
 ### 没有 review 的包
 
-**包可以不经过官方 review 就注册到 Official Registry。** 但是：
+**包可以不经过 review 发布到自己的仓库。** 但是：
 
-- 没有被接受的 review PR，就没有官方 claim priors 和条件概率参数
-- 没有官方参数 = LKM 的官方 belief 流程跳过这些未审输入
-- 效果：包版本被索引了，但没有进入官方 belief 计算
+- 如果没有足够的 review reports，该版本过不了 Official Registry 的入库校验
+- 过不了入库校验 = 没有官方 claim priors 和条件概率参数
+- 效果：包可以存在，但不会进入官方索引和 LKM 的官方 belief 计算
 
-这意味着 review 不是注册的前提条件，而是官方参数激活的前提条件。作者可以先注册再由 Registry 协调 reviewer，review PR 通过后续 PR 补充。
+这意味着 review 不是发布包的前提条件，但它是进入 Official Registry 的前提条件。作者需要先把满足 minimal policy 的 review reports 合并进包，再请求注册。
 
 ## LKM 的 Curation 角色
 
@@ -136,7 +137,7 @@ LKM 和人类/agent 是两类并列的贡献者。区别在于知识来源：
 - **人类/agent：** 从实验、理论、分析中创建知识包
 - **LKM：** 从全局图构建过程中发现跨包关系，创建 curation 包
 
-但两者走**完全相同的流程**：创建包 → 请求 Official Registry → official review → 合并。LKM 没有捷径。
+但两者走**完全相同的流程**：创建包 → 获取 review reports → 请求 Official Registry → 合并。LKM 没有捷径。
 
 ### Research Tasks：发现与分拣
 
@@ -148,7 +149,7 @@ LKM 的 curation 流程分两阶段。第一阶段是**发现**——各 LKM Ser
 
 1. **Official Registry issue：** 人类 / agent 在研究过程中发现疑似 duplicate / contradiction / connection，就向 Official Registry 提交 relation report。
 2. **LKM Repo issue：** LKM Server 在 curation 过程中发现候选关系，就在自己的 LKM Repo 发布 research task。
-3. **Review finding：** Review Server 在审核包内逻辑时发现疑似跨包关系，就写进 review PR 的 finding，供后续调查。
+3. **Review finding：** Review Server 在审核包内逻辑时发现疑似跨包关系，就写进 review report 的 finding，供后续调查。
 
 LKM 的价值在于它能系统性地扫描全局图，发现人类不容易注意到的关系。但人类的洞察力同样重要——三类入口互补。
 
@@ -231,9 +232,9 @@ Official Registry issue / LKM Repo issue / review finding
   - 附带检测依据和置信度
   - 在对应 issue / review finding 中贴上 curation 包链接
   ↓
-Official Registry 指派 Review Server 审核 curation 包
+Review Server 向 curation 包仓库提交 review report PR
   ↓
-被接受的 review PR + curation 包注册到 Official Registry
+curation 包合并足够的 review reports 后注册到 Official Registry
   ↓
 对应的 LKM 在后续 snapshot / global inference 中吸收该结构变更
 ```
@@ -253,18 +254,19 @@ Official Registry 指派 Review Server 审核 curation 包
 | | Review Server ×N | LKM Server ×N |
 |---|---|---|
 | **本质** | LLM/agent 审核员 | 全局推理引擎 + research agent |
-| **审核时机** | Registry 协调的 official review 阶段 | 全局推理和 curation 过程中 |
+| **审核时机** | 包发布到 Registry 之前 | 全局推理和 curation 过程中 |
 | **视角** | 单个包内部的推理逻辑 | 全局知识网络 |
-| **产出** | review PR（claim priors + chain strategies + findings） | belief snapshots + research tasks + curation 包 |
-| **与 Registry 的交互** | 提交并维护 review PR | 读取已注册包 / accepted reviews；注册 curation 包 |
+| **产出** | review report（claim priors + chain strategies + findings） | belief snapshots + research tasks + curation 包 |
+| **与 Registry 的交互** | 注册 reviewer 身份；由入库 CI 验证其 reports | 读取已注册包 / validated review reports；注册 curation 包 |
+| **与包仓库的交互** | 以 PR 方式提交 review report | 创建知识包 / curation 包 |
 | **与 LKM Repo 的交互** | — | 各自维护 LKM Repo，发布 research tasks，调查、确认、close |
 | **权限** | 无特权 | 无特权 |
 
-两者互补：Review Server 保证每个包版本进入官方流程时有 prior / strategy 和清晰的 finding；LKM 保证全局知识网络有持续的发现、调查和 belief 发布。
+两者互补：Review Server 保证每个包版本在注册前就有 prior / strategy 和清晰的 finding；LKM 保证全局知识网络有持续的发现、调查和 belief 发布。
 
 ## 相关文档
 
 - [02-decentralized-architecture.md](02-decentralized-architecture.md) — 架构总纲，LKM Repo 的定义和参与者交互
-- [04-registry-operations.md](04-registry-operations.md) — 注册流程、官方 review 协调、relation report issue
+- [04-registry-operations.md](04-registry-operations.md) — 注册流程、review report 验收、relation report issue
 - [06-belief-flow-and-quality.md](06-belief-flow-and-quality.md) — belief snapshots、全局推理、错误修正场景中 curation 包的具体影响
 - [03-authoring-and-publishing.md](03-authoring-and-publishing.md) — 作者视角：本地预览、请求 registry、浏览研究机会

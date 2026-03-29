@@ -10,14 +10,14 @@
 |------|------|---------|
 | **作者**（人类 / AI agent） | 贡献者 | 创建知识包，声明依赖，编译，本地推理，发布 |
 | **LKM Server** ×N | 贡献者 + 全局推理 | 全局推理；发布 research tasks 和 belief snapshots；必要时贡献 curation 包 |
-| **Review Server** ×N | 审核员 | 为新命题给 prior，为推理链给条件概率，记录疑似跨包关系 findings |
+| **Review Server** ×N | 审核员 | 为新命题给 prior，为推理链给条件概率，输出 review reports 并记录疑似跨包关系 findings |
 | **Knowledge Repo** | 基础设施 | 托管包源码、编译产物、可选的本地 self-review 材料 |
-| **Official Registry** | 基础设施 | 注册包 / reviewer / LKM，协调官方 review，托管人类 issue |
+| **Official Registry** | 基础设施 | 注册包 / reviewer / LKM，校验 review report gate，托管人类 issue |
 | **LKM Repo** ×N | 基础设施 | 各 LKM 各自的运营仓库，Issues 管理其 research tasks，并发布 belief snapshots |
 
 两个关键设计点：
 
-- **LKM 和人类是并列贡献者**，走完全相同的流程（创建包 → 请求 Registry → official review → 合并），没有捷径。LKM 的特殊之处在于它能看到整个知识网络，因此能发现跨包关系——但它的发现仍然要走标准流程。
+- **LKM 和人类是并列贡献者**，走完全相同的流程（创建包 → 获取 review reports → 请求 Registry → 合并），没有捷径。LKM 的特殊之处在于它能看到整个知识网络，因此能发现跨包关系——但它的发现仍然要走标准流程。
 - **一切通过 git 交互**——commit、PR、Issues。本文档以 GitHub 为例，但架构只依赖 git + PR 语义，GitLab、Gitea 等同样适用。
 
 ## 架构图
@@ -37,15 +37,15 @@ flowchart TB
     end
 
     Author -->|"① 创建包"| PKG
-    Author -->|"② 请求注册"| REG
-    REG -.->|"③ 指派 official review"| RS
-    RS -->|"④ 提交 review PR"| REG
-    Author -.->|"提交 issue / rebuttal"| REG
+    Author -.->|"② 请求 review"| RS
+    RS -->|"③ review report PR"| PKG
+    PKG -->|"④ 注册包版本"| REG
+    Author -.->|"提交 issue"| REG
     LKM -->|"⑤ 发布 research task"| LKMR
     LKM -->|"⑥ 发布 belief snapshot"| LKMR
     LKM -->|"⑦ 创建 curation 包"| PKG
     PKG -->|"⑧ 注册 curation 包"| REG
-    REG -.->|"拉取已注册包 + accepted reviews"| LKM
+    REG -.->|"拉取已注册包 + validated review reports"| LKM
     Author -.->|"读取 research task / belief snapshot"| LKMR
     PKG -.->|"拉取显式依赖"| REG
 
@@ -60,17 +60,17 @@ flowchart TB
 | 编号 | 方向 | 含义 |
 |------|------|------|
 | ① | 作者 → Knowledge Repo | 创建知识包 |
-| ② | 作者 → Official Registry | 请求注册某个包版本 |
-| ③ | Official Registry → Review Server | 指派官方 reviewer |
-| ④ | Review Server → Official Registry | 提交 review PR（prior / strategy / findings） |
+| ② | 作者 → Review Server | 请求审核并生成 review report |
+| ③ | Review Server → Knowledge Repo | 以 PR 方式提交 review report |
+| ④ | Knowledge Repo → Official Registry | 带 review reports 注册某个包版本 |
 | ⑤ | LKM → LKM Repo | 发布 research task（Issues） |
 | ⑥ | LKM → LKM Repo | 发布 belief snapshot |
 | ⑦ | LKM → Knowledge Repo | 候选确认后，创建 curation 包 |
 | ⑧ | Knowledge Repo → Official Registry | 注册 curation 包 |
-| 虚线 | Registry → LKM | LKM 拉取已注册包和 accepted reviews |
+| 虚线 | Registry → LKM | LKM 拉取已注册包和 validated review reports |
 | 虚线 | Knowledge Repo → Registry | 包解析显式依赖时引用已注册包 |
 | 虚线 | 作者 → LKM Repo | 浏览 research tasks，读取 belief snapshot |
-| 虚线 | 作者 → Official Registry | 提交 open question / relation report / rebuttal |
+| 虚线 | 作者 → Official Registry | 提交 open question / relation report |
 
 ## 架构分层
 
@@ -90,25 +90,25 @@ flowchart TB
 
 ### + Review Server：推理链获得可信参数
 
-Review Server 是独立部署的 LLM/agent 审核员。它审核包内部推理过程的逻辑可靠性，并为新命题给出初始 prior。不同机构可以各自部署 Review Server，但进入官方流程时，由 Official Registry 指派或认可 reviewer，作者不能通过自由挑 reviewer 来决定官方参数。
+Review Server 是独立部署的 LLM/agent 审核员。它审核包内部推理过程的逻辑可靠性，并为新命题给出初始 prior。不同机构可以各自部署 Review Server。它们把结果写成 review report，并通过 PR 提交到作者自己的包仓库。
 
-没有 official review 的包版本也可以注册到 Registry，但各 LKM 的官方 belief 流程会跳过其未审参数。作者可以先注册后审，顺序灵活。
+没有足够 review reports 的包版本仍然可以存在于作者自己的仓库，但不能通过 Official Registry 的入库校验。只有满足 minimal review policy 的版本，才会进入官方索引并被 LKM 消费。
 
 **新增能力：** 独立的逻辑审核，推理链有可信的条件概率参数。
 **局限：** 仍然只看到直接依赖图，不同包中相同结论的独立证据无法汇聚。
 
-### + Official Registry：公共索引与官方 review 协调
+### + Official Registry：公共索引与 review gate 验收
 
-Official Registry 是所有已注册包的公共索引。它记录包、版本、显式依赖、reviewer / LKM 身份，并协调官方 review PR。Registry 不在 package 注册阶段直接做 binding / equivalence / dedup 裁决，也不发布单一官方 belief。
+Official Registry 是所有已注册包的公共索引。它记录包、版本、显式依赖、reviewer / LKM 身份，并在注册时校验包内 review reports 是否满足最低 policy。Registry 不在 package 注册阶段直接做 binding / equivalence / dedup 裁决，也不发布单一官方 belief。
 
-带有 accepted review PR 的包版本，会向后续的 LKM snapshot / global inference 提供官方 prior / strategy 输入。Registry 可以 fork、可以联邦：不同学科或机构可以维护自己的 Registry，没有单一的"真理权威"。
+带有足够 valid review reports 的包版本，会向后续的 LKM snapshot / global inference 提供官方 prior / strategy 输入。Registry 可以 fork、可以联邦：不同学科或机构可以维护自己的 Registry，没有单一的"真理权威"。
 
-**新增能力：** 公共包索引、官方 review 协调、人类 issue（open question / relation report）、可 fork 的治理。
+**新增能力：** 公共包索引、review report 验收、人类 issue（open question / relation report）、可 fork 的治理。
 **局限：** 不直接做 belief 计算；不在注册时直接裁决跨包关系。
 
 ### + LKM Server：全局推理与跨包关系发现
 
-LKM Server 拉取 Registry 的包索引和 accepted reviews，运行十亿节点级的全局推理，处理长链传播和跨 Registry 关系。同时，在构建全局图的过程中，LKM 自然会发现跨包关系——两个命题语义等价、互相矛盾、或存在未声明的隐含连接。
+LKM Server 拉取 Registry 的包索引和 validated review reports，运行十亿节点级的全局推理，处理长链传播和跨 Registry 关系。同时，在构建全局图的过程中，LKM 自然会发现跨包关系——两个命题语义等价、互相矛盾、或存在未声明的隐含连接。
 
 这些发现以 research task（Issues）的形式发布到该 LKM 自己的 LKM Repo，供社区浏览和参与调查。LKM 还会把自己的 belief 结果发布成 snapshots，供人类 / agent 参考。确认后，LKM 创建 curation 包，经 Review Server 审核，注册到 Registry——和人类作者走完全相同的流程。
 
@@ -126,16 +126,16 @@ LKM Server 拉取 Registry 的包索引和 accepted reviews，运行十亿节点
 **② 编译 + 本地推理预览。** `gaia build` 将源码确定性地编译为结构化推理图。`gaia infer` 在本地运行推理，让 Alice 在发布前预览可信度——如果结论可信度很低，可能需要补充论证。
 → 详见 [03 包的创建与发布](03-authoring-and-publishing.md)
 
-**③ 向 Registry 请求注册。** Alice push/tag 之后，向 Official Registry 请求注册该版本。Registry 创建 package PR，记录包版本和依赖。
-→ 详见 [04 Registry 的运作](04-registry-operations.md)
-
-**④ Official review。** Official Registry 指派 Review Server。Review Server 逐条检查推理链的逻辑有效性，为新命题给 prior、为推理链给条件概率，并在 review PR 中记录 findings。Alice 如果不同意可以 rebuttal；僵局时由 Registry 追加 reviewer 或仲裁。
+**③ Review Server 审核。** Alice 向一个或多个 Review Server 请求审核。Review Server 逐条检查推理链的逻辑有效性，为新命题给 prior、为推理链给条件概率，并以 PR 的形式把 review report 写进 Alice 仓库的 `.gaia/reviews/`。Alice 如果不同意，可以在这个 PR 里 rebuttal。
 → 详见 [05 审核与策展](05-review-and-curation.md)
 
-**⑤ 包进入官方索引。** package PR 合并后，Alice 的包版本进入 Official Registry。若 review PR 也被接受，则该版本的官方 prior / strategy 会在后续被各 LKM 读取。
+**④ 向 Registry 请求注册。** Alice 合并足够的 review reports 后，向 Official Registry 请求注册该版本。Registry 校验编译重现、依赖、以及 review report 的存在性 / 来源 / 数量 / 格式。通过后，该版本进入官方索引。
 → 详见 [04 Registry 的运作](04-registry-operations.md)，[05 审核与策展](05-review-and-curation.md)
 
-**⑥ LKM 发现跨包关系。** LKM 拉取全局图运行全局推理，发现 Alice 的结论和 Bob 包中的一个结论语义高度相似，但注册时的 embedding 匹配没有捕捉到。LKM 在自己的 LKM Repo 创建 equivalence issue（research task）。
+**⑤ LKM 发布 belief。** 某个 LKM 拉取已注册包和其 validated review reports，运行 snapshot / global inference，发布 belief snapshot，供其他人参考。
+→ 详见 [06 多级推理与质量涌现](06-belief-flow-and-quality.md)
+
+**⑥ LKM 发现跨包关系。** LKM 拉取全局图运行全局推理，发现 Alice 的结论和 Bob 包中的一个结论语义高度相似。LKM 在自己的 LKM Repo 创建 equivalence issue（research task）。
 → 详见 [05 审核与策展](05-review-and-curation.md)
 
 **⑦ Curation 包走标准流程。** 调查确认后，LKM 创建 curation 包声明两者的关系（duplicate / independent evidence / refinement），经 Review Server 审核，注册到 Registry。对应的 LKM 后续发布新的 belief snapshot / global result。
@@ -167,15 +167,16 @@ LKM Server 拉取 Registry 的包索引和 accepted reviews，运行十亿节点
 | 每一层可选增强 | 纯包可离线工作，Registry 和 LKM 是增值层 |
 | 两类贡献者并列 | 人类/agent 和 LKM 走同样的流程，无特权 |
 | 依赖优先引用 Registry | 已注册包通过 Registry 标识引用，未注册直接引用 git URL |
-| 官方 review 由 Registry 协调 | accepted review PR 才是官方 prior / strategy 来源 |
-| 新推理链需有参数才生效 | 没有 accepted review = 没有官方 prior / strategy = LKM 跳过 |
+| review reports 进入包仓库 | Review Server 以 PR 方式把 report 提交给作者 |
+| Registry 负责验收而非代写 | 只有满足 minimal policy 的 review reports 才能入库 |
+| 新推理链需有参数才生效 | 没有足够 valid review reports = Registry 不入库 / LKM 跳过 |
 | 多级推理 | 包级 + LKM snapshot + LKM 全局 |
 | 错误可修正 | 暂停 → re-review → 恢复，全程可审计 |
 
 ## 各环节详解
 
 - [03 包的创建与发布](03-authoring-and-publishing.md) — 作者从创建包到审核、发布的完整旅程
-- [04 Registry 的运作](04-registry-operations.md) — 注册、官方 review 协调、human issue
+- [04 Registry 的运作](04-registry-operations.md) — 注册、review report 验收、human issue
 - [05 审核与策展](05-review-and-curation.md) — Review Server 审核 + LKM curation 的业务逻辑
 - [06 多级推理与质量涌现](06-belief-flow-and-quality.md) — 包级预览、belief snapshot、全局推理、质量如何涌现
 
