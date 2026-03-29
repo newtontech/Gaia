@@ -28,6 +28,87 @@
 
 服务器上的 Review Service 和 Curation Service **没有特殊权限**——它们和普通贡献者一样通过 PR 与 official repo 交互。
 
+## 整体架构图
+
+```mermaid
+graph TB
+    %% ── Layer 2: LKM Server ──────────────────────────
+    subgraph L2["<b>Layer 2 · LKM Server</b>"]
+        direction TB
+        RS["Review Service<br/><i>为 reviewer 提供工具<br/>自动验证 review 合规性</i>"]
+        CS["Curation Service<br/><i>自动发现跨包关系<br/>语义重复 · 矛盾 · 跨包连接</i>"]
+        GBP["全局推理引擎<br/><i>十亿节点 · 定期全量<br/>跨 Registry 传播</i>"]
+    end
+
+    %% ── Layer 1: Official Repo ───────────────────────
+    subgraph L1["<b>Layer 1 · Official Repo（GitHub 仓库）</b>"]
+        direction TB
+        OR["Official Repo<br/><i>包注册信息 · 审核记录<br/>推理结果 · 合并记录</i>"]
+        CI["CI Workflows<br/><i>register.yml 编译重现<br/>review.yml 合规检查<br/>incremental-bp.yml</i>"]
+        PQ["待审队列<br/><i>新推理链默认不生效<br/>等待 reviewer 审核</i>"]
+        IBP["增量推理<br/><i>局部子图重算<br/>秒级响应</i>"]
+    end
+
+    %% ── Layer 0: Package（用户侧）────────────────────
+    subgraph L0["<b>Layer 0 · Package（用户侧 · 完全自治）</b>"]
+        direction TB
+        Author["👤 作者<br/><i>人类或 AI agent</i>"]
+        Reviewer["👤 Reviewer<br/><i>人类或 AI agent</i>"]
+        PKG["包仓库（git repo）<br/><i>源码 · 编译产物 · 依赖</i>"]
+        Build["gaia build<br/><i>确定性编译<br/>源码 → 推理图</i>"]
+        Infer["gaia infer<br/><i>本地概率推理<br/>可信度预览</i>"]
+    end
+
+    %% ── Layer 0 内部流 ───────────────────────────────
+    Author -->|"创建 · 编写"| PKG
+    PKG -->|"源码 + 依赖"| Build
+    Build -->|"推理图"| Infer
+    Infer -->|"可信度预览"| Author
+
+    %% ── Layer 0 → Layer 1 ────────────────────────────
+    Author -->|"① 请求注册<br/>（@GaiaRegistrator）"| OR
+    OR -->|"② CI 验证<br/>编译重现 · 依赖可解析"| CI
+    CI -->|"③ 等待期 → 合并"| OR
+    OR -->|"④ 去重<br/>embedding 匹配"| PQ
+
+    %% ── Review 流 ────────────────────────────────────
+    RS -.->|"展示上下文 · 建议"| Reviewer
+    Reviewer -->|"⑤ 提交 review PR<br/>判定关系 · 赋参数"| OR
+    RS -.->|"验证合规性"| OR
+    OR -->|"⑥ review 合并"| IBP
+    IBP -->|"更新可信度"| OR
+
+    %% ── Curation 流 ──────────────────────────────────
+    CS -->|"⑦ 发现关系 →<br/>提交 curation PR<br/>或注册新包"| OR
+    Reviewer -->|"审核 curation PR"| OR
+
+    %% ── 全局推理 ─────────────────────────────────────
+    OR -->|"推理结果同步"| GBP
+    GBP -->|"⑧ 全局可信度<br/>更新回写"| OR
+
+    %% ── 可信度回流 ──────────────────────────────────
+    OR -.->|"下游拉取<br/>最新可信度"| Infer
+
+    %% ── 样式 ─────────────────────────────────────────
+    style L0 fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    style L1 fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style L2 fill:#fce4ec,stroke:#c62828,stroke-width:2px
+    style Author fill:#fff,stroke:#388e3c
+    style Reviewer fill:#fff,stroke:#388e3c
+    style PKG fill:#fff,stroke:#388e3c
+    style Build fill:#fff,stroke:#388e3c
+    style Infer fill:#fff,stroke:#388e3c
+    style OR fill:#fff,stroke:#1565c0
+    style CI fill:#fff,stroke:#1565c0
+    style PQ fill:#fff,stroke:#1565c0
+    style IBP fill:#fff,stroke:#1565c0
+    style RS fill:#fff,stroke:#c62828
+    style CS fill:#fff,stroke:#c62828
+    style GBP fill:#fff,stroke:#c62828
+```
+
+**图例：** 实线箭头 = 数据/控制流，虚线箭头 = 辅助/拉取。编号 ①–⑧ 标注主流程顺序。
+
 ## 三层分离
 
 ```
@@ -44,19 +125,18 @@ Layer 2: LKM Server（Review Service + Curation Service + 全局推理）
 
 ## 业务流程总览
 
-```
-作者创建包 → 编译 → 本地推理预览 → 发布到 GitHub
-    ↓
-注册到 Official Repo → CI 验证 → 去重 → 等待期 → 合并
-    ↓
-新证据进入待审队列（不影响已有推理结果）
-    ↓
-Review Service / Reviewer 审核 → 判定关系 → 赋予参数 → 触发增量推理
-    ↓
-Curation Service 自动发现跨包关系 → 提交 curation PR → 审核 → 合并
-    ↓
-LKM 全局推理 → 所有命题的可信度更新
-```
+上图中的编号对应以下主流程：
+
+| 步骤 | 描述 | 详见 |
+|------|------|------|
+| ① 请求注册 | 作者 release tag 后向 Official Repo 请求注册 | [authoring-and-publishing.md](authoring-and-publishing.md) |
+| ② CI 验证 | 编译重现、依赖可解析、Schema 合法 | [registry-operations.md](registry-operations.md) |
+| ③ 等待期 → 合并 | 新包 3 天，版本更新 1 小时 | [registry-operations.md](registry-operations.md) |
+| ④ 去重 | embedding 匹配，区分前提引用 vs 独立结论 | [registry-operations.md](registry-operations.md) |
+| ⑤ Reviewer 审核 | 判定独立/重复/细化，赋予推理参数 | [review-and-curation.md](review-and-curation.md) |
+| ⑥ 触发增量推理 | 局部子图重算，秒级更新可信度 | [belief-flow-and-quality.md](belief-flow-and-quality.md) |
+| ⑦ Curation 发现 | 语义重复、跨包连接、矛盾检测 | [review-and-curation.md](review-and-curation.md) |
+| ⑧ 全局推理 | 十亿节点全量推理，跨 Registry 传播 | [belief-flow-and-quality.md](belief-flow-and-quality.md) |
 
 各环节的详细业务逻辑：
 
