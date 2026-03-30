@@ -62,7 +62,7 @@ Knowledge:
 
 **内容指纹**：`content_hash = SHA-256(type + content + sorted(parameters))`，不含 `package_id`。同一内容在不同包中产生相同的 `content_hash`。用途：
 
-- **Canonicalization 快速路径**：新 local node 进入全局图时，先用 `content_hash` 精确匹配已有 global node，命中则直接进入 exact same proposition 候选路径，跳过 embedding 计算。
+- **Canonicalization 快速路径**：新 local node 进入全局图时，先用 `content_hash` 精确匹配已有 global node，命中则直接 `match_existing`，跳过 embedding 计算。
 - **Global 层 denormalized index**：global node 的 `content_hash` 从 `representative_lcn` 同步，供 canonicalization 和 curation 查询。Representative 变更时更新此字段，global `id` 不变。
 
 **内容存储**：所有知识内容存储在 local 层的 `content` 字段上。Global 层通过 `representative_lcn` 引用获取内容，不重复存储。LKM 服务器直接创建的 global Knowledge（包括 FormalExpr 展开的中间 Knowledge）无 local 来源，content 直接存在 global 层。
@@ -601,8 +601,7 @@ Canonicalization 已拆分到独立文档：[05-canonicalization.md](05-canonica
 
 - local canonical 与 global canonical 是两个不同身份层
 - `Knowledge.id` 与 `Knowledge.content_hash` 是两个不同概念：前者是对象身份，后者是跨包内容指纹
-- Knowledge 的 canonical identity 先在 Knowledge 层决定；Strategy 的集成与去重随后在 Strategy 层处理
-- equivalence 只用于**不同 proposition** 之间的 truth-coupling，不用于表达“同一 proposition 的额外证据”
+- binding / equivalence 的判断发生在 **Strategy chain** 层，而不是单个结论文本层
 - local Strategy 提升到 global graph 时，只提升结构，不复制 local `steps`
 
 完整内容，包括：
