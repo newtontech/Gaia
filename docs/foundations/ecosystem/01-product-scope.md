@@ -3,7 +3,7 @@
 > **Status:** Current canonical
 
 > 相关文档：
-> - [00-pipeline-overview.md](../gaia-ir/00-pipeline-overview.md)
+> - [overview.md](../gaia-ir/overview.md)
 > - [../theory/04-reasoning-strategies.md](../theory/04-reasoning-strategies.md)
 > - [../gaia-lang/spec.md](../gaia-lang/spec.md)
 
