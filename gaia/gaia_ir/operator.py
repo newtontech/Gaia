@@ -71,9 +71,7 @@ class Operator(BaseModel):
 
         elif self.operator == OperatorType.CONJUNCTION:
             if len(self.variables) < 2:
-                raise ValueError(
-                    "operator=conjunction requires at least 2 variables (inputs)"
-                )
+                raise ValueError("operator=conjunction requires at least 2 variables (inputs)")
 
         elif self.operator in (
             OperatorType.EQUIVALENCE,
@@ -81,14 +79,10 @@ class Operator(BaseModel):
             OperatorType.COMPLEMENT,
         ):
             if len(self.variables) != 2:
-                raise ValueError(
-                    f"operator={self.operator} requires exactly 2 variables"
-                )
+                raise ValueError(f"operator={self.operator} requires exactly 2 variables")
 
         elif self.operator == OperatorType.DISJUNCTION:
             if len(self.variables) < 2:
-                raise ValueError(
-                    "operator=disjunction requires at least 2 variables"
-                )
+                raise ValueError("operator=disjunction requires at least 2 variables")
 
         return self

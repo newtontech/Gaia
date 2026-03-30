@@ -38,9 +38,7 @@ class TestOperatorCreation:
         assert op.conclusion == "gcn_h"
 
     def test_contradiction(self):
-        op = Operator(
-            operator="contradiction", variables=["gcn_a", "gcn_b"], conclusion="gcn_h"
-        )
+        op = Operator(operator="contradiction", variables=["gcn_a", "gcn_b"], conclusion="gcn_h")
         assert op.conclusion == "gcn_h"
 
     def test_complement(self):
@@ -156,9 +154,7 @@ class TestOperatorScope:
 
     def test_invalid_scope_rejected(self):
         with pytest.raises(ValueError, match="scope must be one of"):
-            Operator(
-                scope="detached", operator="equivalence", variables=["a", "b"], conclusion="h"
-            )
+            Operator(scope="detached", operator="equivalence", variables=["a", "b"], conclusion="h")
 
     def test_local_scope_requires_lco_prefix(self):
         with pytest.raises(ValueError, match="lco_ prefix"):
