@@ -229,7 +229,7 @@ Operator 分为两类：
 3. `conclusion` 必须引用同 graph 中存在的 `claim`
 4. `conclusion` **不出现在** `variables` 中——`variables` 只放输入，`conclusion` 独立承载输出
 5. 关系型 Operator 的 `conclusion` 应语义上对应其结构型 helper claim，不允许借此手写任意主观结论
-6. 推荐在 `metadata.canonical_name` 中记录稳定 functor 形式；具体命名算法当前属于互操作约定，不写成 hard validation
+6. 推荐在 `metadata.canonical_name` 中记录函数式命名（如 `not_both_true(A,B)`、`same_truth(A,B)`）；这是不同实现之间建议统一的命名惯例，不作为 hard validation
 
 完整 validator 视角的检查清单见 [08-validation.md](08-validation.md)。
 
