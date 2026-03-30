@@ -20,6 +20,9 @@ from gaia.gaia_ir.parameterization import (
 from gaia.gaia_ir.binding import CanonicalBinding
 
 
+_PARAMETERIZED_TYPES = {StrategyType.INFER, StrategyType.NOISY_AND}
+
+
 @dataclass
 class ValidationResult:
     valid: bool = True
@@ -105,7 +108,7 @@ def _validate_operators(
                 f"Operator '{op.operator_id}': scope '{op.scope}' incompatible with {scope} graph"
             )
 
-        # reference completeness
+        # reference completeness — variables (inputs only)
         for var_id in op.variables:
             if var_id not in knowledge_lookup:
                 result.error(f"Operator '{op.operator_id}': variable '{var_id}' not found in graph")
@@ -115,10 +118,21 @@ def _validate_operators(
                     f"'{knowledge_lookup[var_id].type}', must be claim"
                 )
 
-        # conclusion in variables (Pydantic also checks this, but belt-and-suspenders at graph level)
-        if op.conclusion is not None and op.conclusion not in op.variables:
+        # conclusion reference completeness (required str, always present)
+        if op.conclusion not in knowledge_lookup:
             result.error(
-                f"Operator '{op.operator_id}': conclusion '{op.conclusion}' not in variables"
+                f"Operator '{op.operator_id}': conclusion '{op.conclusion}' not found in graph"
+            )
+        elif knowledge_lookup[op.conclusion].type != KnowledgeType.CLAIM:
+            result.error(
+                f"Operator '{op.operator_id}': conclusion '{op.conclusion}' is "
+                f"'{knowledge_lookup[op.conclusion].type}', must be claim"
+            )
+
+        # conclusion must NOT be in variables (belt-and-suspenders, Pydantic also checks)
+        if op.conclusion in op.variables:
+            result.error(
+                f"Operator '{op.operator_id}': conclusion '{op.conclusion}' must not be in variables"
             )
 
 
@@ -132,6 +146,7 @@ def _validate_strategy(
     knowledge_lookup: dict[str, Knowledge],
     scope: str,
     result: ValidationResult,
+    strategy_lookup: dict[str, Strategy] | None = None,
 ) -> None:
     """Validate a single Strategy (any form) against the knowledge set."""
     sid = strategy.strategy_id or "<no-id>"
@@ -169,7 +184,7 @@ def _validate_strategy(
     if scope == "global" and strategy.steps is not None:
         result.error(f"Strategy '{sid}': global strategy must not have steps")
 
-    # scope/prefix checks (applied to nested strategies too, not just top-level)
+    # scope/prefix checks
     prefix = "lcs_" if scope == "local" else "gcs_"
     if strategy.scope != scope:
         result.error(f"Strategy '{sid}': scope '{strategy.scope}' incompatible with {scope} graph")
@@ -178,11 +193,143 @@ def _validate_strategy(
 
     # form-specific validation
     if isinstance(strategy, CompositeStrategy):
-        for sub in strategy.sub_strategies:
-            _validate_strategy(sub, knowledge_lookup, scope, result)
+        _validate_composite_sub_strategies(strategy, strategy_lookup, result)
 
     if isinstance(strategy, FormalStrategy):
         _validate_operators(strategy.formal_expr.operators, knowledge_lookup, scope, result)
+        _validate_formal_expr_closure(strategy, knowledge_lookup, result)
+
+
+def _validate_composite_sub_strategies(
+    strategy: CompositeStrategy,
+    strategy_lookup: dict[str, Strategy] | None,
+    result: ValidationResult,
+) -> None:
+    """Validate CompositeStrategy sub_strategy references exist."""
+    sid = strategy.strategy_id or "<no-id>"
+    if strategy_lookup is None:
+        return
+    for sub_id in strategy.sub_strategies:
+        if sub_id not in strategy_lookup:
+            result.error(
+                f"CompositeStrategy '{sid}': sub_strategy '{sub_id}' not found as top-level strategy"
+            )
+
+
+def _validate_composite_dag(
+    strategies: list[Strategy],
+    result: ValidationResult,
+) -> None:
+    """Check that CompositeStrategy sub_strategy references form a DAG (no cycles)."""
+    # Build adjacency: composite strategy_id -> list of sub_strategy_ids
+    adj: dict[str, list[str]] = {}
+    composite_ids: set[str] = set()
+    for s in strategies:
+        if isinstance(s, CompositeStrategy) and s.strategy_id:
+            adj[s.strategy_id] = list(s.sub_strategies)
+            composite_ids.add(s.strategy_id)
+
+    # DFS cycle detection
+    WHITE, GRAY, BLACK = 0, 1, 2
+    color: dict[str, int] = {sid: WHITE for sid in adj}
+
+    def dfs(node: str) -> bool:
+        """Returns True if cycle found."""
+        color[node] = GRAY
+        for nb in adj.get(node, []):
+            if nb not in color:
+                continue  # non-composite, leaf — no cycle through it
+            if color[nb] == GRAY:
+                result.error(f"CompositeStrategy cycle detected involving '{node}' -> '{nb}'")
+                return True
+            if color[nb] == WHITE:
+                if dfs(nb):
+                    return True
+        color[node] = BLACK
+        return False
+
+    for sid in adj:
+        if color[sid] == WHITE:
+            dfs(sid)
+
+
+def _validate_formal_expr_closure(
+    strategy: FormalStrategy,
+    knowledge_lookup: dict[str, Knowledge],
+    result: ValidationResult,
+) -> None:
+    """Validate FormalExpr reference closure (§5 of 08-validation.md).
+
+    Each Operator's variables/conclusion must reference one of:
+    - The FormalStrategy's premises (interface input)
+    - The FormalStrategy's conclusion (interface output)
+    - Another Operator's conclusion in the same FormalExpr (internal intermediate)
+    """
+    sid = strategy.strategy_id or "<no-id>"
+    allowed: set[str] = set(strategy.premises)
+    if strategy.conclusion is not None:
+        allowed.add(strategy.conclusion)
+
+    # Collect all operator conclusions in this FormalExpr as internal intermediates
+    operator_conclusions: set[str] = set()
+    for op in strategy.formal_expr.operators:
+        operator_conclusions.add(op.conclusion)
+
+    full_allowed = allowed | operator_conclusions
+
+    for op in strategy.formal_expr.operators:
+        for var_id in op.variables:
+            if var_id not in full_allowed:
+                result.error(
+                    f"FormalStrategy '{sid}': operator variable '{var_id}' not in "
+                    f"strategy premises/conclusion or operator conclusions (reference closure)"
+                )
+        if op.conclusion not in full_allowed:
+            result.error(
+                f"FormalStrategy '{sid}': operator conclusion '{op.conclusion}' not in "
+                f"strategy premises/conclusion or operator conclusions (reference closure)"
+            )
+
+
+def _validate_private_node_isolation(
+    strategies: list[Strategy],
+    result: ValidationResult,
+) -> None:
+    """Validate that internal FormalExpr nodes are not referenced by other strategies.
+
+    A 'private' node is an operator conclusion in a FormalExpr that is NOT in
+    the owning FormalStrategy's own premises/conclusion interface. Such nodes
+    must not be referenced by any other top-level strategy.
+    """
+    # Collect private nodes per FormalStrategy: operator conclusions that are NOT
+    # in the owning strategy's premises or conclusion
+    private_nodes: dict[str, str] = {}  # node_id -> owning strategy_id
+    for s in strategies:
+        if isinstance(s, FormalStrategy):
+            sid = s.strategy_id or "<no-id>"
+            own_interface: set[str] = set(s.premises)
+            if s.conclusion is not None:
+                own_interface.add(s.conclusion)
+            for op in s.formal_expr.operators:
+                if op.conclusion not in own_interface:
+                    private_nodes[op.conclusion] = sid
+
+    # Check: no other strategy references a private node
+    for s in strategies:
+        sid = s.strategy_id or "<no-id>"
+        for pid in s.premises:
+            if pid in private_nodes and private_nodes[pid] != sid:
+                result.error(
+                    f"Strategy '{sid}': premise '{pid}' is a private internal node "
+                    f"of FormalStrategy '{private_nodes[pid]}'"
+                )
+        if s.conclusion is not None and s.conclusion in private_nodes:
+            owner = private_nodes[s.conclusion]
+            if owner != sid:
+                result.error(
+                    f"Strategy '{sid}': conclusion '{s.conclusion}' is a private internal node "
+                    f"of FormalStrategy '{owner}'"
+                )
 
 
 def _validate_strategies(
@@ -193,6 +340,11 @@ def _validate_strategies(
 ) -> None:
     """Validate all top-level Strategies."""
     seen_ids: set[str] = set()
+    strategy_lookup: dict[str, Strategy] = {}
+
+    for s in strategies:
+        if s.strategy_id:
+            strategy_lookup[s.strategy_id] = s
 
     for s in strategies:
         # uniqueness (top-level only)
@@ -201,8 +353,13 @@ def _validate_strategies(
         if s.strategy_id:
             seen_ids.add(s.strategy_id)
 
-        # _validate_strategy handles scope, prefix, references, and recursion
-        _validate_strategy(s, knowledge_lookup, scope, result)
+        _validate_strategy(s, knowledge_lookup, scope, result, strategy_lookup)
+
+    # DAG check for CompositeStrategy references
+    _validate_composite_dag(strategies, result)
+
+    # Private node isolation check
+    _validate_private_node_isolation(strategies, result)
 
 
 # ---------------------------------------------------------------------------
@@ -237,6 +394,10 @@ def _validate_scope_consistency(
                 result.error(
                     f"Operator '{op.operator_id}': variable '{var_id}' has wrong prefix for {scope} graph"
                 )
+        if op.conclusion and not op.conclusion.startswith(prefix):
+            result.error(
+                f"Operator '{op.operator_id}': conclusion '{op.conclusion}' has wrong prefix for {scope} graph"
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -296,19 +457,22 @@ def validate_parameterization(
     """Validate parameterization completeness before BP run.
 
     Checks that every claim Knowledge has at least one PriorRecord and every
-    Strategy has at least one StrategyParamRecord, and all values are within
-    Cromwell bounds.
+    parameterized Strategy (infer/noisy_and) has a StrategyParamRecord.
+    FormalStrategy types derive behavior from FormalExpr — no params needed.
     """
     result = ValidationResult()
 
     # collect claim gcn_ids
     claim_ids = {k.id for k in graph.knowledges if k.type == KnowledgeType.CLAIM and k.id}
 
-    # collect strategy ids
-    strategy_ids: set[str] = set()
+    # collect strategy ids, split by parameterized vs not
+    parameterized_ids: set[str] = set()
+    all_strategy_ids: set[str] = set()
     for s in graph.strategies:
         if s.strategy_id:
-            strategy_ids.add(s.strategy_id)
+            all_strategy_ids.add(s.strategy_id)
+            if s.type in _PARAMETERIZED_TYPES:
+                parameterized_ids.add(s.strategy_id)
 
     # check prior coverage
     prior_gcn_ids = {r.gcn_id for r in priors}
@@ -316,18 +480,29 @@ def validate_parameterization(
         if cid not in prior_gcn_ids:
             result.error(f"Claim '{cid}': missing PriorRecord")
 
-    # check strategy param coverage
+    # check strategy param coverage — only for parameterized types
     param_strategy_ids = {r.strategy_id for r in strategy_params}
-    for sid in strategy_ids:
+    for sid in parameterized_ids:
         if sid not in param_strategy_ids:
             result.error(f"Strategy '{sid}': missing StrategyParamRecord")
 
-    # check conditional_probabilities arity
+    # warn if StrategyParamRecord exists for non-parameterized type
+    non_parameterized_ids = all_strategy_ids - parameterized_ids
+    for r in strategy_params:
+        if r.strategy_id in non_parameterized_ids:
+            result.warn(
+                f"StrategyParamRecord '{r.strategy_id}': strategy type is not parameterized "
+                f"(only infer/noisy_and need params)"
+            )
+
+    # check conditional_probabilities arity — only for infer/noisy_and
     strategy_lookup = {s.strategy_id: s for s in graph.strategies if s.strategy_id}
     for r in strategy_params:
         s = strategy_lookup.get(r.strategy_id)
         if s is None:
             continue  # dangling ref handled below
+        if s.type not in _PARAMETERIZED_TYPES:
+            continue  # non-parameterized, already warned
         actual = len(r.conditional_probabilities)
         if s.type == StrategyType.INFER:
             expected = 2 ** len(s.premises)
@@ -341,13 +516,6 @@ def validate_parameterization(
             if actual != 1:
                 result.error(
                     f"StrategyParamRecord '{r.strategy_id}': noisy_and strategy "
-                    f"requires 1 conditional_probability, got {actual}"
-                )
-        else:
-            # named strategies (folded): 1 parameter
-            if actual != 1:
-                result.error(
-                    f"StrategyParamRecord '{r.strategy_id}': {s.type} strategy "
                     f"requires 1 conditional_probability, got {actual}"
                 )
 
@@ -376,7 +544,7 @@ def validate_parameterization(
 
     # dangling references: params for non-existent strategies
     for r in strategy_params:
-        if r.strategy_id not in strategy_ids:
+        if r.strategy_id not in all_strategy_ids:
             result.warn(f"StrategyParamRecord '{r.strategy_id}': references non-existent Strategy")
 
     return result
