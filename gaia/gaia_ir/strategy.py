@@ -99,16 +99,21 @@ _FORMAL_STRATEGY_TYPES = frozenset(
 
 
 def _canonical_formal_expr(formal_expr: FormalExpr) -> str:
-    """Canonical JSON representation of a FormalExpr for hashing."""
+    """Canonical JSON representation of a FormalExpr for hashing.
+
+    Operators are sorted by their JSON representation to ensure
+    order-independent deterministic serialization (spec §3.2).
+    """
     ops = []
     for op in formal_expr.operators:
         ops.append(
             {
                 "operator": op.operator.value,
-                "variables": op.variables,
+                "variables": sorted(op.variables),
                 "conclusion": op.conclusion,
             }
         )
+    ops.sort(key=lambda x: json.dumps(x, sort_keys=True))
     return json.dumps(ops, sort_keys=True, separators=(",", ":"))
 
 
