@@ -13,11 +13,14 @@ from __future__ import annotations
 import hashlib
 import json
 from enum import StrEnum
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from pydantic import BaseModel, model_validator
 
 from gaia.gaia_ir.operator import Operator
+
+if TYPE_CHECKING:
+    from gaia.gaia_ir.formalize import FormalizationResult
 
 
 class StrategyType(StrEnum):
@@ -137,6 +140,27 @@ class Strategy(BaseModel):
         Leaf strategies have empty structure hash.
         """
         return ""
+
+    def formalize(self) -> FormalizationResult:
+        """Expand a named leaf Strategy into generated intermediates + FormalStrategy."""
+        from gaia.gaia_ir.formalize import formalize_named_strategy
+
+        if isinstance(self, CompositeStrategy):
+            raise TypeError("CompositeStrategy cannot be directly formalized")
+        if isinstance(self, FormalStrategy):
+            raise TypeError("FormalStrategy is already formalized")
+        if self.conclusion is None:
+            raise ValueError("formalize() requires the strategy to set a conclusion")
+
+        return formalize_named_strategy(
+            scope=self.scope,
+            type_=self.type,
+            premises=self.premises,
+            conclusion=self.conclusion,
+            background=self.background,
+            steps=self.steps,
+            metadata=self.metadata,
+        )
 
     @model_validator(mode="after")
     def _compute_id_and_validate(self) -> Strategy:

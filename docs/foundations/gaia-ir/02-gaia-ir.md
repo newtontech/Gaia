@@ -453,6 +453,8 @@ CompositeStrategy 的作用是**保留分解边界**。它组合的是多个 str
 
 所有命名策略在**未展开**时都可以先作为叶子 Strategy 存在。下面给出它们在识别出命名结构后的直接 FormalStrategy 写法；若要保留更大的 hierarchy，再由外层 CompositeStrategy 组合这些 FormalStrategy。
 
+这些 `formal_expr` 示例表示的是 **IR formalization 之后的 canonical stored form**。正常构图时，调用方通常只提供命名 leaf `Strategy` 的接口节点；IR 侧负责自动创建所需的中间 Knowledge，并生成对应的 `FormalExpr`，而不是要求用户手写 `operators`。
+
 对纯确定性家族，FormalExpr 骨架通常几乎是唯一的：
 
 **演绎（deduction）**：`premises=[A₁,...,Aₖ], conclusion=C`

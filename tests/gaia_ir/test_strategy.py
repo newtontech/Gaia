@@ -252,66 +252,49 @@ class TestFormalStrategy:
         assert len(fs.formal_expr.operators) == 3
 
     def test_abduction_is_formal(self):
-        """Abduction is now a FormalStrategy type."""
-        fs = FormalStrategy(
+        """Named leaf strategies can be formalized into canonical FormalStrategy skeletons."""
+        leaf = Strategy(
             scope="global",
             type="abduction",
             premises=["gcn_obs"],
             conclusion="gcn_h",
-            formal_expr=FormalExpr(
-                operators=[
-                    Operator(operator="implication", variables=["gcn_h"], conclusion="gcn_obs"),
-                ]
-            ),
         )
-        assert fs.type == StrategyType.ABDUCTION
+        result = leaf.formalize()
+        assert result.strategy.type == StrategyType.ABDUCTION
+        assert len(result.strategy.formal_expr.operators) == 2
 
     def test_induction_is_formal(self):
-        """Induction is now a FormalStrategy type."""
-        fs = FormalStrategy(
+        leaf = Strategy(
             scope="global",
             type="induction",
-            premises=["gcn_a"],
-            conclusion="gcn_b",
-            formal_expr=FormalExpr(
-                operators=[
-                    Operator(operator="implication", variables=["gcn_a"], conclusion="gcn_b"),
-                ]
-            ),
+            premises=["gcn_obs_1", "gcn_obs_2"],
+            conclusion="gcn_law",
         )
-        assert fs.type == StrategyType.INDUCTION
+        result = leaf.formalize()
+        assert result.strategy.type == StrategyType.INDUCTION
+        assert len(result.strategy.formal_expr.operators) == 4
 
     def test_analogy_is_formal(self):
-        """Analogy is now a FormalStrategy type."""
-        fs = FormalStrategy(
+        leaf = Strategy(
             scope="global",
             type="analogy",
-            premises=["gcn_a"],
-            conclusion="gcn_b",
-            formal_expr=FormalExpr(
-                operators=[
-                    Operator(
-                        operator="equivalence", variables=["gcn_a", "gcn_b"], conclusion="gcn_eq"
-                    ),
-                ]
-            ),
+            premises=["gcn_source_law", "gcn_bridge"],
+            conclusion="gcn_target",
         )
-        assert fs.type == StrategyType.ANALOGY
+        result = leaf.formalize()
+        assert result.strategy.type == StrategyType.ANALOGY
+        assert len(result.strategy.formal_expr.operators) == 2
 
     def test_extrapolation_is_formal(self):
-        """Extrapolation is now a FormalStrategy type."""
-        fs = FormalStrategy(
+        leaf = Strategy(
             scope="global",
             type="extrapolation",
-            premises=["gcn_a"],
-            conclusion="gcn_b",
-            formal_expr=FormalExpr(
-                operators=[
-                    Operator(operator="implication", variables=["gcn_a"], conclusion="gcn_b"),
-                ]
-            ),
+            premises=["gcn_known_law", "gcn_continuity"],
+            conclusion="gcn_extended",
         )
-        assert fs.type == StrategyType.EXTRAPOLATION
+        result = leaf.formalize()
+        assert result.strategy.type == StrategyType.EXTRAPOLATION
+        assert len(result.strategy.formal_expr.operators) == 2
 
     def test_empty_formal_expr_rejected(self):
         with pytest.raises(ValueError, match="at least one operator"):

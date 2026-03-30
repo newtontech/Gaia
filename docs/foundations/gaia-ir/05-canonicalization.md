@@ -143,11 +143,14 @@ Global 层是**结构索引**，local 层是**内容仓库**。
 
 展开操作可能需要创建中间 Knowledge（如 deduction 的 conjunction 结果 `M`、abduction 的 prediction `O`）。这些 Knowledge 由执行展开的 compiler/reviewer/agent **显式创建**，不由 FormalExpr 自动产生。
 
+在当前 IR API 中，这一步通常通过专门的 formalization 入口一次性完成：调用方提供 leaf `Strategy`（或等价输入），IR 侧生成中间 Knowledge 与 canonical `FormalExpr`，再落成最终 `FormalStrategy`。也就是说，**中间 Knowledge 仍然是显式对象，但一般不要求用户手写每个 Operator 与中间 claim ID。**
+
 - Local 层：中间 Knowledge 获得 `lcn_` ID，归属于当前包
 - Global 层：中间 Knowledge 获得 `gcn_` ID，content 直接存在 global Knowledge 上
 
 ### 8.2 FormalExpr 的生成方式
 
-- **确定性命名策略**（`deduction`、`reductio`、`elimination`、`mathematical_induction`、`case_analysis`）：FormalExpr 骨架通常由 type 唯一确定，可在分类确认时自动生成
-- **带隐式桥接/预测/实例的命名策略**（`abduction`、`induction`、`analogy`、`extrapolation`）：当 prediction、instance、bridge/continuity claim 等中间 Knowledge 已显式存在时，可直接生成对应的 FormalExpr。若更大的论证需要保留 hierarchy，则再由外层 CompositeStrategy 组合这些 leaf FormalStrategy
+- **所有命名策略**（`deduction`、`reductio`、`elimination`、`mathematical_induction`、`case_analysis`、`abduction`、`induction`、`analogy`、`extrapolation`）：其 canonical `FormalExpr` 骨架由 `type` 和接口节点唯一确定，IR 侧应自动生成
+- 对 `abduction`、`induction`、`analogy`、`extrapolation` 这类带隐式 prediction / instance / bridge / continuity 的家族，formalization 同时负责创建所需的 latent intermediate claim 与 structural helper claim，然后生成对应的 `FormalExpr`
+- 因此，规范中的 `formal_expr` 示例应理解为 **formalization 之后的 canonical stored form**，而不是要求用户在正常构图时手写 `operators`
 - **`toolcall` / `proof`**：deferred，未引入
