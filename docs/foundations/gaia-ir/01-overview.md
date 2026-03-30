@@ -8,18 +8,87 @@
 
 Gaia IR 是 Gaia 推理超图的**中间表示**（Intermediate Representation）。
 
-类比 LLVM：LLVM IR 将 M 个语言前端与 N 个硬件后端解耦，使得每一端只需要关心”如何编译到 / 消费 IR”，而不需要知道另一端的存在。Gaia IR 在知识推理领域扮演同样的角色——将**生产知识的前端**与**消费知识的后端**解耦。
+类比 LLVM：LLVM IR 将 M 个语言前端与 N 个硬件后端解耦，使得每一端只需要关心”如何编译到 / 消费 IR”，而不需要知道另一端的存在——没有 LLVM IR，M 个语言 × N 个后端需要 M×N 个转换器；有了 IR，只需要 M + N 个。Gaia IR 在知识推理领域扮演同样的角色——将**生产知识的前端**与**消费知识的后端**解耦。
+
+```mermaid
+graph LR
+    subgraph 前端 — 编译到 IR
+        F1[“Typst compiler<br/>.typ → IR”]
+        F2[“XML / JSON<br/>importer”]
+        F3[“AI agent<br/>自动生成”]
+        F4[“...”]
+    end
+
+    IR[“<strong>Gaia IR</strong><br/>Knowledge · Strategy · Operator”]
+
+    subgraph 后端 — 消费 IR
+        B1[“Belief Propagation<br/>概率推理”]
+        B2[“图数据库<br/>存储 / 查询”]
+        B3[“Obsidian / Markdown<br/>笔记持久化”]
+        B4[“PDF 渲染<br/>出版”]
+        B5[“可视化<br/>知识图谱浏览”]
+        B6[“...”]
+    end
+
+    F1 --> IR
+    F2 --> IR
+    F3 --> IR
+    F4 --> IR
+    IR --> B1
+    IR --> B2
+    IR --> B3
+    IR --> B4
+    IR --> B5
+    IR --> B6
+```
 
 ### 前端与后端
 
-- **前端**：任何将外部格式编译为 Gaia IR 的组件。例如 Typst compiler（`.typ` → IR）、XML/JSON importer、AI agent 自动生成等。
-- **后端**：任何消费 Gaia IR 的组件。例如 Belief Propagation 概率推理、Obsidian Markdown 持久化、PDF 渲染、图数据库存储等。
+- **前端**（Frontend）：任何将外部格式**编译为** Gaia IR 的组件。
+- **后端**（Backend）：任何**消费** Gaia IR 并产出最终制品的组件。
 
-生态系统的参与者（本地用户 CLI、LKM 服务器、Review Server 等）互相之间交换的不一定是 Gaia IR 本身，但每个参与者的**内部架构**都以 IR 为中心——不同的前端编译到同一个 IR，不同的后端从同一个 IR 消费。这就是 IR 作为解耦契约层的价值。
+| | 前端示例 | 说明 |
+|---|---|---|
+| 1 | Typst compiler | `.typ` 源文件 → `LocalCanonicalGraph` |
+| 2 | XML / JSON importer | 结构化数据交换格式 → IR |
+| 3 | AI agent | LLM 自动从文献中提取知识并生成 IR |
+
+| | 后端示例 | 说明 |
+|---|---|---|
+| 1 | Belief Propagation | IR + Parameterization → 后验信念（概率推理） |
+| 2 | 图数据库存储 | IR → Neo4j / Kuzu 持久化、拓扑查询 |
+| 3 | Obsidian / Markdown | IR → 本地笔记系统持久化 |
+| 4 | PDF 渲染 | IR → 可出版的文档格式 |
+| 5 | 知识图谱可视化 | IR → 交互式图浏览 |
+
+新增一个前端或后端时，只需实现”到 IR / 从 IR”的转换，无需关心其他前端或后端的实现细节。
+
+### IR 作为内部架构中心
+
+Gaia 生态系统中的参与者（本地用户 CLI、LKM 服务器、Review Server 等）互相之间交换的不一定是 Gaia IR 本身——例如用户发布包时传输的是打包后的制品，Review Server 返回的是参数化记录。但每个参与者的**内部架构**都以 IR 为中心：
+
+```mermaid
+graph TB
+    subgraph “本地用户 CLI”
+        CLI_F[“前端: Typst compiler”] --> CLI_IR[“Gaia IR”]
+        CLI_IR --> CLI_B1[“后端: 本地 BP”]
+        CLI_IR --> CLI_B2[“后端: Obsidian 持久化”]
+        CLI_IR --> CLI_B3[“后端: PDF 渲染”]
+    end
+
+    subgraph “LKM 服务器”
+        LKM_F[“前端: 接收发布的 IR”] --> LKM_IR[“Gaia IR”]
+        LKM_IR --> LKM_B1[“后端: 大规模 BP”]
+        LKM_IR --> LKM_B2[“后端: 图数据库存储”]
+        LKM_IR --> LKM_B3[“后端: 知识图谱可视化”]
+    end
+```
+
+无论本地还是服务端，IR 都是内部各组件的连接枢纽。这使得同一份 IR 可以同时服务于不同的使用场景——本地用户可以用高精度 BP 做推理、用 Obsidian 做笔记、编译成 PDF；LKM 服务器可以做大规模 BP、存入图数据库、提供可视化浏览——而所有这些后端共享同一个 IR 定义。
 
 ### IR 与 Parameterization
 
-Gaia 的数据由两个独立部分组成：
+Gaia IR 本身只编码结构（什么连接什么），不包含任何概率值。概率信息由独立的 Parameterization 层提供：
 
 ```
 Gaia IR（结构）    ×    Parameterization（参数）
@@ -27,10 +96,10 @@ Gaia IR（结构）    ×    Parameterization（参数）
 编译时确定                  review 产出
 ```
 
-- **Gaia IR** 编码推理超图的拓扑——Knowledge 之间通过 Strategy 和 Operator 连接，不包含任何概率值。
+- **Gaia IR** 编码推理超图的拓扑——Knowledge 之间通过 Strategy 和 Operator 连接。
 - **Parameterization** 是 GlobalCanonicalGraph 上的概率参数层——review 过程为每个 Knowledge 和 Strategy 赋予可信度。
 
-二者严格分离。Gaia IR 有 local 和 global 两层；Parameterization 只作用在 GlobalCanonicalGraph 上。
+二者严格分离。Gaia IR 有 local 和 global 两层；Parameterization 只作用在 GlobalCanonicalGraph 上。后端（如 BP）同时消费 IR 和 Parameterization 来产出最终结果。
 
 ## 一、Gaia IR — 结构
 
