@@ -4,7 +4,7 @@
 
 Global canonicalization 将 local canonical node（包作用域）映射到 global canonical node（跨包）。这使得全局知识图谱能够识别不同包中语义等价的命题指向同一 claim。
 
-关于规范化身份模型（raw、local canonical、global canonical），参见 [../gaia-ir/gaia-ir.md](../gaia-ir/gaia-ir.md)。
+关于规范化身份模型（raw、local canonical、global canonical），参见 [../gaia-ir/canonicalization.md](../gaia-ir/canonicalization.md)。
 
 ## 规范化的作用
 

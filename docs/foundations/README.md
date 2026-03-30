@@ -35,7 +35,8 @@ Gaia 的规范参考文档，按架构层级组织。
 ## Gaia IR — CLI 与 LKM 之间的共享契约
 
 - [概述](gaia-ir/overview.md) — 三部分总览（Gaia IR + Parameterization + BeliefState）
-- [结构定义](gaia-ir/gaia-ir.md) — KnowledgeNode、FactorNode、规范化
+- [结构定义](gaia-ir/gaia-ir.md) — Knowledge、Strategy、Operator、FormalExpr
+- [规范化](gaia-ir/canonicalization.md) — local canonical 到 global canonical 的映射契约
 - [参数定义](gaia-ir/parameterization.md) — 原子记录、resolution policy
 - [信念定义](gaia-ir/belief-state.md) — BP 输出、可重现性
 

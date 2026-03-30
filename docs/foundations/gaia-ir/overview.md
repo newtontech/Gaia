@@ -205,7 +205,7 @@ FormalStrategy 的确定性展开结构——由 Operator 列表构成。中间 
 | **LocalCanonicalGraph** | 单个包 | `lcn_`, `lcs_`, `lco_` | 存储完整 content + Strategy steps（内容仓库） |
 | **GlobalCanonicalGraph** | 跨包 | `gcn_`, `gcs_`, `gco_` | 引用 representative lcn，Strategy 无 steps（结构索引）+ Operator |
 
-规范化（lcn → gcn 映射）见 [gaia-ir.md](gaia-ir.md) §5。
+规范化（lcn → gcn 映射）见 [canonicalization.md](canonicalization.md)。
 
 ### 图哈希
 

@@ -49,7 +49,7 @@ typst query --root <repo-root> lib.typ 'figure.where(kind: "gaia-ext")'
 
 目前实现单例规范化：每个原始节点精确映射到一个 `LocalCanonicalNode`，不进行合并。原始到局部的映射记录在 `CanonicalizationLogEntry` 中以便审计。
 
-规范化标识模型参见 [../gaia-ir/gaia-ir.md](../gaia-ir/gaia-ir.md)。
+规范化标识模型参见 [../gaia-ir/canonicalization.md](../gaia-ir/canonicalization.md)。
 
 ## 步骤四：局部参数化
 
