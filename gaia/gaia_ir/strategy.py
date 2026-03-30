@@ -76,13 +76,6 @@ def _compute_strategy_id(
     return f"{prefix}{_sha256_hex(payload)}"
 
 
-_LEAF_STRATEGY_TYPES = frozenset(
-    {
-        StrategyType.INFER,
-        StrategyType.NOISY_AND,
-    }
-)
-
 _FORMAL_STRATEGY_TYPES = frozenset(
     {
         StrategyType.DEDUCTION,

@@ -325,13 +325,14 @@ def _validate_formal_expr_closure(
 
 def _validate_private_node_isolation(
     strategies: list[Strategy],
+    operators: list[Operator],
     result: ValidationResult,
 ) -> None:
-    """Validate that internal FormalExpr nodes are not referenced by other strategies.
+    """Validate that internal FormalExpr nodes are not referenced externally.
 
     A 'private' node is an operator conclusion in a FormalExpr that is NOT in
     the owning FormalStrategy's own premises/conclusion interface. Such nodes
-    must not be referenced by any other top-level strategy.
+    must not be referenced by any other top-level strategy or top-level operator.
     """
     # Collect private nodes per FormalStrategy: operator conclusions that are NOT
     # in the owning strategy's premises or conclusion
@@ -363,9 +364,25 @@ def _validate_private_node_isolation(
                     f"of FormalStrategy '{owner}'"
                 )
 
+    # Check: no top-level operator references a private node
+    for op in operators:
+        oid = op.operator_id or "<no-id>"
+        for var_id in op.variables:
+            if var_id in private_nodes:
+                result.error(
+                    f"Operator '{oid}': variable '{var_id}' is a private internal node "
+                    f"of FormalStrategy '{private_nodes[var_id]}'"
+                )
+        if op.conclusion in private_nodes:
+            result.error(
+                f"Operator '{oid}': conclusion '{op.conclusion}' is a private internal node "
+                f"of FormalStrategy '{private_nodes[op.conclusion]}'"
+            )
+
 
 def _validate_strategies(
     strategies: list[Strategy],
+    operators: list[Operator],
     knowledge_lookup: dict[str, Knowledge],
     scope: str,
     result: ValidationResult,
@@ -390,8 +407,8 @@ def _validate_strategies(
     # DAG check for CompositeStrategy references
     _validate_composite_dag(strategies, result)
 
-    # Private node isolation check
-    _validate_private_node_isolation(strategies, result)
+    # Private node isolation check (includes top-level operators)
+    _validate_private_node_isolation(strategies, operators, result)
 
 
 # ---------------------------------------------------------------------------
@@ -420,16 +437,25 @@ def _validate_scope_consistency(
                 f"Strategy '{s.strategy_id}': conclusion '{s.conclusion}' has wrong prefix for {scope} graph"
             )
 
-    for op in operators:
+    def _check_operator_prefix(op: Operator, context: str) -> None:
         for var_id in op.variables:
             if var_id and not var_id.startswith(prefix):
                 result.error(
-                    f"Operator '{op.operator_id}': variable '{var_id}' has wrong prefix for {scope} graph"
+                    f"{context} '{op.operator_id}': variable '{var_id}' has wrong prefix for {scope} graph"
                 )
         if op.conclusion and not op.conclusion.startswith(prefix):
             result.error(
-                f"Operator '{op.operator_id}': conclusion '{op.conclusion}' has wrong prefix for {scope} graph"
+                f"{context} '{op.operator_id}': conclusion '{op.conclusion}' has wrong prefix for {scope} graph"
             )
+
+    for op in operators:
+        _check_operator_prefix(op, "Operator")
+
+    # Also check FormalExpr-embedded operators
+    for s in strategies:
+        if isinstance(s, FormalStrategy):
+            for op in s.formal_expr.operators:
+                _check_operator_prefix(op, f"FormalStrategy '{s.strategy_id}' operator")
 
 
 # ---------------------------------------------------------------------------
@@ -443,7 +469,7 @@ def validate_local_graph(graph: LocalCanonicalGraph) -> ValidationResult:
 
     knowledge_lookup = _validate_knowledges(graph.knowledges, "local", result)
     _validate_operators(graph.operators, knowledge_lookup, "local", result)
-    _validate_strategies(graph.strategies, knowledge_lookup, "local", result)
+    _validate_strategies(graph.strategies, graph.operators, knowledge_lookup, "local", result)
     _validate_scope_consistency(
         knowledge_lookup, graph.operators, graph.strategies, "local", result
     )
@@ -468,7 +494,7 @@ def validate_global_graph(graph: GlobalCanonicalGraph) -> ValidationResult:
 
     knowledge_lookup = _validate_knowledges(graph.knowledges, "global", result)
     _validate_operators(graph.operators, knowledge_lookup, "global", result)
-    _validate_strategies(graph.strategies, knowledge_lookup, "global", result)
+    _validate_strategies(graph.strategies, graph.operators, knowledge_lookup, "global", result)
     _validate_scope_consistency(
         knowledge_lookup, graph.operators, graph.strategies, "global", result
     )

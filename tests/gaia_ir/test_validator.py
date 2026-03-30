@@ -741,6 +741,94 @@ class TestFormalStrategyValidation:
         r = validate_local_graph(g)
         assert r.valid
 
+    def test_private_node_referenced_by_top_level_operator_variable(self):
+        """Top-level operator referencing a FormalExpr private node as variable is an error."""
+        formal = FormalStrategy(
+            scope="local",
+            type="deduction",
+            premises=["lcn_a", "lcn_b"],
+            conclusion="lcn_c",
+            formal_expr=FormalExpr(
+                operators=[
+                    Operator(
+                        operator="conjunction",
+                        variables=["lcn_a", "lcn_b"],
+                        conclusion="lcn_m",
+                    ),
+                    Operator(
+                        operator="implication",
+                        variables=["lcn_m"],
+                        conclusion="lcn_c",
+                    ),
+                ]
+            ),
+        )
+        # Top-level operator uses private node lcn_m as a variable
+        top_op = Operator(
+            operator_id="lco_bad",
+            scope="local",
+            operator="implication",
+            variables=["lcn_m"],
+            conclusion="lcn_c",
+        )
+        g = _local_graph(
+            knowledges=[
+                _claim("lcn_a"),
+                _claim("lcn_b"),
+                _claim("lcn_c"),
+                _claim("lcn_m"),
+            ],
+            operators=[top_op],
+            strategies=[formal],
+        )
+        r = validate_local_graph(g)
+        assert not r.valid
+        assert any("private internal node" in e for e in r.errors)
+
+    def test_private_node_referenced_by_top_level_operator_conclusion(self):
+        """Top-level operator using a FormalExpr private node as conclusion is an error."""
+        formal = FormalStrategy(
+            scope="local",
+            type="deduction",
+            premises=["lcn_a", "lcn_b"],
+            conclusion="lcn_c",
+            formal_expr=FormalExpr(
+                operators=[
+                    Operator(
+                        operator="conjunction",
+                        variables=["lcn_a", "lcn_b"],
+                        conclusion="lcn_m",
+                    ),
+                    Operator(
+                        operator="implication",
+                        variables=["lcn_m"],
+                        conclusion="lcn_c",
+                    ),
+                ]
+            ),
+        )
+        # Top-level operator outputs to private node lcn_m
+        top_op = Operator(
+            operator_id="lco_bad",
+            scope="local",
+            operator="implication",
+            variables=["lcn_a"],
+            conclusion="lcn_m",
+        )
+        g = _local_graph(
+            knowledges=[
+                _claim("lcn_a"),
+                _claim("lcn_b"),
+                _claim("lcn_c"),
+                _claim("lcn_m"),
+            ],
+            operators=[top_op],
+            strategies=[formal],
+        )
+        r = validate_local_graph(g)
+        assert not r.valid
+        assert any("private internal node" in e for e in r.errors)
+
 
 # ---------------------------------------------------------------------------
 # 4. Graph-level validation
@@ -785,6 +873,39 @@ class TestGraphLevelValidation:
         assert not r.valid
         # Should have wrong prefix error for conclusion
         assert any("wrong prefix" in e or "not found" in e for e in r.errors)
+
+    def test_formal_expr_operator_scope_prefix(self):
+        """FormalExpr-embedded operators with wrong prefix are caught in scope consistency."""
+        # lcn_a and lcn_c exist in local graph, but FormalExpr internally
+        # references gcn_wrong which has a global prefix in a local graph.
+        g = _local_graph(
+            knowledges=[_claim("lcn_a"), _claim("lcn_c"), _claim("lcn_m")],
+            strategies=[
+                FormalStrategy(
+                    scope="local",
+                    type="deduction",
+                    premises=["lcn_a"],
+                    conclusion="lcn_c",
+                    formal_expr=FormalExpr(
+                        operators=[
+                            Operator(
+                                operator="implication",
+                                variables=["lcn_a"],
+                                conclusion="lcn_m",
+                            ),
+                            Operator(
+                                operator="implication",
+                                variables=["gcn_wrong"],
+                                conclusion="lcn_c",
+                            ),
+                        ]
+                    ),
+                )
+            ],
+        )
+        r = validate_local_graph(g)
+        assert not r.valid
+        assert any("wrong prefix" in e and "FormalStrategy" in e for e in r.errors)
 
     def test_hash_consistency(self):
         g = _local_graph(knowledges=[_claim("lcn_a")])
