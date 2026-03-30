@@ -243,6 +243,7 @@ BP 运行前按 resolution policy 从原子记录中选择每个 Knowledge/Strat
 
 - **claim_priors**：只有 `type=claim` 的 Knowledge 有记录。
 - **strategy_params**：只有参数化 Strategy 才有 conditional_probabilities（目前主要是 `infer`、`noisy_and`，以及未来若定义参数模型的 `toolcall` / `proof`）。
+- **derived conditional view**：直接 FormalStrategy 在运行时也可以得到一份等效 `conditional_probabilities`，但这是由 `FormalExpr` + 私有中间 claim prior 现算导出的视图，不是持久化输入。
 - **Cromwell's rule**：所有概率钳制到 `[ε, 1-ε]`，ε = 1e-3。
 - 组装时使用 `prior_cutoff` 时间戳过滤记录，确保可重现。
 - 组装结果必须覆盖所有 claim Knowledge、所有参数化 Strategy，以及直接 FormalStrategy 所依赖的显式中间 claim，否则 BP 拒绝运行。
