@@ -1206,9 +1206,7 @@ class TestParameterizationValidation:
             strategy_params=[],
         )
         assert not r.valid
-        assert any(
-            alternative_explanation.id in e and "missing PriorRecord" in e for e in r.errors
-        )
+        assert any(alternative_explanation.id in e and "missing PriorRecord" in e for e in r.errors)
 
     def test_abduction_generated_interface_claim_prior_allowed(self):
         """The generated alternative explanation can be parameterized like any public claim."""

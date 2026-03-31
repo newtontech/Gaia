@@ -126,7 +126,9 @@ class TestFormalizeNamedStrategy:
             knowledge.id for knowledge in result_b.knowledges
         ]
         assert result_a.strategy.strategy_id == result_b.strategy.strategy_id
-        assert result_a.strategy.model_dump(mode="json") == result_b.strategy.model_dump(mode="json")
+        assert result_a.strategy.model_dump(mode="json") == result_b.strategy.model_dump(
+            mode="json"
+        )
 
     @pytest.mark.parametrize(
         ("type_", "premises"),
@@ -184,7 +186,10 @@ class TestFormalizeNamedStrategy:
         assert equivalence.metadata["generated_kind"] == "helper_claim"
         assert equivalence.metadata["helper_kind"] == "equivalence_result"
         assert result.strategy.premises == ["gcn_obs", alternative_explanation.id]
-        assert result.strategy.formal_expr.operators[0].variables == ["gcn_h", alternative_explanation.id]
+        assert result.strategy.formal_expr.operators[0].variables == [
+            "gcn_h",
+            alternative_explanation.id,
+        ]
         assert result.strategy.formal_expr.operators[0].conclusion == disjunction.id
         assert result.strategy.formal_expr.operators[1].variables == [disjunction.id, "gcn_obs"]
         assert result.strategy.formal_expr.operators[1].conclusion == equivalence.id

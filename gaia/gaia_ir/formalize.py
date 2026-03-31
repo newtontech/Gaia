@@ -19,19 +19,7 @@ from gaia.gaia_ir.strategy import (
     FormalStrategy,
     Step,
     StrategyType,
-)
-
-
-_NAMED_TEMPLATE_TYPES = frozenset(
-    {
-        StrategyType.DEDUCTION,
-        StrategyType.ELIMINATION,
-        StrategyType.MATHEMATICAL_INDUCTION,
-        StrategyType.CASE_ANALYSIS,
-        StrategyType.ABDUCTION,
-        StrategyType.ANALOGY,
-        StrategyType.EXTRAPOLATION,
-    }
+    _FORMAL_STRATEGY_TYPES,
 )
 
 _HELPER_KIND_BY_OPERATOR = {
@@ -345,7 +333,9 @@ def _build_case_analysis(builder: _TemplateBuilder) -> list[Operator]:
 
 def _build_abduction(builder: _TemplateBuilder) -> list[Operator]:
     if len(builder.premises) not in {1, 2}:
-        raise ValueError("abduction formalization requires observation plus optional alternative explanation")
+        raise ValueError(
+            "abduction formalization requires observation plus optional alternative explanation"
+        )
     observation = builder.premises[0]
     if len(builder.premises) == 1:
         # The leak / alternative explanation is a public interface claim because
@@ -438,8 +428,8 @@ def formalize_named_strategy(
             "with a shared conclusion instead"
         )
     strategy_type = StrategyType(type_)
-    if strategy_type not in _NAMED_TEMPLATE_TYPES:
-        allowed = ", ".join(sorted(t.value for t in _NAMED_TEMPLATE_TYPES))
+    if strategy_type not in _FORMAL_STRATEGY_TYPES:
+        allowed = ", ".join(sorted(t.value for t in _FORMAL_STRATEGY_TYPES))
         raise ValueError(
             f"formalize_named_strategy only supports named FormalStrategy types: {allowed}; "
             f"got {strategy_type.value}"
