@@ -540,7 +540,9 @@ def validate_parameterization(
     FormalStrategy types derive behavior from FormalExpr — no params needed.
     Structural helper claims (top-level or FormalExpr operator conclusions produced
     by conjunction/disjunction/equivalence/contradiction/complement) are PROHIBITED
-    from having independent PriorRecords (§4, §6 of spec).
+    from having independent PriorRecords (§4, §6 of spec). Generated public
+    interface claims (for example abduction's alternative explanation claim)
+    remain ordinary claim inputs and therefore still require PriorRecord.
     """
     result = ValidationResult()
 

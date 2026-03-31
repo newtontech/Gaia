@@ -485,7 +485,7 @@ class TestCompositeStrategyValidation:
             strategies=[
                 CompositeStrategy(
                     scope="local",
-                    type="induction",
+                    type="abduction",
                     premises=["lcn_a"],
                     conclusion="lcn_c",
                     sub_strategies=["lcs_nonexistent"],
@@ -514,7 +514,7 @@ class TestCompositeStrategyValidation:
         comp_b = CompositeStrategy(
             strategy_id="lcs_comp_b",
             scope="local",
-            type="induction",
+            type="abduction",
             premises=["lcn_a"],
             conclusion="lcn_b",
             sub_strategies=["lcs_comp_a"],
@@ -1177,8 +1177,8 @@ class TestParameterizationValidation:
         assert not r.valid
         assert any("structural helper claim" in e for e in r.errors)
 
-    def test_private_non_helper_claim_requires_prior(self):
-        """Implication-produced latent claims remain regular claims unless structurally helper."""
+    def test_abduction_generated_interface_claim_requires_prior(self):
+        """Auto-generated alternative explanations are public interface claims with priors."""
         from gaia.gaia_ir import PriorRecord
 
         formalized = Strategy(
@@ -1187,15 +1187,10 @@ class TestParameterizationValidation:
             premises=["gcn_obs"],
             conclusion="gcn_h",
         ).formalize()
-        prediction = next(
+        alternative_explanation = next(
             knowledge
             for knowledge in formalized.knowledges
-            if knowledge.metadata["intermediate_role"] == "prediction"
-        )
-        equivalence = next(
-            knowledge
-            for knowledge in formalized.knowledges
-            if knowledge.metadata["intermediate_role"] == "equivalence_result"
+            if knowledge.metadata.get("interface_role") == "alternative_explanation"
         )
 
         g = _global_graph(
@@ -1211,11 +1206,12 @@ class TestParameterizationValidation:
             strategy_params=[],
         )
         assert not r.valid
-        assert any(prediction.id in e and "missing PriorRecord" in e for e in r.errors)
-        assert not any(equivalence.id in e and "missing PriorRecord" in e for e in r.errors)
+        assert any(
+            alternative_explanation.id in e and "missing PriorRecord" in e for e in r.errors
+        )
 
-    def test_private_non_helper_claim_prior_allowed(self):
-        """Implication-produced latent claims can carry priors when they are not helper claims."""
+    def test_abduction_generated_interface_claim_prior_allowed(self):
+        """The generated alternative explanation can be parameterized like any public claim."""
         from gaia.gaia_ir import PriorRecord
 
         formalized = Strategy(
@@ -1224,10 +1220,10 @@ class TestParameterizationValidation:
             premises=["gcn_obs"],
             conclusion="gcn_h",
         ).formalize()
-        prediction = next(
+        alternative_explanation = next(
             knowledge
             for knowledge in formalized.knowledges
-            if knowledge.metadata["intermediate_role"] == "prediction"
+            if knowledge.metadata.get("interface_role") == "alternative_explanation"
         )
 
         g = _global_graph(
@@ -1239,7 +1235,50 @@ class TestParameterizationValidation:
             priors=[
                 PriorRecord(gcn_id="gcn_obs", value=0.5, source_id="s"),
                 PriorRecord(gcn_id="gcn_h", value=0.5, source_id="s"),
-                PriorRecord(gcn_id=prediction.id, value=0.5, source_id="s"),
+                PriorRecord(gcn_id=alternative_explanation.id, value=0.5, source_id="s"),
+            ],
+            strategy_params=[],
+        )
+        assert r.valid
+
+    def test_elimination_only_requires_interface_priors(self):
+        """Strict elimination should not introduce hidden prior-bearing internal claims."""
+        from gaia.gaia_ir import PriorRecord
+
+        formalized = Strategy(
+            scope="global",
+            type="elimination",
+            premises=[
+                "gcn_exhaustive",
+                "gcn_h1",
+                "gcn_e1",
+                "gcn_h2",
+                "gcn_e2",
+            ],
+            conclusion="gcn_h3",
+        ).formalize()
+
+        g = _global_graph(
+            knowledges=[
+                _claim("gcn_exhaustive"),
+                _claim("gcn_h1"),
+                _claim("gcn_e1"),
+                _claim("gcn_h2"),
+                _claim("gcn_e2"),
+                _claim("gcn_h3"),
+                *formalized.knowledges,
+            ],
+            strategies=[formalized.strategy],
+        )
+        r = validate_parameterization(
+            g,
+            priors=[
+                PriorRecord(gcn_id="gcn_exhaustive", value=0.9, source_id="s"),
+                PriorRecord(gcn_id="gcn_h1", value=0.2, source_id="s"),
+                PriorRecord(gcn_id="gcn_e1", value=0.9, source_id="s"),
+                PriorRecord(gcn_id="gcn_h2", value=0.2, source_id="s"),
+                PriorRecord(gcn_id="gcn_e2", value=0.9, source_id="s"),
+                PriorRecord(gcn_id="gcn_h3", value=0.2, source_id="s"),
             ],
             strategy_params=[],
         )

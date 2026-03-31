@@ -20,12 +20,17 @@ def _operator_names(strategy: FormalStrategy) -> list[str]:
     return [op.operator.value for op in strategy.formal_expr.operators]
 
 
+def _generated_role(knowledge) -> str:
+    metadata = knowledge.metadata or {}
+    return metadata.get("interface_role") or metadata.get("intermediate_role")
+
+
 def _role_counts(knowledges) -> Counter[str]:
-    return Counter(knowledge.metadata["intermediate_role"] for knowledge in knowledges)
+    return Counter(_generated_role(knowledge) for knowledge in knowledges)
 
 
 def _knowledge_for_role(knowledges, role: str):
-    return next(knowledge for knowledge in knowledges if knowledge.metadata["intermediate_role"] == role)
+    return next(knowledge for knowledge in knowledges if _generated_role(knowledge) == role)
 
 
 class TestStrategyFormalize:
@@ -156,104 +161,120 @@ class TestFormalizeNamedStrategy:
             conclusion="gcn_h",
         )
 
-        assert _operator_names(result.strategy) == ["implication", "equivalence"]
-        assert _role_counts(result.knowledges) == Counter({"prediction": 1, "equivalence_result": 1})
-
-        prediction = _knowledge_for_role(result.knowledges, "prediction")
-        equivalence = _knowledge_for_role(result.knowledges, "equivalence_result")
-
-        assert prediction.metadata["generated_kind"] == "latent_claim"
-        assert equivalence.metadata["generated_kind"] == "helper_claim"
-        assert equivalence.metadata["helper_kind"] == "equivalence_result"
-        assert result.strategy.formal_expr.operators[0].conclusion == prediction.id
-        assert result.strategy.formal_expr.operators[1].variables == [prediction.id, "gcn_obs"]
-        assert result.strategy.formal_expr.operators[1].conclusion == equivalence.id
-
-    def test_induction_template(self):
-        result = formalize_named_strategy(
-            scope="global",
-            type_="induction",
-            premises=["gcn_obs_1", "gcn_obs_2"],
-            conclusion="gcn_law",
-        )
-
-        assert _operator_names(result.strategy) == [
-            "implication",
-            "equivalence",
-            "implication",
-            "equivalence",
-        ]
-        assert _role_counts(result.knowledges) == Counter({"instance": 2, "equivalence_result": 2})
-
-        instances = [
-            knowledge for knowledge in result.knowledges if knowledge.metadata["intermediate_role"] == "instance"
-        ]
-        equivalences = [
-            knowledge
-            for knowledge in result.knowledges
-            if knowledge.metadata["intermediate_role"] == "equivalence_result"
-        ]
-
-        assert all(instance.metadata["generated_kind"] == "latent_claim" for instance in instances)
-        assert all(eq.metadata["generated_kind"] == "helper_claim" for eq in equivalences)
-        assert {op.conclusion for op in result.strategy.formal_expr.operators[::2]} == {
-            instance.id for instance in instances
-        }
-
-    def test_reductio_template(self):
-        result = formalize_named_strategy(
-            scope="global",
-            type_="reductio",
-            premises=["gcn_r"],
-            conclusion="gcn_not_p",
-        )
-
-        assert _operator_names(result.strategy) == ["implication", "contradiction", "complement"]
+        assert _operator_names(result.strategy) == ["disjunction", "equivalence"]
         assert _role_counts(result.knowledges) == Counter(
             {
-                "reductio_assumption": 1,
-                "reductio_consequence": 1,
-                "contradiction_result": 1,
-                "complement_result": 1,
+                "alternative_explanation": 1,
+                "disjunction_result": 1,
+                "equivalence_result": 1,
             }
         )
+        assert result.strategy.metadata["interface_roles"] == {
+            "alternative_explanation": [result.strategy.premises[1]],
+            "observation": ["gcn_obs"],
+        }
+        assert result.strategy.premises[0] == "gcn_obs"
+
+        alternative_explanation = _knowledge_for_role(result.knowledges, "alternative_explanation")
+        disjunction = _knowledge_for_role(result.knowledges, "disjunction_result")
+        equivalence = _knowledge_for_role(result.knowledges, "equivalence_result")
+
+        assert alternative_explanation.metadata["generated_kind"] == "interface_claim"
+        assert alternative_explanation.metadata["visibility"] == "strategy_interface"
+        assert equivalence.metadata["generated_kind"] == "helper_claim"
+        assert equivalence.metadata["helper_kind"] == "equivalence_result"
+        assert result.strategy.premises == ["gcn_obs", alternative_explanation.id]
+        assert result.strategy.formal_expr.operators[0].variables == ["gcn_h", alternative_explanation.id]
+        assert result.strategy.formal_expr.operators[0].conclusion == disjunction.id
+        assert result.strategy.formal_expr.operators[1].variables == [disjunction.id, "gcn_obs"]
+        assert result.strategy.formal_expr.operators[1].conclusion == equivalence.id
+
+    def test_abduction_reuses_explicit_alternative_explanation(self):
+        result = formalize_named_strategy(
+            scope="global",
+            type_="abduction",
+            premises=["gcn_obs", "gcn_alt"],
+            conclusion="gcn_h",
+        )
+
+        assert _operator_names(result.strategy) == ["disjunction", "equivalence"]
+        assert _role_counts(result.knowledges) == Counter(
+            {
+                "disjunction_result": 1,
+                "equivalence_result": 1,
+            }
+        )
+        assert result.strategy.premises == ["gcn_obs", "gcn_alt"]
+        assert result.strategy.metadata["interface_roles"] == {
+            "alternative_explanation": ["gcn_alt"],
+            "observation": ["gcn_obs"],
+        }
+
+    def test_induction_deferred(self):
+        with pytest.raises(ValueError, match="deferred in Gaia IR core"):
+            formalize_named_strategy(
+                scope="global",
+                type_="induction",
+                premises=["gcn_obs_1", "gcn_obs_2"],
+                conclusion="gcn_law",
+            )
+
+    def test_reductio_deferred(self):
+        with pytest.raises(ValueError, match="reductio is deferred in Gaia IR core"):
+            formalize_named_strategy(
+                scope="global",
+                type_="reductio",
+                premises=["gcn_r"],
+                conclusion="gcn_not_p",
+            )
 
     def test_elimination_template(self):
         result = formalize_named_strategy(
             scope="global",
             type_="elimination",
-            premises=["gcn_e1", "gcn_e2", "gcn_exhaustive"],
+            premises=[
+                "gcn_exhaustive",
+                "gcn_h1",
+                "gcn_e1",
+                "gcn_h2",
+                "gcn_e2",
+            ],
             conclusion="gcn_h3",
         )
 
         assert _operator_names(result.strategy) == [
+            "disjunction",
+            "equivalence",
             "contradiction",
             "contradiction",
-            "complement",
-            "complement",
             "conjunction",
             "implication",
         ]
         assert _role_counts(result.knowledges) == Counter(
             {
-                "elimination_hypothesis": 2,
-                "elimination_negated_hypothesis": 2,
+                "disjunction_result": 1,
+                "equivalence_result": 1,
                 "contradiction_result": 2,
-                "complement_result": 2,
                 "conjunction_result": 1,
             }
         )
+        assert result.strategy.metadata["interface_roles"] == {
+            "eliminated_candidate": ["gcn_h1", "gcn_h2"],
+            "elimination_evidence": ["gcn_e1", "gcn_e2"],
+            "exhaustiveness": ["gcn_exhaustive"],
+        }
 
     def test_case_analysis_template(self):
         result = formalize_named_strategy(
             scope="global",
             type_="case_analysis",
-            premises=["gcn_exhaustive", "gcn_p1", "gcn_p2"],
+            premises=["gcn_exhaustive", "gcn_a1", "gcn_p1", "gcn_a2", "gcn_p2"],
             conclusion="gcn_c",
         )
 
         assert _operator_names(result.strategy) == [
             "disjunction",
+            "equivalence",
             "conjunction",
             "implication",
             "conjunction",
@@ -261,11 +282,26 @@ class TestFormalizeNamedStrategy:
         ]
         assert _role_counts(result.knowledges) == Counter(
             {
-                "case_branch": 2,
                 "disjunction_result": 1,
+                "equivalence_result": 1,
                 "conjunction_result": 2,
             }
         )
+        assert result.strategy.metadata["interface_roles"] == {
+            "case": ["gcn_a1", "gcn_a2"],
+            "case_support": ["gcn_p1", "gcn_p2"],
+            "exhaustiveness": ["gcn_exhaustive"],
+        }
+
+    def test_case_analysis_open_world_variant_deferred(self):
+        with pytest.raises(ValueError, match="open-world case_analysis is deferred"):
+            formalize_named_strategy(
+                scope="global",
+                type_="case_analysis",
+                premises=["gcn_exhaustive", "gcn_a1", "gcn_p1", "gcn_a2", "gcn_p2"],
+                conclusion="gcn_c",
+                metadata={"include_other_relevant_case": True},
+            )
 
     def test_rejects_non_named_strategy_type(self):
         with pytest.raises(ValueError, match="only supports named FormalStrategy types"):

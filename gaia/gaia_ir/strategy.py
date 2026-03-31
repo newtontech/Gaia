@@ -38,7 +38,6 @@ class StrategyType(StrEnum):
 
     # Named strategies — non-deterministic (FormalStrategy)
     ABDUCTION = "abduction"
-    INDUCTION = "induction"
     ANALOGY = "analogy"
     EXTRAPOLATION = "extrapolation"
 
@@ -82,12 +81,10 @@ def _compute_strategy_id(
 _FORMAL_STRATEGY_TYPES = frozenset(
     {
         StrategyType.DEDUCTION,
-        StrategyType.REDUCTIO,
         StrategyType.ELIMINATION,
         StrategyType.MATHEMATICAL_INDUCTION,
         StrategyType.CASE_ANALYSIS,
         StrategyType.ABDUCTION,
-        StrategyType.INDUCTION,
         StrategyType.ANALOGY,
         StrategyType.EXTRAPOLATION,
     }
@@ -215,8 +212,8 @@ class CompositeStrategy(Strategy):
 class FormalStrategy(Strategy):
     """Strategy with deterministic Operator expansion.
 
-    Used for named strategies (deduction, reductio, elimination,
-    mathematical_induction, case_analysis, abduction, induction, analogy,
+    Used for named strategies (deduction, elimination,
+    mathematical_induction, case_analysis, abduction, analogy,
     extrapolation) and as sub-parts of CompositeStrategy.
     """
 
