@@ -30,7 +30,7 @@ validation 的职责是**验证结构合法性**。
 1. **对象级校验**
    单个 `Knowledge` / `Operator` / `Strategy` / `FormalExpr` 是否自洽
 2. **图级校验**
-   一个 `LocalCanonicalGraph` / `GlobalCanonicalGraph` 内部引用是否闭合、scope 是否一致
+   一个 `LocalCanonicalGraph` / `GlobalCanonicalGraph`（LKM 层） 内部引用是否闭合、scope 是否一致
 3. **层级校验**
    local 与 global 的字段约束是否满足
 4. **相邻层完整性校验**
@@ -50,7 +50,7 @@ validation 的职责是**验证结构合法性**。
    - `setting`
    - `question`
 3. `content_hash` 若存在，必须与 `type + content + sorted(parameters)` 的标准计算一致
-4. global `Knowledge` 若从 `representative_lcn` 同步 `content_hash`，则其值必须与当前代表内容一致
+4. global `Knowledge`（LKM 层）若从 `representative_lcn` 同步 `content_hash`，则其值必须与当前代表内容一致
 5. 若某处把它当作可取真值命题引用，则其 `type` 必须是 `claim`
 6. 含 `parameters` 的 claim 仍然是 claim，不是独立类型
 7. helper claim 仍然是 `claim`，不能引入新的 Knowledge primitive
@@ -134,7 +134,9 @@ identity 与 hashing 的细节见 [03-identity-and-hashing.md](03-identity-and-h
 2. local 内容字段允许完整保留
 3. local Knowledge 使用 QID 格式；local Strategy 使用 `lcs_`；local Operator 使用 `lco_`
 
-### 7.2 GlobalCanonicalGraph
+### 7.2 GlobalCanonicalGraph（LKM 层）
+
+> **注意：** `validate_global_graph` 已从 IR 代码中移除，global 层校验由 LKM 负责。以下规则作为设计规范保留。
 
 至少应检查：
 

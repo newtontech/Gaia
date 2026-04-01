@@ -50,13 +50,13 @@ QID 是 name-addressed 身份，不是 content-addressed。内容变化不影响
 
 ### 2.2 Global Knowledge
 
-global `Knowledge.id` 是注册中心分配的稳定 canonical identity：
+global `Knowledge.id`（LKM 层）是注册中心分配的稳定 canonical identity：
 
 - 一旦某个 global Knowledge 被创建并获得 `gcn_id`，它的 `id` 就不因 representative 切换而变化
 - `gcn_id` 不等于内容哈希
 - `gcn_id` 也不应被重新计算
 
-也就是说，global `id` 是“这个 canonical 节点是谁”，不是“它当前由哪段内容代表”。
+也就是说，global `id` 是”这个 canonical 节点是谁”，不是”它当前由哪段内容代表”。Global Knowledge 的创建和管理由 LKM 负责，IR 代码只处理 local 层。
 
 ## 3. Knowledge 内容指纹
 
@@ -71,7 +71,7 @@ SHA-256(type + content + sorted(parameters))
 因此：
 
 - 不同包中同内容的 local Knowledge 拥有相同的 `content_hash`
-- 同一个 global Knowledge 更换 `representative_lcn` 时，`content_hash` 可能随代表内容同步更新
+- 同一个 global Knowledge（LKM 层）更换 `representative_lcn` 时，`content_hash` 可能随代表内容同步更新
 - `content_hash` 不是对象主键，不能替代 `id`
 
 ### 3.1 典型用途
@@ -79,13 +79,13 @@ SHA-256(type + content + sorted(parameters))
 - **Canonicalization 快速路径**
   新 local Knowledge 进入全局图时，先用 `content_hash` 做精确匹配；命中则直接 `match_existing`
 - **查询与去重索引**
-  global 层保存一份从 `representative_lcn` 同步来的 `content_hash`，供 canonicalization / curation 查询
+  global 层（LKM 层）保存一份从 `representative_lcn` 同步来的 `content_hash`，供 canonicalization / curation 查询
 
 ### 3.2 不应如何使用
 
 - 不能把 `content_hash` 当作 global `id`
 - 不能把两个 `content_hash` 相同的节点自动视为“同一条推理链”
-- 不能用 `content_hash` 替代 `CanonicalBinding`
+- 不能用 `content_hash` 替代 `CanonicalBinding`（LKM 层）
 
 `content_hash` 只说明“内容完全一致”，不说明它在图中的结构角色完全一致。
 
@@ -159,7 +159,7 @@ validator 至少应检查：
 
 1. local `Knowledge.id` 是否为有效 QID 格式（`{namespace}:{package_name}::{label}`）
 2. `content_hash` 若存在，是否与 `type + content + sorted(parameters)` 一致
-3. global `Knowledge` 若保存了 `content_hash`，它是否与当前代表内容保持同步
+3. global `Knowledge`（LKM 层）若保存了 `content_hash`，它是否与当前代表内容保持同步
 4. `ir_hash` 若定义，是否与 canonical serialization 一致
 
 这些检查的细分边界见 [08-validation.md](08-validation.md)。

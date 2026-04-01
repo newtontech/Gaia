@@ -43,14 +43,14 @@ Knowledge:
     # ── 来源追溯 ──
     provenance:             list[PackageRef] | None   # 贡献包列表
 
-    # ── global 层 ──
+    # ── global 层（LKM 层，IR 代码中不使用） ──
     representative_lcn:     LocalCanonicalRef | None  # 代表性 local Knowledge（内容从此获取）
     local_members:          list[LocalCanonicalRef] | None  # 所有映射到此的 local Knowledge
 ```
 
 **各层字段使用：**
 
-| 字段 | Local | Global |
+| 字段 | Local（IR 代码实现） | Global（LKM 层，IR 代码中不使用） |
 |------|-------|--------|
 | `id` | QID 格式 `{namespace}:{package_name}::{label}`，name-addressed | `gcn_` 前缀，注册中心分配的稳定 canonical identity |
 | `content_hash` | SHA-256(type + content + sorted(params))，不含 `package_id` | 从 `representative_lcn` 同步的 denormalized 指纹；representative 变更时更新 |
@@ -63,10 +63,10 @@ Knowledge:
 
 **内容指纹**：`content_hash = SHA-256(type + content + sorted(parameters))`，不含 `package_id`。同一内容在不同包中产生相同的 `content_hash`。用途：
 
-- **Canonicalization 快速路径**：新 local node 进入全局图时，先用 `content_hash` 精确匹配已有 global node，命中则直接 `match_existing`，跳过 embedding 计算。
-- **Global 层 denormalized index**：global node 的 `content_hash` 从 `representative_lcn` 同步，供 canonicalization 和 curation 查询。Representative 变更时更新此字段，global `id` 不变。
+- **Canonicalization 快速路径**（LKM 层）：新 local node 进入全局图时，先用 `content_hash` 精确匹配已有 global node，命中则直接 `match_existing`，跳过 embedding 计算。
+- **Global 层 denormalized index**（LKM 层）：global node 的 `content_hash` 从 `representative_lcn` 同步，供 canonicalization 和 curation 查询。Representative 变更时更新此字段，global `id` 不变。
 
-**内容存储**：所有知识内容存储在 local 层的 `content` 字段上。Global 层通过 `representative_lcn` 引用获取内容，不重复存储。LKM 服务器直接创建的 global Knowledge（包括 FormalExpr 展开的中间 Knowledge）无 local 来源，content 直接存在 global 层。
+**内容存储**：所有知识内容存储在 local 层的 `content` 字段上。Global 层（LKM 层）通过 `representative_lcn` 引用获取内容，不重复存储。LKM 服务器直接创建的 global Knowledge（包括 FormalExpr 展开的中间 Knowledge）无 local 来源，content 直接存在 global 层。
 
 完整的身份、内容指纹与图哈希规则见 [03-identity-and-hashing.md](03-identity-and-hashing.md)。
 
@@ -348,7 +348,7 @@ strategy_id = {lcs_|gcs_}_{SHA-256(scope + type + sorted(premises) + conclusion 
 
 `canonical(formal_expr)` 是对 FormalExpr 内 Operator 列表的确定性序列化（按 operator_id 或结构排序）。具体序列化算法待实现时细化。
 
-**注意**：`sorted(premises)` 和 `conclusion` 中的 Knowledge ID，在 local 层为 QID，在 global 层为 `gcn_` ID。
+**注意**：`sorted(premises)` 和 `conclusion` 中的 Knowledge ID，在 IR 代码（local 层）中为 QID。Global 层使用 `gcn_` ID（由 LKM 负责）。
 
 ### 3.3 类型字段
 
