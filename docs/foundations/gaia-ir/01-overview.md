@@ -347,7 +347,7 @@ Gaia IR 里至少要区分三件事：
 | **LocalCanonicalGraph** | 单个包 | QID `{ns}:{pkg}::{label}` | `lcs_`, `lco_` | 存储完整 content + Strategy steps（内容仓库） |
 | **GlobalCanonicalGraph** | 跨包 | `gcn_` | `gcs_`, `gco_` | 引用 representative，Strategy 无 steps（结构索引）+ Operator |
 
-`Knowledge.content_hash` 独立于 QID：相同内容的 local 节点可以有不同 QID（不同包），但共享同一个 `content_hash`。规范化（QID → gcn 映射）见 [05-canonicalization.md](05-canonicalization.md)，完整身份规则见 [03-identity-and-hashing.md](03-identity-and-hashing.md)。
+`Knowledge.content_hash` 独立于 QID：相同内容的 local 节点可以有不同 QID（不同包），但共享同一个 `content_hash`。`content_hash` 的角色和等价/独立证据的 IR 表达见 [05-canonicalization.md](05-canonicalization.md)，完整身份规则见 [03-identity-and-hashing.md](03-identity-and-hashing.md)。
 
 ### 图哈希
 

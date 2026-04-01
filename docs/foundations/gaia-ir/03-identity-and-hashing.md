@@ -167,6 +167,6 @@ validator 至少应检查：
 ## 8. 与其他文档的分工
 
 - [02-gaia-ir.md](02-gaia-ir.md)：定义对象字段本身
-- [05-canonicalization.md](05-canonicalization.md)：定义如何利用 `content_hash` 做匹配与提升
+- [05-canonicalization.md](05-canonicalization.md)：定义 `content_hash` 的角色、等价/独立证据的 IR 表达、FormalExpr 中间 Knowledge 创建规则
 - [08-validation.md](08-validation.md)：定义应如何校验这些字段
 - [01-overview.md](01-overview.md)：给出高层总览
