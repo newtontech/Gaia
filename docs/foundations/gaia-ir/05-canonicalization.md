@@ -49,6 +49,14 @@ binding_strategy (type: binding):
 
 **BP 效果：** 公共结论 C 的 belief 等于 A 和 B 的 belief 的算术平均，不会 double count。binding factor 的反向消息会校准 A 和 B 的 belief 使之趋于一致。
 
+**A 和 B 在 binding 之后仍可被其他 package 引用。** 这不会导致 double counting，因为 A、B、C 通过 binding factor 在 factor graph 中连通。BP 的 message passing 会正确处理这些依赖：
+
+- **引用 C**（推荐）：拿到的是 averaged belief，最干净的方式。
+- **引用 A**：A 的 belief 已经被 binding 的反向消息校准过——包含了 B 的信息。后续 package 拿到的不是"纯 S₁ 的结论"，而是"被等价论证校准后的结论"。这是正确的语义——既然 A ≡ B 已经声明，B 的信息理应影响 A。
+- **同时引用 A 和 C 作为前提**：BP 不会 double count，因为 A 和 C 之间有 binding factor 连通，BP 的消息传播知道它们是相关的。
+
+因此不需要在 binding 之后"退役"或"重定向" A 和 B。它们作为各自 package 的结论节点继续存在，binding factor 通过双向消息自然维护了 A、B、C 之间的一致性。
+
 **典型场景：**
 
 - LKM curation 发现两个包的推理链论据等价，发布 curation package 做合并

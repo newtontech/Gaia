@@ -460,6 +460,8 @@ Strategy_binding (type: binding):
 - 包内作者声明两种表述等价
 - 多个 reviewer/agent 对同一推理给出不同强度评估
 
+**binding 后 A 和 B 仍可被引用：** 其他 package 可以继续引用 A 或 B（而非 C）。这不会导致 double counting——A、B、C 通过 binding factor 在 factor graph 中连通，BP message passing 会正确处理依赖关系。A 的 belief 已被 binding 的反向消息校准（包含 B 的信息），引用 A 等价于引用一个被等价论证校准后的版本。
+
 #### `independent_evidence`（独立证据声明）
 
 当多条推理链**从不重叠的前提集**独立推导出同一结论时，用 `independent_evidence` CompositeStrategy 将它们组织在一起。
