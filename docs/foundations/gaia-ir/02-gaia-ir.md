@@ -365,10 +365,12 @@ strategy_id = {lcs_|gcs_}_{SHA-256(scope + type + sorted(premises) + conclusion 
 | **`elimination`** | 无独立 strategy-level 参数 | FormalStrategy | 条件行为由 disjunction + equivalence + contradiction + conjunction / implication skeleton 直接确定 |
 | **`mathematical_induction`** | 无独立 strategy-level 参数 | FormalStrategy | 条件行为由其 formal skeleton 直接确定 |
 | **`case_analysis`** | 无独立 strategy-level 参数 | FormalStrategy | 条件行为由 disjunction + equivalence + conjunction / implication skeleton 直接确定 |
+| **`binding`** | averaging CPT：P(C=1 \| a₁,...,aₙ) = Σaᵢ/N（自动由 premises 数量确定） | Strategy (leaf) | 将 N 个等价论证的结论合并为一个，belief 取算术平均 |
+| **`independent_evidence`** | 无独立 strategy-level 参数 | CompositeStrategy | 标记 sub-strategies 为独立证据块；BP 标准累积，reviewer 验证前提不重叠 |
 | **`toolcall`**（deferred） | — | — | 未引入。待后续设计 |
 | **`proof`**（deferred） | — | — | 未引入。待后续设计 |
 
-> **设计决策：** `independent_evidence` 和 `contradiction` 不作为 Strategy 类型——它们是结构关系，直接用 Operator（equivalence / contradiction）表达。原 `soft_implication` 合并到 `noisy_and`（k=1 的特例）。原 `None` 合并到 `infer`。
+> **设计决策：** `contradiction` 不作为 Strategy 类型——它是结构关系，直接用 Operator 表达。原 `soft_implication` 合并到 `noisy_and`（k=1 的特例）。原 `None` 合并到 `infer`。`independent_evidence` 作为 CompositeStrategy 类型引入（标记独立证据块），`binding` 作为叶子 Strategy 引入（合并等价论证）。
 
 ### 3.4 参数化语义
 
@@ -410,6 +412,105 @@ P(conclusion=true | any premise=false) = ε    （Cromwell leak）
 
 **不适用于把整条归纳/溯因语义压平成单条 generic noisy_and。** 归纳、溯因、类比、外推在 theory 中都有各自的命名微观结构；如果要保留这些语义，应使用对应的命名 `type` 并直接 formalize 为 FormalStrategy。若更大论证需要保留 hierarchy，则由外层 CompositeStrategy 组合这些结构。
 
+#### `binding`（等价论证合并）
+
+当多条推理链推导出**等价但非独立**的结论时，用 `binding` strategy 将它们合并为一条，避免 BP 重复计算（double counting）。
+
+**结构：** 叶子 Strategy，premises 是各子论证的结论，conclusion 是合并后的公共结论。
+
+**CPT（自动确定）：** N 个前提的 binding strategy 的条件概率表为：
+
+```
+P(C=1 | a₁, a₂, ..., aₙ) = (a₁ + a₂ + ... + aₙ) / N
+```
+
+即对输入 truth value 取算术平均。此 CPT 在 BP 中产生的效果是：**公共结论的 belief 等于各子结论 belief 的算术平均**。
+
+**反向消息的语义：** BP 中 binding factor 是双向的。当公共结论收到下游证据时，反向消息会同时影响所有子结论；当某个子结论 belief 很强而另一个很弱时，反向消息会将它们向一致性方向"校准"。这对等价论证是合理的——如果两条等价论证结果差异过大，说明等价声明本身可能有问题。
+
+**示例：同一结论被两个包从不同角度推导**
+
+```text
+# 包 A 通过晶体结构分析推导 YBCO 超导
+Strategy_A (type: deduction):
+  premises: [reg:pkg_a::crystal_structure, reg:pkg_a::tc_prediction_model]
+  conclusion: reg:pkg_a::ybco_sc_90k
+
+# 包 B 通过电阻测量推导 YBCO 超导
+Strategy_B (type: abduction):
+  premises: [reg:pkg_b::resistance_drops_90k]
+  conclusion: reg:pkg_b::ybco_sc_90k
+
+# 经 curation 发现两者论据等价（非独立），发布 binding
+# curation 包 C 声明两者结论等价并合并
+equivalence(reg:pkg_a::ybco_sc_90k, reg:pkg_b::ybco_sc_90k)
+  → helper claim: reg:pkg_c::eq_ybco
+
+Strategy_binding (type: binding):
+  premises: [reg:pkg_a::ybco_sc_90k, reg:pkg_b::ybco_sc_90k]
+  conclusion: reg:pkg_c::ybco_sc_merged
+  CPT: P(C=1|a,b) = (a+b)/2
+```
+
+**与 `noisy_and` 的区别：** `noisy_and` 的语义是"所有前提联合必要"——若任一前提为假则结论几乎为假。`binding` 的语义是"多个等价评估取平均"——每个前提是对同一命题的独立估计，不是必要条件。
+
+**适用场景：**
+
+- LKM curation 发现两个包的推理链等价（前提集等价或重叠），需要合并以防 double counting
+- 包内作者声明两种表述等价
+- 多个 reviewer/agent 对同一推理给出不同强度评估
+
+#### `independent_evidence`（独立证据声明）
+
+当多条推理链**从不重叠的前提集**独立推导出同一结论时，用 `independent_evidence` CompositeStrategy 将它们组织在一起。
+
+**结构：** CompositeStrategy，`sub_strategies` 引用 N 个子策略，这些子策略**共享同一个 conclusion**。
+
+**BP 效果：** 不需要特殊处理——N 个子策略各自独立连接到同一结论变量，BP 标准 message product 自然累积证据（log-odds 空间中的加法）。
+
+**Review 效果：** reviewer 需要验证两件事：
+
+1. 每个 sub-strategy 的内部推理是否 sound（前提 → 结论是否成立）
+2. 各 sub-strategy 的前提集是否**不重叠**（独立性）
+
+如果前提集有重叠，独立性声明不成立，reviewer 应标记问题。
+
+**示例：同一结论由两条独立路径支持**
+
+```text
+# 路径 1：从理论预测推导
+Strategy_theory (type: deduction):
+  premises: [reg:pkg::bcs_theory, reg:pkg::electron_phonon_coupling]
+  conclusion: reg:pkg::ybco_superconducts
+
+# 路径 2：从实验观测推导
+Strategy_experiment (type: abduction):
+  premises: [reg:pkg::meissner_effect_observed]
+  conclusion: reg:pkg::ybco_superconducts
+
+# 作者声明这两条路径是独立证据
+CompositeStrategy (type: independent_evidence):
+  sub_strategies: [Strategy_theory.id, Strategy_experiment.id]
+  conclusion: reg:pkg::ybco_superconducts
+```
+
+Reviewer 检查：
+- `{bcs_theory, electron_phonon_coupling}` ∩ `{meissner_effect_observed}` = ∅ ✓（前提不重叠）
+- 两条推理各自 sound ✓
+
+BP 效果：两条独立的 factor 同时支持 `ybco_superconducts`，belief 累积增强。
+
+**`binding` 与 `independent_evidence` 的对比：**
+
+| | `binding` | `independent_evidence` |
+|---|---|---|
+| 含义 | 等价论证，同一证据的不同表述 | 独立证据，不同来源 |
+| 形态 | 叶子 Strategy | CompositeStrategy |
+| 前提 | 各子论证的结论（通常不同变量） | 各子策略直接共享同一个 conclusion |
+| BP | averaging CPT → belief 取平均 | 标准 message product → belief 累积 |
+| Reviewer | 检查各子结论确实等价 | 检查前提集不重叠 |
+| 典型场景 | Curation 发现等价推理、合并 | 作者组织多条独立证据线 |
+
 ### 3.5 三种形态
 
 #### 3.5.1 基本 Strategy（叶子 ↝）
@@ -431,7 +532,7 @@ CompositeStrategy 的作用是**保留分解边界**。它组合的是多个 str
 - 大型证明或工具调用的多步结构
 - 只展开局部而保留其余部分折叠的 partial expansion
 - 为更大的论证树保留语义上的组合边界
-- 同一结论下对多条子路径做分组、审查或展示
+- **独立证据声明**（`type=independent_evidence`）：标记 sub-strategies 为独立证据块，供 reviewer 验证前提不重叠。BP 不需要特殊处理——sub-strategies 共享同一 conclusion，标准 message product 自然累积
 
 当一个较大的论证逐步 formalize 时，典型会经历三个阶段：
 
