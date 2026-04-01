@@ -52,7 +52,7 @@ validation 的职责是**验证结构合法性**。
 6. helper claim 仍然是 `claim`，不能引入新的 Knowledge primitive
 7. 结构型 helper claim **禁止**携带独立的 `PriorRecord`——它们不引入新的中间命题或新的前提，其值由 Operator 确定性决定（见 [04-helper-claims.md §6](04-helper-claims.md#6-与-parameterization-的关系)）
 8. `label` 在同一 `LocalCanonicalGraph` 内必须唯一
-9. QID 中的 `namespace` 和 `package_name` 必须与所属 `LocalCanonicalGraph` 的 `namespace` 和 `package` 一致
+9. `LocalCanonicalGraph.namespace` / `package_name` 约束自动生成的本地 QID；显式写入的 foreign QID 允许作为 external reference 出现在 graph 中
 
 ## 3. Operator 校验
 

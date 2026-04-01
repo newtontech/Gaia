@@ -24,19 +24,19 @@ Gaia IR 里至少有三类容易混淆的“标识”：
 
 ## 2. Knowledge 身份
 
-### 2.1 Local Knowledge
+### 2.1 Knowledge QID
 
-local `Knowledge.id` 使用 **QID**（Qualified Node ID）格式，是 **name-addressed** identity：
+`Knowledge.id` 使用 **QID**（Qualified Node ID）格式，是 **name-addressed** identity：
 
 ```text
 {namespace}:{package_name}::{label}
 ```
 
-其中：
+对于 QID 中的三部分：
 
 - **namespace**：知识来源命名空间（`reg` = 注册表包，`paper` = 提取的论文）
 - **package_name**：包名（`reg` 由 registry 保证唯一，`paper` 由数据库 metadata ID 保证唯一）
-- **label**：包内唯一的人类可读标签（编译期/提取期强制保证唯一）
+- **label**：在当前 graph 中使用的人类可读句柄；对本地声明通常是包内标签，对 imported external reference 也可以保留一个 graph-local alias
 
 示例：`reg:galileo_falling_bodies::vacuum_prediction`、`paper:{metadata_id}::cmb_power_spectrum`
 
@@ -44,6 +44,8 @@ local `Knowledge.id` 使用 **QID**（Qualified Node ID）格式，是 **name-ad
 - `namespace`：以小写字母开头，后续为小写字母、数字或下划线（`[a-z][a-z0-9_]*`）
 - `package_name`：以小写字母或数字开头，后续为小写字母、数字、下划线或连字符（`[a-z0-9][a-z0-9_\-]*`）
 - `label`：以小写字母或下划线开头，后续为小写字母、数字或下划线（`[a-z_][a-z0-9_]*`）。自动生成的 label 以 `__` 开头
+
+对 **本地声明** 且未显式指定 `id` 的 Knowledge，`LocalCanonicalGraph` 会用自己的 `(namespace, package_name)` 自动生成 QID。对 **外部引用** 的 Knowledge，则允许显式保留 foreign QID。
 
 因此：
 

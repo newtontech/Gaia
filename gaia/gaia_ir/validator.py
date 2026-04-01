@@ -110,29 +110,13 @@ def _validate_knowledges(
                     result.error(f"Knowledge label '{label}': duplicate in local graph")
                 seen.add(label)
 
-    # namespace/package consistency checks (local scope only)
+    # graph namespace sanity check (local scope only)
     if scope == "local" and graph_namespace is not None:
         allowed_namespaces = {"reg", "paper"}
         if graph_namespace not in allowed_namespaces:
             result.error(
                 f"Graph namespace '{graph_namespace}' must be one of: {allowed_namespaces}"
             )
-
-        for k in knowledges:
-            if k.id and is_qid(k.id):
-                parsed = _parse_qid(k.id)
-                if parsed:
-                    ns, pkg, _ = parsed
-                    if ns != graph_namespace:
-                        result.error(
-                            f"Knowledge '{k.id}': QID namespace '{ns}' does not match "
-                            f"graph namespace '{graph_namespace}'"
-                        )
-                    if graph_package_name is not None and pkg != graph_package_name:
-                        result.error(
-                            f"Knowledge '{k.id}': QID package '{pkg}' does not match "
-                            f"graph package_name '{graph_package_name}'"
-                        )
 
     return lookup
 

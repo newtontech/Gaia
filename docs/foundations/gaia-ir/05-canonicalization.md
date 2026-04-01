@@ -57,7 +57,8 @@ Gaia IR 只管理 **local package 内部的结构表示**。
 
 ### 2.3 显式语义关系
 
-Gaia IR 允许作者在 package 内用 `equivalence` Operator 声明两个 claim 真值等价。
+Gaia IR 允许作者在 graph 中用 `equivalence` Operator 声明两个 claim 真值等价。  
+这两个 claim 既可以都是本地节点，也可以包含通过 external reference 引入的 foreign QID。
 
 这类 Operator 的意义是：
 
@@ -66,7 +67,7 @@ Gaia IR 允许作者在 package 内用 `equivalence` Operator 声明两个 claim
 - 为后续 registry 侧的跨 package 判断提供证据
 
 但它**不是**跨 package identity merge primitive。  
-`equivalence(A, B)` 说明的是某个 package 内主张的真值约束，不等于 registry 已经接受 “A 和 B 是同一个 canonical proposition”。
+`equivalence(A, B)` 说明的是某个 package 公开提交的真值约束主张，不等于 registry 已经接受 “A 和 B 是同一个 canonical proposition”。
 
 ### 2.4 Provenance 与上下文
 
@@ -125,7 +126,7 @@ core IR 在这里的职责不是直接“合并图”，而是保证这些 judgm
 这些是下游 LKM 构建 anti-double-counting graph 的充分输入。  
 具体如何 materialize 成内部图结构，不由 Gaia IR 本体规定。
 
-> **Future work:** 外部 claim / strategy reference 的精确 schema 仍待单独设计。当前文档先固定边界：cross-package duplicate handling 不在 core IR 内伪装成新的 Strategy type。
+> **Future work:** imported reference 的附加 metadata / provenance schema 仍待单独设计。当前文档先固定边界：cross-package duplicate handling 不在 core IR 内伪装成新的 Strategy type。
 
 ## 5. `content_hash` 的角色
 

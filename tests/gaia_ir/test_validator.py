@@ -93,27 +93,25 @@ class TestKnowledgeValidation:
         assert not r.valid
         assert any("namespace" in e for e in r.errors)
 
-    def test_qid_namespace_must_match_graph(self):
-        """Knowledge QID namespace must match graph namespace."""
+    def test_external_qid_with_different_namespace_is_allowed(self):
+        """Local graphs may explicitly reference external package nodes."""
         g = LocalCanonicalGraph(
             namespace="reg",
             package_name="test",
             knowledges=[Knowledge(id="paper:other::a", type="claim", content="test", label="a")],
         )
         r = validate_local_graph(g)
-        assert not r.valid
-        assert any("namespace" in e and "does not match" in e for e in r.errors)
+        assert r.valid
 
-    def test_qid_package_must_match_graph(self):
-        """Knowledge QID package must match graph package_name."""
+    def test_external_qid_with_different_package_is_allowed(self):
+        """Foreign package QIDs are valid as long as the QID itself is valid."""
         g = LocalCanonicalGraph(
             namespace="reg",
             package_name="test",
             knowledges=[Knowledge(id="reg:other_pkg::a", type="claim", content="test", label="a")],
         )
         r = validate_local_graph(g)
-        assert not r.valid
-        assert any("package" in e and "does not match" in e for e in r.errors)
+        assert r.valid
 
     def test_valid_namespace_and_package(self):
         """Valid namespace and matching package pass."""
@@ -1670,4 +1668,3 @@ class TestParameterizationValidation:
             ],
         )
         assert r.valid
-

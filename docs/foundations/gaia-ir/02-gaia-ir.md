@@ -28,8 +28,8 @@ Knowledge 表示命题。**Claim 是唯一携带概率（prior + belief）的类
 
 ```
 Knowledge:
-    id:                     str | None       # QID 格式 `{namespace}:{package_name}::{label}`；可为 None（由 LocalCanonicalGraph 自动分配）
-    label:                  str | None       # 包内唯一；id 和 label 至少提供一个
+    id:                     str | None       # QID 格式 `{namespace}:{package_name}::{label}`；可为 None（由 LocalCanonicalGraph 为本地节点自动分配）
+    label:                  str | None       # graph 内唯一；id 和 label 至少提供一个
     type:                   str              # claim | setting | question
     content:                str | None       # 知识内容
     content_hash:           str | None       # SHA-256(type + content + sorted(parameters))，不含 package_id
@@ -40,7 +40,7 @@ Knowledge:
     provenance:             list[PackageRef] | None   # 贡献包列表
 ```
 
-**对象身份**：`id` 使用 QID 格式 `{namespace}:{package_name}::{label}`，是 name-addressed identity。其中 `namespace` 和 `package_name` 来自所属 `LocalCanonicalGraph`，`label` 是 Knowledge 自身的包内唯一标签（编译期/提取期强制保证）。不同包中相同内容的节点有**不同的** QID（不同 `package_name`）。
+**对象身份**：`id` 使用 QID 格式 `{namespace}:{package_name}::{label}`，是 name-addressed identity。对**本地声明**且未显式给出 `id` 的 Knowledge，`namespace` 和 `package_name` 由所属 `LocalCanonicalGraph` 自动补齐。对**外部引用**的 Knowledge，则保留其原始 external QID。`label` 是该 graph 内的唯一句柄。不同包中相同内容的节点有**不同的** QID（不同 `package_name`）。
 
 **内容指纹**：`content_hash = SHA-256(type + content + sorted(parameters))`，不含 `package_id`。同一内容在不同包中产生相同的 `content_hash`。用途：
 
