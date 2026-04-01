@@ -41,6 +41,10 @@ class StrategyType(StrEnum):
     ANALOGY = "analogy"
     EXTRAPOLATION = "extrapolation"
 
+    # Structural strategy types
+    BINDING = "binding"  # averaging CPT: merges equivalent argument conclusions
+    INDEPENDENT_EVIDENCE = "independent_evidence"  # marks independent evidence blocks
+
 
 class Step(BaseModel):
     """A single reasoning step (local layer only)."""
