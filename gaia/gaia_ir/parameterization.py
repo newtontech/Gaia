@@ -49,7 +49,7 @@ class StrategyParamRecord(BaseModel):
     All values are Cromwell-clamped.
     """
 
-    strategy_id: str  # lcs_ or gcs_ prefix
+    strategy_id: str  # lcs_ prefix
     conditional_probabilities: list[float]
     source_id: str
     created_at: datetime = None  # type: ignore[assignment]

@@ -245,22 +245,18 @@ class TestOperatorValidation:
         assert not r.valid
         assert any("conclusion" in e and "must be claim" in e for e in r.errors)
 
-    def test_local_graph_rejects_global_scoped_operator(self):
-        g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
-            operators=[
-                Operator(
-                    operator_id="gco_bad",
-                    scope="global",
-                    operator="implication",
-                    variables=["reg:test::a"],
-                    conclusion="reg:test::b",
-                )
-            ],
-        )
-        r = validate_local_graph(g)
-        assert not r.valid
-        assert any("scope" in e.lower() for e in r.errors)
+    def test_global_scoped_operator_rejected_at_construction(self):
+        """Global scope is no longer allowed — Operator model rejects it."""
+        import pytest
+
+        with pytest.raises(ValueError, match="scope must be one of"):
+            Operator(
+                operator_id="gco_bad",
+                scope="global",
+                operator="implication",
+                variables=["reg:test::a"],
+                conclusion="reg:test::b",
+            )
 
     def test_operator_conclusion_scope_prefix_check(self):
         """Operator conclusion should have correct scope prefix."""
@@ -416,18 +412,16 @@ class TestStrategyValidation:
         assert r.valid  # warning, not error
         assert any("background" in w for w in r.warnings)
 
-    def test_global_strategy_rejects_steps(self):
-        """Pydantic model validation rejects steps on global Strategy at construction time."""
+    def test_global_scope_rejected_at_construction(self):
+        """Global scope is no longer allowed — Strategy model rejects it."""
         import pytest
-        from gaia.gaia_ir import Step
 
-        with pytest.raises(Exception, match="global Strategy must not carry steps"):
+        with pytest.raises(ValueError, match="scope must be 'local'"):
             Strategy(
                 scope="global",
                 type="infer",
                 premises=["gcn_a"],
                 conclusion="gcn_b",
-                steps=[Step(reasoning="should not be here")],
             )
 
     def test_strategy_prefix_check(self):
@@ -442,19 +436,6 @@ class TestStrategyValidation:
                 premises=["reg:test::a"],
                 conclusion="reg:test::b",
             )
-
-    def test_local_graph_rejects_global_scoped_strategy(self):
-        g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
-            strategies=[
-                Strategy(
-                    scope="global", type="infer", premises=["reg:test::a"], conclusion="reg:test::b"
-                )
-            ],
-        )
-        r = validate_local_graph(g)
-        assert not r.valid
-        assert any("scope" in e.lower() for e in r.errors)
 
 
 class TestCompositeStrategyValidation:

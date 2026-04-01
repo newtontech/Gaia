@@ -143,12 +143,8 @@ def _validate_operators(
             )
 
         if top_level and op.operator_id is not None:
-            expected_prefix = "lco_" if scope == "local" else "gco_"
-            if not op.operator_id.startswith(expected_prefix):
-                result.error(
-                    f"Operator '{op.operator_id}': expected {expected_prefix} prefix "
-                    f"in {scope} graph"
-                )
+            if not op.operator_id.startswith("lco_"):
+                result.error(f"Operator '{op.operator_id}': expected lco_ prefix in {scope} graph")
 
         # operator scope must be compatible with graph scope
         if op.scope is not None and op.scope != scope:
@@ -228,16 +224,11 @@ def _validate_strategy(
             if bid not in knowledge_lookup:
                 result.warn(f"Strategy '{sid}': background '{bid}' not found in graph")
 
-    # global strategies must not have steps
-    if scope == "global" and strategy.steps is not None:
-        result.error(f"Strategy '{sid}': global strategy must not have steps")
-
     # scope/prefix checks
-    prefix = "lcs_" if scope == "local" else "gcs_"
     if strategy.scope != scope:
         result.error(f"Strategy '{sid}': scope '{strategy.scope}' incompatible with {scope} graph")
-    if strategy.strategy_id and not strategy.strategy_id.startswith(prefix):
-        result.error(f"Strategy '{sid}': expected {prefix} prefix in {scope} graph")
+    if strategy.strategy_id and not strategy.strategy_id.startswith("lcs_"):
+        result.error(f"Strategy '{sid}': expected lcs_ prefix in {scope} graph")
 
     # form-specific validation
     if isinstance(strategy, CompositeStrategy):
@@ -480,15 +471,11 @@ def _validate_scope_consistency(
     """Ensure all references use the correct ID format for the scope."""
 
     def _check_id_format(id_: str, context: str) -> None:
-        if scope == "local":
-            if id_ and not is_qid(id_):
-                result.error(
-                    f"{context} has wrong format for {scope} graph "
-                    f"(expected QID namespace:package::label)"
-                )
-        else:
-            if id_ and not id_.startswith("gcn_"):
-                result.error(f"{context} has wrong prefix for {scope} graph")
+        if id_ and not is_qid(id_):
+            result.error(
+                f"{context} has wrong format for {scope} graph "
+                f"(expected QID namespace:package::label)"
+            )
 
     for s in strategies:
         for pid in s.premises:
