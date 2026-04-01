@@ -45,7 +45,7 @@ validation 的职责是**验证结构合法性**。
    - `claim`
    - `setting`
    - `question`
-3. `content_hash` 若存在，必须与 `type + content + sorted(parameters)` 的标准计算一致
+3. `content_hash` 由 Knowledge model 构造时保证（Pydantic model_validator）；graph-level validator 不重复检查
 4. 若某处把它当作可取真值命题引用，则其 `type` 必须是 `claim`
 5. 含 `parameters` 的 claim 仍然是 claim，不是独立类型
 6. helper claim 仍然是 `claim`，不能引入新的 Knowledge primitive

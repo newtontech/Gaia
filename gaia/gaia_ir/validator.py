@@ -19,6 +19,17 @@ from gaia.gaia_ir.parameterization import (
 )
 
 
+def _parse_qid(qid: str) -> tuple[str, str, str] | None:
+    """Parse QID into (namespace, package_name, label). Returns None if not valid QID."""
+    parts = qid.split("::", 1)
+    if len(parts) != 2:
+        return None
+    prefix_parts = parts[0].split(":", 1)
+    if len(prefix_parts) != 2:
+        return None
+    return (prefix_parts[0], prefix_parts[1], parts[1])
+
+
 _PARAMETERIZED_TYPES = {StrategyType.INFER, StrategyType.NOISY_AND}
 _STRUCTURAL_HELPER_OPERATOR_TYPES = {
     OperatorType.CONJUNCTION,
@@ -58,6 +69,9 @@ def _validate_knowledges(
     knowledges: list[Knowledge],
     scope: str,
     result: ValidationResult,
+    *,
+    graph_namespace: str | None = None,
+    graph_package_name: str | None = None,
 ) -> dict[str, Knowledge]:
     """Validate Knowledge nodes and return id→Knowledge lookup."""
     lookup: dict[str, Knowledge] = {}
@@ -96,6 +110,30 @@ def _validate_knowledges(
                     result.error(f"Knowledge label '{label}': duplicate in local graph")
                 seen.add(label)
 
+    # namespace/package consistency checks (local scope only)
+    if scope == "local" and graph_namespace is not None:
+        allowed_namespaces = {"reg", "paper"}
+        if graph_namespace not in allowed_namespaces:
+            result.error(
+                f"Graph namespace '{graph_namespace}' must be one of: {allowed_namespaces}"
+            )
+
+        for k in knowledges:
+            if k.id and is_qid(k.id):
+                parsed = _parse_qid(k.id)
+                if parsed:
+                    ns, pkg, _ = parsed
+                    if ns != graph_namespace:
+                        result.error(
+                            f"Knowledge '{k.id}': QID namespace '{ns}' does not match "
+                            f"graph namespace '{graph_namespace}'"
+                        )
+                    if graph_package_name is not None and pkg != graph_package_name:
+                        result.error(
+                            f"Knowledge '{k.id}': QID package '{pkg}' does not match "
+                            f"graph package_name '{graph_package_name}'"
+                        )
+
     return lookup
 
 
@@ -119,6 +157,14 @@ def _validate_operators(
                 "Top-level Operator must set both operator_id and scope "
                 "(embedded FormalExpr operators may omit them)"
             )
+
+        if top_level and op.operator_id is not None:
+            expected_prefix = "lco_" if scope == "local" else "gco_"
+            if not op.operator_id.startswith(expected_prefix):
+                result.error(
+                    f"Operator '{op.operator_id}': expected {expected_prefix} prefix "
+                    f"in {scope} graph"
+                )
 
         # operator scope must be compatible with graph scope
         if op.scope is not None and op.scope != scope:
@@ -523,7 +569,13 @@ def validate_local_graph(graph: LocalCanonicalGraph) -> ValidationResult:
     """Validate a LocalCanonicalGraph."""
     result = ValidationResult()
 
-    knowledge_lookup = _validate_knowledges(graph.knowledges, "local", result)
+    knowledge_lookup = _validate_knowledges(
+        graph.knowledges,
+        "local",
+        result,
+        graph_namespace=graph.namespace,
+        graph_package_name=graph.package_name,
+    )
     _validate_operators(graph.operators, knowledge_lookup, "local", result, top_level=True)
     _validate_strategies(graph.strategies, graph.operators, knowledge_lookup, "local", result)
     _validate_scope_consistency(

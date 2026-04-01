@@ -82,6 +82,45 @@ class TestKnowledgeValidation:
         assert not r.valid
         assert any("duplicate" in e and "label" in e for e in r.errors)
 
+    def test_namespace_must_be_allowed(self):
+        """Namespace must be reg or paper."""
+        g = LocalCanonicalGraph(
+            namespace="invalid",
+            package_name="test",
+            knowledges=[Knowledge(id="invalid:test::a", type="claim", content="test", label="a")],
+        )
+        r = validate_local_graph(g)
+        assert not r.valid
+        assert any("namespace" in e for e in r.errors)
+
+    def test_qid_namespace_must_match_graph(self):
+        """Knowledge QID namespace must match graph namespace."""
+        g = LocalCanonicalGraph(
+            namespace="reg",
+            package_name="test",
+            knowledges=[Knowledge(id="paper:other::a", type="claim", content="test", label="a")],
+        )
+        r = validate_local_graph(g)
+        assert not r.valid
+        assert any("namespace" in e and "does not match" in e for e in r.errors)
+
+    def test_qid_package_must_match_graph(self):
+        """Knowledge QID package must match graph package_name."""
+        g = LocalCanonicalGraph(
+            namespace="reg",
+            package_name="test",
+            knowledges=[Knowledge(id="reg:other_pkg::a", type="claim", content="test", label="a")],
+        )
+        r = validate_local_graph(g)
+        assert not r.valid
+        assert any("package" in e and "does not match" in e for e in r.errors)
+
+    def test_valid_namespace_and_package(self):
+        """Valid namespace and matching package pass."""
+        g = _local_graph(knowledges=[_claim("reg:test::a")])
+        r = validate_local_graph(g)
+        assert r.valid
+
 
 # ---------------------------------------------------------------------------
 # 2. Operator validation
@@ -255,6 +294,19 @@ class TestOperatorValidation:
         r = validate_local_graph(g)
         assert not r.valid
         assert any("Top-level Operator must set both operator_id and scope" in e for e in r.errors)
+
+    def test_operator_lco_prefix_required(self):
+        """Pydantic model validation rejects wrong ID prefix at construction time."""
+        import pytest
+
+        with pytest.raises(Exception, match="lco_ prefix"):
+            Operator(
+                operator_id="bad_prefix",
+                scope="local",
+                operator="implication",
+                variables=["reg:test::a"],
+                conclusion="reg:test::b",
+            )
 
 
 # ---------------------------------------------------------------------------

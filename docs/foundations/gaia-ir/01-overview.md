@@ -151,6 +151,7 @@ Gaia IR 由三种实体构成：**Knowledge**（命题）、**Strategy**（推�
 {
   "scope": "local",
   "namespace": "reg",
+  "package_name": "ybco_superconductivity",
   "ir_hash": "sha256:...",
   "knowledges": [
     {

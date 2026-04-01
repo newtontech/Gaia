@@ -40,6 +40,11 @@ local `Knowledge.id` 使用 **QID**（Qualified Node ID）格式，是 **name-ad
 
 示例：`reg:galileo_falling_bodies::vacuum_prediction`、`paper:{metadata_id}::cmb_power_spectrum`
 
+**字符集约束：**
+- `namespace`：以小写字母开头，后续为小写字母、数字或下划线（`[a-z][a-z0-9_]*`）
+- `package_name`：以小写字母或数字开头，后续为小写字母、数字、下划线或连字符（`[a-z0-9][a-z0-9_\-]*`）
+- `label`：以小写字母或下划线开头，后续为小写字母、数字或下划线（`[a-z_][a-z0-9_]*`）。自动生成的 label 以 `__` 开头
+
 因此：
 
 - 同包、同 label → 相同 QID（即使内容因版本更新而变化）
