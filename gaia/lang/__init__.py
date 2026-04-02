@@ -2,17 +2,31 @@
 
 from gaia.lang.core import Knowledge, Operator, Package, Strategy
 from gaia.lang.operators import complement, contradiction, disjunction, equivalence
+from gaia.lang.strategies import (
+    abduction,
+    analogy,
+    deduction,
+    extrapolation,
+    infer,
+    noisy_and,
+)
 
 __all__ = [
     "Knowledge",
     "Operator",
     "Package",
     "Strategy",
+    "abduction",
+    "analogy",
     "claim",
     "complement",
     "contradiction",
+    "deduction",
     "disjunction",
     "equivalence",
+    "extrapolation",
+    "infer",
+    "noisy_and",
     "question",
     "setting",
 ]
