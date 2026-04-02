@@ -1,0 +1,15 @@
+{
+  "reg:newton_principia::derivation__apollo15_confirms_equal_fall": 0.42550000000000004,
+  "reg:newton_principia::derivation__apollo15_feather_drop": 0.5000000000000001,
+  "reg:newton_principia::derivation__apollo_galileo_convergence": 0.1821125005,
+  "reg:newton_principia::derivation__freefall_acceleration_equals_g": 0.034677236824938035,
+  "reg:newton_principia::derivation__galileo_newton_convergence": 0.01654004605812183,
+  "reg:newton_principia::derivation__inverse_square_force": 0.21367450000000002,
+  "reg:newton_principia::derivation__law_of_gravity": 0.09237241559950005,
+  "reg:newton_principia::derivation__mass_equivalence": 0.04042507147466278,
+  "reg:newton_principia::laws__second_law": 0.5,
+  "reg:newton_principia::laws__third_law": 0.5,
+  "reg:newton_principia::observations__kepler_third_law": 0.5,
+  "reg:newton_principia::observations__pendulum_experiment": 0.5,
+  "reg:newton_principia::vacuum_prediction": 0.5
+}
