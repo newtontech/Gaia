@@ -77,10 +77,7 @@ include = ["galileo_falling_bodies*"]    # Import name omits -gaia suffix
 [tool.gaia]
 namespace = "galileo"
 type = "knowledge-package"
-
-[[tool.uv.index]]
-name = "gaia"
-url = "https://siliconeinstein.github.io/gaia-registry/simple/"
+uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 ```
 
 **Naming convention (Julia-style `.gaia` suffix):**
@@ -135,8 +132,10 @@ with Package("my_analysis") as pkg:
 
 Dependency management:
 ```bash
-uv add aristotle-mechanics-gaia
+uv add "aristotle-mechanics-gaia @ git+https://github.com/example/AristotleMechanics.gaia@v1.0.0"
 ```
+
+Phase 1 assumes a GitHub-backed source registry, not an installable package index. Cross-package dependencies are therefore pinned as standard Python direct references (or handled via local workspace paths in a monorepo).
 
 ### 2.6 Workspace (Monorepo)
 
@@ -625,12 +624,15 @@ with source(model="gpt-5-mini", reviewer="alice", policy="conservative") as src:
     parameterize(vacuum_prediction.strategy, p=0.85)
 ```
 
-### 4.6 Resolution at Inference Time
+### 4.6 Resolution at Inference Time (Future Extension)
 
-```bash
-gaia infer . --policy latest          # Use newest records per claim/strategy
-gaia infer . --policy source:alice    # Use only Alice's parameterization
-```
+Phase 1 does not yet expose a user-facing `gaia infer` command.
+
+Parameterization resolution remains a future extension point. When local or server-side inference is reintroduced, resolution policy can select:
+
+- the latest accepted records
+- records from a specific reviewer or source
+- registry-approved records only
 
 ---
 
@@ -644,8 +646,7 @@ gaia infer . --policy source:alice    # Use only Alice's parameterization
     ↓  gaia compile
     │
     ├──→ ir.json           (LocalCanonicalGraph, structure only)
-    ├──→ ir_hash            (SHA-256 integrity checksum)
-    └──→ params/*.json      (Parameterization records, separate files)
+    └──→ ir_hash           (SHA-256 integrity checksum)
 ```
 
 Three steps:
@@ -695,31 +696,21 @@ Implementation: `Package.__exit__` inspects the caller's `locals()` or uses desc
 ### 5.3 CLI Commands
 
 ```bash
-# ── Create ──
-gaia init my-research          # Scaffold: pyproject.toml + package dir + __init__.py template
-                                # Internally calls: uv init --lib my-research-gaia
-
-# ── Compile ──
 gaia compile [path]            # Compile → .gaia/ir.json + ir_hash
-gaia compile --check           # Validate only, no output
 
-# ── Check ──
 gaia check [path]              # Structural validation (references, schema legality)
-gaia check --show-inputs       # List input claims and strategies needing parameterization
-gaia check --params            # Verify parameterization completeness
-
-# ── Infer ──
-gaia infer [path]              # Local BP preview
-gaia infer --policy latest     # Use latest parameters
-gaia infer --policy source:alice  # Use specific reviewer's parameters
-
-# ── Publish ──
-gaia publish                   # uv build + uv publish --index gaia
-gaia publish --local           # Write to local LanceDB + Kuzu (dev mode)
-
-# ── Render ──
-gaia render [path]             # IR → document (Typst/LaTeX/HTML), separate pipeline
+gaia register [path]           # Submit a tagged GitHub-backed release to the official registry
 ```
+
+Phase 1 keeps the author-side lifecycle intentionally small:
+
+1. `gaia compile`
+2. `gaia check`
+3. Push source to GitHub
+4. Create and push a git tag (default convention: `v<version>`)
+5. `gaia register`
+
+`gaia register` is **not** direct publication of artifacts. It creates or prepares a metadata PR against the official registry for a GitHub-tagged source release.
 
 ### 5.4 Validation (`gaia check`)
 
@@ -739,7 +730,7 @@ Three levels, aligning with Gaia IR v2 [08-validation.md](../foundations/gaia-ir
 - FormalExpr private nodes not referenced by external Strategies
 - All names in `__all__` exist
 
-**Parameterization completeness (`gaia check --params`):**
+**Future parameterization checks (not yet an active Phase 1 CLI surface):**
 - Every input claim has a PriorRecord
 - Every `noisy_and`/`infer` Strategy has a StrategyParamRecord
 - Every FormalStrategy's public interface claims have PriorRecords
@@ -876,11 +867,12 @@ uv init --lib galileo-falling-bodies-gaia
 uv add gaia-lang
 # ... write knowledge ...
 gaia compile .
-gaia check --show-inputs       # See what reviewer needs to parameterize
-# ... reviewer writes .gaia/params/review_alice.py ...
-gaia check --params            # Verify completeness
-gaia infer . --policy source:alice
-gaia publish
+gaia check .
+git add . && git commit -m "Prepare v1.0.0"
+git push origin main
+git tag v1.0.0
+git push origin v1.0.0
+gaia register
 ```
 
 ---
@@ -891,32 +883,36 @@ gaia publish
 
 | Ecosystem concept | v4 design | v5 (Python DSL + uv) |
 |---|---|---|
-| Package creation | `gaia init` + typst.toml | `gaia init` → `uv init --lib` + pyproject.toml |
+| Package creation | `gaia init` + typst.toml | `uv init --lib` + pyproject.toml |
 | Dependency declaration | gaia-deps.yml | pyproject.toml `[project].dependencies` |
 | Cross-package reference | Hand-written YAML label | Python `import` |
 | Version management | typst.toml version field | `uv version --bump` |
 | Local build | `gaia build` → .gaia/ir.json | `gaia compile` → .gaia/ir.json |
-| Publish | git push + manual registration | `uv publish --index gaia` |
-| Private registry | Not designed | `[[tool.uv.index]]` + auth |
+| Registration | git push + manual registration | `git push` + `git tag` + `gaia register` |
+| Private source registry | Not designed | Git-hosted metadata repo + direct Git dependencies |
 | Workspace | Not supported | `[tool.uv.workspace]` |
 | Lockfile | ir_hash only | uv.lock + ir_hash |
 
 ### 7.2 What uv Handles vs What Gaia Builds
 
 **uv handles (solved infrastructure):**
-- Package creation, building, publishing
+- Package creation and packaging scaffolding
 - Dependency resolution and lockfiles
 - Private registry authentication
 - Workspace management
 - Python version management
 
-**Gaia builds (domain-specific):**
+**Gaia Phase 1 currently provides (implemented author-side surface):**
 - `gaia compile` — Python DSL → Gaia IR JSON compiler
-- `gaia check` — IR validation (references, schema, parameterization completeness)
-- `gaia infer` — Local BP inference preview
-- `gaia render` — IR → document rendering
-- Registry review gate — Verify review reports, reviewer qualifications
-- LKM integration — Global inference, cross-package relationship discovery
+- `gaia check` — IR validation and artifact consistency checks
+- `gaia register` — source-release registration PR generation
+
+**Future extension points (not yet current Phase 1 CLI):**
+- parameterization resolution
+- local or server-side inference
+- rendering flows
+- richer registry review gates
+- LKM integration and cross-package relationship discovery
 
 > **Note:** The ecosystem foundation docs (`docs/foundations/ecosystem/`) still reference Typst-based authoring. Upon implementation, those docs will need updating to reflect the Python DSL workflow.
 

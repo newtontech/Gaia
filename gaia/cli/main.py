@@ -2,7 +2,9 @@
 
 import typer
 
+from gaia.cli.commands.check import check_command
 from gaia.cli.commands.compile import compile_command
+from gaia.cli.commands.register import register_command
 
 app = typer.Typer(
     name="gaia",
@@ -17,3 +19,5 @@ def _callback() -> None:
 
 
 app.command(name="compile")(compile_command)
+app.command(name="check")(check_command)
+app.command(name="register")(register_command)

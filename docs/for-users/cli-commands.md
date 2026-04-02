@@ -2,261 +2,129 @@
 
 > **Status:** Current canonical
 
-Reference for all Gaia CLI commands. The CLI is invoked as `python cli/main.py <command>`.
+Reference for the active Gaia Lang v5 CLI. The installed entrypoint is `gaia`.
 
----
+## Command Set
 
-### gaia init
-
-Initialize a new Typst knowledge package with the v4 label-based DSL.
-
-```
-Usage: python cli/main.py init <name>
+```text
+gaia compile
+gaia check
+gaia register
 ```
 
-**Arguments:**
+`gaia build`, `gaia infer`, and `gaia publish` are not part of the current Gaia Lang v5 author workflow.
 
-| Argument | Required | Description |
-|----------|----------|-------------|
-| `name` | Yes | Package name (also used as directory name) |
+## `gaia compile`
 
-**What it creates:**
-
-```
-<name>/
-  typst.toml          # package manifest
-  lib.typ             # entrypoint
-  gaia.typ            # runtime import
-  _gaia/              # vendored Gaia runtime
-    lib.typ
-    declarations.typ
-    bibliography.typ
-    style.typ
-  motivation.typ      # starter module with a question
-  reasoning.typ       # starter module with a setting and claim
-```
-
-**Example:**
+Compile a Gaia Python package into `.gaia/ir.json` and `.gaia/ir_hash`.
 
 ```bash
-python cli/main.py init enzyme_kinetics
-# Initialized Typst package 'enzyme_kinetics' in enzyme_kinetics/
+gaia compile [path]
 ```
 
-The command fails if the directory already exists.
-
----
-
-### gaia build
-
-Build a knowledge package: validate structure, extract knowledge via `typst query`, compile the raw graph, and produce a local canonical graph.
-
-```
-Usage: python cli/main.py build [path] [--format FORMAT] [--proof-state]
-```
-
-**Arguments:**
+Arguments:
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `path` | `.` | Path to the knowledge package directory |
+| `path` | `.` | Path to the package repository |
 
-**Options:**
+What it does:
 
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--format` | `md` | Output format: `md`, `json`, `typst`, or `all` |
-| `--proof-state` | off | Also generate a proof state analysis report |
+- loads `pyproject.toml`
+- resolves the Python import package from either `<repo>/<import_name>/` or `<repo>/src/<import_name>/`
+- executes the Gaia DSL declarations
+- emits a `LocalCanonicalGraph` to `.gaia/ir.json`
+- writes the deterministic graph hash to `.gaia/ir_hash`
 
-**Output artifacts** (written to `<path>/.gaia/`):
+What it does not do:
 
-| File | Description |
-|------|-------------|
-| `graph/raw_graph.json` | Extracted knowledge graph from Typst source |
-| `graph/local_canonical_graph.json` | Canonicalized graph with resolved references |
-| `graph/canonicalization_log.json` | Log of canonicalization decisions |
-| `build/graph_data.json` | Full graph data as JSON |
-| `build/package.md` | Human-readable Markdown rendering (when `--format md` or `all`) |
-| `build/graph.json` | Graph JSON (when `--format json` or `all`) |
-| `build/proof_state.txt` | Proof state report (when `--proof-state`) |
+- does not push to GitHub
+- does not register the package
+- does not run belief propagation or local database ingest
 
-**Examples:**
+Example:
 
 ```bash
-# Build the current directory
-python cli/main.py build
-
-# Build a specific package with all output formats
-python cli/main.py build my_package --format all
-
-# Build with proof state analysis
-python cli/main.py build my_package --proof-state
+gaia compile .
 ```
 
-Requires `typst.toml` in the package directory. No LLM calls, no network access.
+## `gaia check`
 
----
+Validate that a package is structurally sound and ready for registration.
 
-### gaia infer
-
-Run local belief propagation on a built package. Computes posterior beliefs for all knowledge nodes.
-
-```
-Usage: python cli/main.py infer [path]
+```bash
+gaia check [path]
 ```
 
-**Arguments:**
+Arguments:
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `path` | `.` | Path to the knowledge package directory |
+| `path` | `.` | Path to the package repository |
 
-**Prerequisites:** The package must have been built (`gaia build`) at least once, so that `.gaia/build/` exists.
+What it checks:
 
-**Output:** Writes `<path>/.gaia/infer/infer_result.json` containing the BP run ID and belief values.
+- `pyproject.toml` and `[tool.gaia]` metadata exist
+- `.gaia/ir.json` matches the current source
+- `.gaia/ir_hash` has the expected `sha256:` format
+- the compiled IR is accepted by the current schema and validator
+- package identity fields such as `name`, `version`, `namespace`, and `uuid` are present and consistent
 
-**Example:**
+Example:
 
 ```bash
-python cli/main.py build my_package
-python cli/main.py infer my_package
+gaia compile .
+gaia check .
 ```
 
-```
-Beliefs after BP:
-  setting.vacuum_env: prior=0.9 -> belief=0.9000
-  galileo.vacuum_prediction: prior=0.7 -> belief=0.8231
-  aristotle.heavier_falls_faster: prior=0.6 -> belief=0.3512
+## `gaia register`
 
-Results: my_package/.gaia/infer/infer_result.json
-```
+Prepare or submit a metadata PR against the official registry for a pushed GitHub-tagged source release.
 
-The infer command runs the full pipeline internally: build, mock review (to derive priors and factor parameters), then belief propagation. It operates on the package-local graph only and does not query or modify any global database.
-
----
-
-### gaia publish
-
-Publish a package to git, a local database, or a remote server.
-
-```
-Usage: python cli/main.py publish [path] --git | --local | --server [--db-path PATH]
+```bash
+gaia register [path] [--tag TAG] [--repo URL] [--registry-dir PATH] [--create-pr]
 ```
 
-**Arguments:**
+Arguments:
 
 | Argument | Default | Description |
 |----------|---------|-------------|
-| `path` | `.` | Path to the knowledge package directory |
+| `path` | `.` | Path to the package repository |
 
-**Options (at least one required):**
+Common options:
 
 | Option | Description |
 |--------|-------------|
-| `--git` | Publish via `git add`, `git commit`, `git push` |
-| `--local` | Import to local LanceDB + Kuzu databases |
-| `--server` | Publish to a Gaia server API (not yet implemented) |
-| `--db-path` | LanceDB path (default: `$GAIA_LANCEDB_PATH` or `./data/lancedb/gaia`) |
+| `--tag` | Git tag to register. Defaults to `v<version>` |
+| `--repo` | Override the GitHub repository URL instead of inferring it from `origin` |
+| `--registry-dir` | Path to a local checkout of the registry repo |
+| `--create-pr` | Create and push the registry branch and open a PR via GitHub CLI |
 
-**Examples:**
+Prerequisites:
 
-```bash
-# Publish to local database
-python cli/main.py publish my_package --local
+- `gaia compile` and `gaia check` already pass
+- the package source is pushed to GitHub
+- the target tag is already pushed
+- the registry repo is available locally if metadata needs to be written
 
-# Publish to local database with custom path
-python cli/main.py publish my_package --local --db-path ./my_data/lancedb
-
-# Publish to git
-python cli/main.py publish my_package --git
-```
-
-With `--local`, the command runs the full pipeline (build, review, infer, publish) and writes knowledge items, chains, and factors to LanceDB:
-
-```
-Published my_package to v2 storage:
-  Knowledge items: 12
-  Chains: 5
-  Factors: 8
-```
-
-With `--git`, the command runs `git add .`, `git commit`, and `git push` in the package directory.
-
----
-
-### gaia search
-
-Search published knowledge items in the local LanceDB database.
-
-```
-Usage: python cli/main.py search [query] [--id ID] [--limit N] [--db-path PATH]
-```
-
-**Arguments:**
-
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `query` | none | Search query text (BM25 full-text search) |
-
-**Options:**
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--id` | none | Look up a specific knowledge item by ID |
-| `--limit`, `-k` | `10` | Maximum number of results |
-| `--db-path` | `$GAIA_LANCEDB_PATH` or `./data/lancedb/gaia` | LanceDB path |
-
-Either `query` or `--id` must be provided.
-
-**Examples:**
+Example:
 
 ```bash
-# Full-text search
-python cli/main.py search "vacuum free fall"
+gaia compile .
+gaia check .
+git push origin main
+git tag v4.0.3
+git push origin v4.0.3
+gaia register . --tag v4.0.3 --create-pr
 ```
 
-```
-  [galileo.vacuum_prediction] (claim) prior=0.7 belief=0.8231  score=4.521
-    In a vacuum, objects of different mass fall at the same rate...
-  [galileo.air_resistance_confound] (claim) prior=0.8 belief=0.7945  score=3.102
-    Observed speed differences are artifacts of medium resistance...
-```
+## Registration Model
 
-```bash
-# Look up by ID
-python cli/main.py search --id "galileo.vacuum_prediction"
-```
+The official registry is currently a Phase 1 source registry:
 
-```
-[galileo.vacuum_prediction] (claim)
-  prior: 0.7  belief: 0.8231
-  content: In a vacuum, objects of different mass fall at the same rate.
-  keywords: vacuum, free fall, galileo, gravity
-```
+- it records package metadata, version metadata, dependencies, `git_tag`, `git_sha`, and `ir_hash`
+- it re-clones the tagged GitHub source in CI
+- it recompiles and revalidates before merge
+- consumers currently use validated Git references rather than install-by-name
 
-The search uses BM25 full-text indexing. For CJK or unsegmented text, it falls back to substring matching.
-
----
-
-### gaia clean
-
-Remove all build artifacts from a package.
-
-```
-Usage: python cli/main.py clean [path]
-```
-
-**Arguments:**
-
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `path` | `.` | Path to the knowledge package directory |
-
-**Example:**
-
-```bash
-python cli/main.py clean my_package
-# Removed my_package/.gaia
-```
-
-Deletes the entire `.gaia/` directory, including build, graph, and infer artifacts. Source files are not touched.
+See [../specs/2026-04-02-gaia-registry-design.md](../specs/2026-04-02-gaia-registry-design.md) for the full registry contract.

@@ -1,80 +1,114 @@
 # 包模型
 
-> **Status:** Target design
+> **Status:** Current canonical for Gaia Lang v5 Phase 1
 >
-> **对齐：** [2026-03-25-gaia-lang-alignment-design.md](../../specs/2026-03-25-gaia-lang-alignment-design.md) §5
+> **Canonical spec:** [../../specs/2026-04-02-gaia-lang-v5-python-dsl-design.md](../../specs/2026-04-02-gaia-lang-v5-python-dsl-design.md)
 
-本文档定义了 Gaia 知识容器在创作界面中呈现的结构层次：Package、Module 和 Knowledge。
+本文档描述当前 Gaia Lang v5 的作者侧包模型。当前模型是一个 Python package + `.gaia/` 编译产物 + GitHub source release，而不是旧的 Typst project / local database workflow。
 
 ## Package
 
-Package 是一个完整的、版本化的知识容器。它类似于一个 git 仓库或一篇已发表的论文。
+Package 是一个版本化的知识源码仓库，也是注册的基本单位。
 
-- **标识**：`(package_id, version)` —— 语义化版本字符串（如 `"4.0.0"`）。
-- **创作形式**：一个 Typst 项目目录，包含 `typst.toml` 清单文件、`lib.typ` 入口文件和模块文件。
-- **状态值**：`preparing` | `submitted` | `merged` | `rejected`。
+- **源码形态：** 标准 Python repository
+- **身份：** `name + version + namespace + uuid`
+- **权威元数据：** `pyproject.toml`
+- **编译产物：** `.gaia/ir.json` 和 `.gaia/ir_hash`
+- **外部发布边界：** pushed GitHub commit + pushed git tag
 
-Package 是提交、审查和集成的单位。Package 的摄入是原子性的——所有模块要么全部成功，要么全部失败。
+最小形态通常是：
+
+```text
+my-package/
+  pyproject.toml
+  src/
+    my_package/
+      __init__.py
+      ...
+  .gaia/
+    ir.json
+    ir_hash
+```
+
+`[tool.gaia]` 当前至少应包含：
+
+- `namespace`
+- `uuid`
 
 ## Module
 
-Module 是包内的逻辑分组。在创作界面中，每个 `.typ` 文件（除 `lib.typ` 和 `gaia.typ` 外）隐式地构成一个模块。
+当前的 Module 就是普通 Python module。
 
-- **标识**：`module_id`，作用域限定在包内。
-- **角色**：`reasoning` | `setting` | `motivation` | `follow_up_question` | `other`。
-- **包含**：对知识对象的引用（`export_ids[]`）。
-- **导入**：通过 `ImportRef(knowledge_id, version, strength)` 实现跨模块依赖。
+- `src/<import_name>/__init__.py` 通常是 DSL 入口
+- 作者可以把前提、推理链、辅助声明拆到多个 `.py` 文件
+- 编译器按 Python import 执行这些声明，而不是按 Typst module 做抽取
 
-Module 的存在是为了组织上的清晰性。它们不会创建独立的推理边界——包内所有知识都参与同一个因子图。
+Module 的作用是组织源码，不构成独立的推理边界。编译后的 graph 仍然是单个 package-local graph。
 
-## Knowledge
+## Knowledge / Strategy / Operator
 
-Knowledge 对象是一个版本化的命题——知识图的基本单元。
+Package 执行时会收集三类运行时对象：
 
-- **标识**：`(knowledge_id, version)`。`knowledge_id` 的作用域限定在包内；版本是一个随编辑递增的整数。
-- **类型**：`claim | setting | question`（参见 [knowledge-types.md](knowledge-types.md)）。
-- **内容**：命题文本。
-- **先验**：仅 `claim` 类型携带先验（作者指定的合理性值，在 (epsilon, 1 - epsilon) 范围内）。`setting` 和 `question` 不参与 BP，不携带先验。
-- **参数**：可选的 `Parameter(name, constraint)` 列表，用于模式/通用节点。
-- **关键词**：提取的搜索词。
+- `Knowledge`
+- `Strategy`
+- `Operator`
 
-## Factor 生成
+这些对象由 `with Package(...) as pkg:` 作用域中的 DSL 调用注册进包上下文，然后由 `gaia compile` 降低为 Gaia IR。
 
-Language 层不定义独立的 Factor 数据模型。Factor 由以下编译路径生成：
+```python
+from gaia.lang import Package, claim, contradiction, deduction, setting
 
-- **`from:`** —— claim 上的 `from:` 参数编译为粗因子（合取 + 似然蕴含语义，参见 [../theory/03-propositional-operators.md](../theory/03-propositional-operators.md)）。
-- **论证策略** —— `#abduction`、`#induction`、`#analogy`、`#extrapolation` 程序化生成细命题网络。
-- **`#relation`** —— `contradiction` / `equivalence` 关系编译为 FactorNode。
 
-详见 [spec.md](spec.md) 和设计文档 §4–§5。
+with Package("galileo_falling_bodies", namespace="reg", version="4.0.3") as pkg:
+    vacuum = setting("The experiment is conducted in a vacuum.")
+    observation = claim("Objects of different mass fall at the same rate in a vacuum.")
+    conclusion = claim("Mass alone does not determine falling speed.")
 
-## 包生命周期（创作视角）
+    deduction(
+        premises=[vacuum, observation],
+        conclusion=conclusion,
+        reason="The controlled observation removes drag as a confounder.",
+    )
 
-```
-authored   -> author writes Typst source
-built      -> gaia build: deterministic lowering to Gaia IR
-inferred   -> gaia infer: local BP preview with local parameterization
-published  -> gaia publish: submitted to registry for peer review
-```
-
-发布之后的流程参见 [dp-gaia](https://github.com/SiliconEinstein/dp-gaia) 仓库的 LKM 文档。
-
-## 层级间关系
-
-```
-Package (1)
-  contains -> Module (1..n)
-    contains -> Knowledge (0..n)
-    Factor 由 from: / 论证策略 / #relation 编译生成
+    contradiction(
+        variables=[conclusion, claim("Heavier bodies necessarily fall faster.")],
+        reason="The two claims cannot both be true under the same experimental setup.",
+    )
 ```
 
-## 跨层引用
+## 生命周期
 
-- **节点标识层**（raw、local canonical、global canonical）：参见 [../gaia-ir/02-gaia-ir.md](../gaia-ir/02-gaia-ir.md)
-- **包的 Gaia IR 表示**：参见 [../gaia-ir/01-overview.md](../gaia-ir/01-overview.md)
-- **持久化模型的存储模式**：参见 [dp-gaia](https://github.com/SiliconEinstein/dp-gaia) 仓库的 LKM 存储文档
+当前作者侧生命周期是：
 
-## 源码
+```text
+authored
+  -> compiled   (gaia compile)
+  -> checked    (gaia check)
+  -> tagged     (git push + git tag)
+  -> registered (gaia register -> registry PR merged)
+```
 
-- `libs/storage/models.py` —— `Package`、`Module`、`Knowledge` 模型
-- **待更新**：`libs/storage/models.py` 中的 `Chain` 和 `ChainStep` 模型需在后续代码变更中移除或迁移至存储/展示层。
+说明：
+
+- `gaia compile` 只生成结构化 IR，不做推理或数据库摄入
+- `gaia check` 只验证结构和注册前提
+- `gaia register` 只创建或提交 registry metadata PR
+- 官方 registry 当前是 source registry，不负责 wheel 发布
+
+## Source Release
+
+当前 official registry 注册的是一个可重建的 GitHub source release，而不是本地目录快照。
+
+每个已注册版本都需要：
+
+- package repo URL
+- git tag
+- pinned git SHA
+- `ir_hash`
+- dependency metadata
+
+registry CI 会重新 clone 该 source release，重新运行 `gaia compile` 和 `gaia check`，然后再决定是否接受该版本。
+
+## Historical Note
+
+旧的 Typst-based package model、`gaia build` / `gaia infer` / `gaia publish`、本地 LanceDB/Kuzu 发布流都属于更早期的设计探索，不是当前 Gaia Lang v5 Phase 1 的 canonical package model。
