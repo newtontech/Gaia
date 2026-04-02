@@ -2,103 +2,23 @@
 
 from __future__ import annotations
 
-import importlib
-import json
-import sys
-from pathlib import Path
-
 import typer
 
-try:
-    import tomllib
-except ImportError:
-    import tomli as tomllib  # type: ignore[no-redef]
+from gaia.cli._packages import GaiaCliError, compile_loaded_package, load_gaia_package
+from gaia.cli._packages import write_compiled_artifacts
 
 
 def compile_command(
     path: str = typer.Argument(".", help="Path to knowledge package directory"),
 ) -> None:
     """Compile a knowledge package to .gaia/ir.json."""
-    pkg_path = Path(path).resolve()
-
-    # Read pyproject.toml
-    pyproject = pkg_path / "pyproject.toml"
-    if not pyproject.exists():
-        typer.echo("Error: no pyproject.toml found.", err=True)
-        raise typer.Exit(1)
-
-    with open(pyproject, "rb") as f:
-        config = tomllib.load(f)
-
-    gaia_config = config.get("tool", {}).get("gaia", {})
-    if gaia_config.get("type") != "knowledge-package":
-        typer.echo(
-            "Error: not a Gaia knowledge package ([tool.gaia].type != 'knowledge-package').",
-            err=True,
-        )
-        raise typer.Exit(1)
-
-    # Derive Python import name: strip -gaia suffix, replace - with _
-    project_name = config["project"]["name"]
-    import_name = project_name.removesuffix("-gaia").replace("-", "_")
-
-    pkg_roots = [pkg_path, pkg_path / "src"]
-    pkg_src = next(
-        (root / import_name for root in pkg_roots if (root / import_name).exists()), None
-    )
-    if pkg_src is None:
-        typer.echo(f"Error: package source directory '{import_name}/' not found.", err=True)
-        raise typer.Exit(1)
-
-    # Add to sys.path and import
-    source_root = str(pkg_src.parent)
-    if source_root not in sys.path:
-        sys.path.insert(0, source_root)
-
     try:
-        mod = importlib.import_module(import_name)
-    except Exception as e:
-        typer.echo(f"Error importing package: {e}", err=True)
+        loaded = load_gaia_package(path)
+        ir = compile_loaded_package(loaded)
+        gaia_dir = write_compiled_artifacts(loaded.pkg_path, ir)
+    except GaiaCliError as exc:
+        typer.echo(str(exc), err=True)
         raise typer.Exit(1)
-
-    # Find the Package object
-    from gaia.lang.runtime import Knowledge
-    from gaia.lang.runtime import Package as GaiaPackage
-
-    pkg = None
-    for attr in dir(mod):
-        obj = getattr(mod, attr)
-        if isinstance(obj, GaiaPackage):
-            pkg = obj
-            break
-
-    if pkg is None:
-        typer.echo("Error: no Package object found in module.", err=True)
-        raise typer.Exit(1)
-
-    # Assign labels from module-level variable names
-    local_knowledge_ids = {id(k) for k in pkg.knowledge}
-    for attr in dir(mod):
-        obj = getattr(mod, attr)
-        if isinstance(obj, Knowledge) and id(obj) in local_knowledge_ids and obj.label is None:
-            obj.label = attr
-
-    # Override package metadata from pyproject.toml
-    pkg.version = config["project"]["version"]
-    if "namespace" in gaia_config:
-        pkg.namespace = gaia_config["namespace"]
-
-    # Compile
-    from gaia.lang.compiler import compile_package
-
-    ir = compile_package(pkg)
-
-    # Write output
-    gaia_dir = pkg_path / ".gaia"
-    gaia_dir.mkdir(exist_ok=True)
-    ir_json = json.dumps(ir, ensure_ascii=False, indent=2, sort_keys=True)
-    (gaia_dir / "ir.json").write_text(ir_json)
-    (gaia_dir / "ir_hash").write_text(ir["ir_hash"])
 
     typer.echo(
         f"Compiled {len(ir['knowledges'])} knowledge, "

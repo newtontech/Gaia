@@ -77,6 +77,7 @@ include = ["galileo_falling_bodies*"]    # Import name omits -gaia suffix
 [tool.gaia]
 namespace = "galileo"
 type = "knowledge-package"
+uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 
 [[tool.uv.index]]
 name = "gaia"
@@ -695,31 +696,21 @@ Implementation: `Package.__exit__` inspects the caller's `locals()` or uses desc
 ### 5.3 CLI Commands
 
 ```bash
-# ── Create ──
-gaia init my-research          # Scaffold: pyproject.toml + package dir + __init__.py template
-                                # Internally calls: uv init --lib my-research-gaia
-
-# ── Compile ──
 gaia compile [path]            # Compile → .gaia/ir.json + ir_hash
-gaia compile --check           # Validate only, no output
 
-# ── Check ──
 gaia check [path]              # Structural validation (references, schema legality)
-gaia check --show-inputs       # List input claims and strategies needing parameterization
-gaia check --params            # Verify parameterization completeness
-
-# ── Infer ──
-gaia infer [path]              # Local BP preview
-gaia infer --policy latest     # Use latest parameters
-gaia infer --policy source:alice  # Use specific reviewer's parameters
-
-# ── Publish ──
-gaia publish                   # uv build + uv publish --index gaia
-gaia publish --local           # Write to local LanceDB + Kuzu (dev mode)
-
-# ── Render ──
-gaia render [path]             # IR → document (Typst/LaTeX/HTML), separate pipeline
+gaia register [path]           # Submit a tagged GitHub-backed release to the official registry
 ```
+
+Phase 1 keeps the author-side lifecycle intentionally small:
+
+1. `gaia compile`
+2. `gaia check`
+3. Push source to GitHub
+4. Create and push a git tag (default convention: `v<version>`)
+5. `gaia register`
+
+`gaia register` is **not** direct publication of artifacts. It creates or prepares a metadata PR against the official registry for a GitHub-tagged source release.
 
 ### 5.4 Validation (`gaia check`)
 

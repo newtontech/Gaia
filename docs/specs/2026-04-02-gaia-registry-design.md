@@ -168,12 +168,14 @@ gaia register                     # Creates PR to Registry repo
 
 `gaia register` automates PR creation:
 
-1. Read `pyproject.toml` for package metadata
+1. Read `pyproject.toml` for package metadata (`[project]` + `[tool.gaia].uuid`)
 2. Read `.gaia/ir_hash` for integrity checksum
-3. Verify git tag exists and is pushed
+3. Verify git tag exists, points to `HEAD`, and is pushed
 4. Create PR to Registry repo via GitHub API (`gh pr create`):
    - For new packages: create `Package.toml` + `Versions.toml` + `Deps.toml`
    - For version updates: append to `Versions.toml` + update `Deps.toml`
+
+Phase 1 source support is intentionally narrow: the release being registered must come from a **GitHub repository + pushed git tag**. Future phases may add other source kinds (for example PyPI sdist), but GitHub is the only accepted source descriptor for now.
 
 PR body template:
 
