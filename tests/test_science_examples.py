@@ -9,7 +9,7 @@ from __future__ import annotations
 from gaia.bp import lower_local_graph
 from gaia.bp.bp import BeliefPropagation
 from gaia.bp.exact import exact_inference
-from gaia.gaia_ir import Knowledge, Operator, Strategy, LocalCanonicalGraph
+from gaia.ir import Knowledge, Operator, Strategy, LocalCanonicalGraph
 
 
 NS, PKG_G, PKG_N, PKG_E = "reg", "galileo", "newton", "einstein"

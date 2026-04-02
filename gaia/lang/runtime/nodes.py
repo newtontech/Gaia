@@ -1,0 +1,69 @@
+"""Gaia Lang v5 — core runtime dataclasses for Python DSL."""
+
+from __future__ import annotations
+
+from contextvars import ContextVar
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from gaia.lang.runtime.package import Package
+
+_current_package: ContextVar[Package | None] = ContextVar("_current_package", default=None)
+
+
+@dataclass
+class Knowledge:
+    """A knowledge declaration (claim, setting, or question)."""
+
+    content: str
+    type: str  # "claim" | "setting" | "question"
+    background: list[Knowledge] = field(default_factory=list)
+    parameters: list[dict] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
+    label: str | None = None
+    strategy: Strategy | None = None
+    _package: Package | None = field(default=None, init=False, repr=False, compare=False)
+
+    def __post_init__(self):
+        pkg = _current_package.get()
+        if pkg is not None:
+            self._package = pkg
+            pkg._register_knowledge(self)
+
+
+@dataclass
+class Strategy:
+    """A reasoning declaration."""
+
+    type: str
+    premises: list[Knowledge] = field(default_factory=list)
+    conclusion: Knowledge | None = None
+    background: list[Knowledge] = field(default_factory=list)
+    steps: list[str] = field(default_factory=list)
+    reason: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
+    label: str | None = None
+    formal_expr: list | None = None
+    sub_strategies: list[Strategy] = field(default_factory=list)
+
+    def __post_init__(self):
+        pkg = _current_package.get()
+        if pkg is not None:
+            pkg._register_strategy(self)
+
+
+@dataclass
+class Operator:
+    """A deterministic logical constraint."""
+
+    operator: str
+    variables: list[Knowledge] = field(default_factory=list)
+    conclusion: Knowledge | None = None
+    reason: str = ""
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self):
+        pkg = _current_package.get()
+        if pkg is not None:
+            pkg._register_operator(self)

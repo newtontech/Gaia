@@ -1,97 +1,98 @@
 # Gaia IR 编译器
 
-> **Status:** Current canonical
+> **Status:** Current canonical for Gaia Lang v5 Phase 1
+>
+> **Canonical spec:** [../../specs/2026-04-02-gaia-lang-v5-python-dsl-design.md](../../specs/2026-04-02-gaia-lang-v5-python-dsl-design.md)
 
-本文档描述驱动 `gaia build` 的 Gaia IR 编译管线。Gaia IR 模式定义参见 [../gaia-ir/01-overview.md](../gaia-ir/01-overview.md)。
+本文档描述当前 `gaia compile` 的工作方式。当前编译器面向 Python DSL package，而不是旧的 Typst `gaia build` 管线。
 
 ## 概览
 
-编译器是一条确定性管线，将 Typst 源码转换为 Gaia IR。它产生因子图中间表示，不涉及 LLM 调用、搜索或概率分配。
+`gaia compile` 是一条确定性编译路径：
 
-```
-Typst source  ->  Typst loading  ->  Raw graph  ->  Local canonical graph  ->  Local parameterization
-```
-
-每一步添加一个标识层。原始图保留精确的源码可追溯性。局部规范图允许包内合并。局部参数化分配默认概率值。
-
-## 步骤一：Typst 加载
-
-参见 `libs/lang/typst_loader.py`。
-
-Typst 加载器运行 `typst query` 从编译后的 Typst 文档中提取 `gaia-node` figure：
-
-```bash
-typst query --root <repo-root> lib.typ 'figure.where(kind: "gaia-node")'
-typst query --root <repo-root> lib.typ 'figure.where(kind: "gaia-ext")'
+```text
+Python package source
+  -> load package metadata
+  -> execute Gaia DSL declarations
+  -> collect runtime objects
+  -> build LocalCanonicalGraph
+  -> write .gaia/ir.json + .gaia/ir_hash
 ```
 
-这会产生一个包含 `nodes`、`factors`、`constraints`、`package` 和 `version` 的字典。
+编译器只产出结构，不做本地推理、数据库写入或 registry 注册。
 
-## 步骤二：原始图编译
+## 步骤一：加载包元数据
 
-参见 `libs/graph_ir/typst_compiler.py:compile_v4_to_raw_graph()`。
+编译器读取 `pyproject.toml`，获取：
 
-编译器将加载器输出处理为 `RawGraph`：
+- `project.name`
+- `project.version`
+- `[tool.gaia].namespace`
+- `[tool.gaia].uuid`
 
-1. **知识节点**：每个非外部节点成为一个 `RawKnowledgeNode`。v4 类型映射解析 `setting`、`question`、`claim`、`action`。关系节点（`contradiction`、`equivalence`）从约束映射获取其类型。
+然后解析 Python import package，当前支持两种布局：
 
-2. **外部节点**：来自 `gaia-bibliography` 的节点成为 `RawKnowledgeNode`，编译后使用与本包节点相同的 QID 格式（`ext:` 前缀是 Gaia Lang 语法糖，编译到 IR 后消失）。
+- `<repo>/<import_name>/`
+- `<repo>/src/<import_name>/`
 
-3. **推理因子**：每个 `from:` 参数生成一个类型为 `infer` 的 `FactorNode`，将前提节点链接到结论。
+## 步骤二：执行 DSL 声明
 
-4. **约束因子**：带有 `between:` 的 `#relation` 声明生成 `contradiction` 或 `equivalence` 因子。
+编译器导入包模块并执行 `with Package(...) as pkg:` 中的 DSL 代码。
 
-因子类型定义参见 [../gaia-ir/02-gaia-ir.md](../gaia-ir/02-gaia-ir.md)。
+执行期间会注册：
 
-## 步骤三：局部规范化
+- `Knowledge`
+- `Strategy`
+- `Operator`
 
-参见 `libs/graph_ir/build_utils.py:build_singleton_local_graph()`。
+这些运行时对象由 `gaia.lang.runtime.package.Package` 收集，作为后续 lowering 的输入。
 
-目前实现单例规范化：每个原始节点精确映射到一个 `Knowledge` 节点（使用 QID 标识），不进行合并。原始到局部的映射记录在 `CanonicalizationLogEntry` 中以便审计。
+## 步骤三：构建 graph closure
 
-规范化标识模型参见 [../gaia-ir/05-canonicalization.md](../gaia-ir/05-canonicalization.md)。
+编译器会遍历：
 
-## 步骤四：局部参数化
+- 包内显式声明的知识对象
+- strategy 的前提、背景、结论
+- operator 的变量与辅助结论
+- 外部引用形成的必要 closure
 
-参见 `libs/graph_ir/build_utils.py:derive_local_parameterization_from_raw()`。
+目标不是保留“执行痕迹”，而是产出一个自洽、可验证、可复编译的 package-local graph。
 
-为本地 BP 导出概率覆盖层：
+## 步骤四：降低到 Gaia IR
 
-- **节点先验**：如果存在显式元数据则使用，否则按类型取默认值（`setting` = 1.0，其他 = 0.5）。
-- **因子参数**：`infer`、`abstraction` 和 `reasoning` 因子默认 `conditional_probability = 1.0`。
+输出对齐现有 `gaia.ir.LocalCanonicalGraph`：
 
-参数化通过 `graph_hash` 绑定到特定图。
+- 顶层字段采用 `namespace` / `package_name` / `knowledges`
+- `steps` 使用当前 `Step` schema
+- `formal_expr` 使用当前 `FormalExpr` schema
+- `ir_hash` 使用 `sha256:` 前缀
 
-参数化模型参见 [../gaia-ir/06-parameterization.md](../gaia-ir/06-parameterization.md)。
+编译器还负责：
 
-## 节点标识
+- 保证 QID 形状合法
+- 为 foreign knowledge 生成可验证的引用
+- 将最终结构序列化到 `.gaia/ir.json`
 
-三种 ID 方案，均为确定性生成：
+## 步骤五：图哈希
 
-| ID 类型 | 格式 | 生成方式 |
-|---------|--------|------------|
-| `raw_node_id` | `raw_{sha256[:16]}` | SHA-256 of `(package, version, module, name, type, kind, content, parameters)` |
-| Knowledge QID | `{ns}:{pkg}::{label}` | 由 graph 的 (namespace, package) + node label 构成 |
-| `factor_id` | `f_{sha256[:16]}` | SHA-256 of `(kind, module, name[, suffix])` |
+`.gaia/ir_hash` 是对最终 IR JSON 的确定性内容哈希。
 
-外部节点在编译后与本包节点使用相同的 QID 格式（`ext:` 前缀是 Gaia Lang 语法糖，编译到 IR 后消失）。
+它的作用是：
 
-全局规范 ID（`gcn_`）参见 [../gaia-ir/02-gaia-ir.md](../gaia-ir/02-gaia-ir.md)。
+- 给 `gaia check` 提供一致性边界
+- 给 `gaia register` 提供注册时的内容身份
+- 让 registry CI 可以重新编译并比对产物
 
 ## 代码路径
 
 | 组件 | 文件 |
-|-----------|------|
-| Typst 加载器 | `libs/lang/typst_loader.py` |
-| 原始图编译器 | `libs/graph_ir/typst_compiler.py` |
-| 局部规范化 | `libs/graph_ir/build_utils.py` |
-| Gaia IR 模型 | `libs/graph_ir/models.py` |
-| CLI 集成 | `libs/pipeline.py:pipeline_build()` |
+|------|------|
+| 编译命令 | `gaia/cli/commands/compile.py` |
+| 包加载辅助 | `gaia/cli/_packages.py` |
+| 编译器 | `gaia/lang/compiler/compile.py` |
+| 运行时对象 | `gaia/lang/runtime/` |
+| IR schema | `gaia/ir/` |
 
-## 当前状态
+## Historical Note
 
-编译器支持 v3 和 v4 Typst 包。完整管线（加载、编译、规范化、参数化）由 `gaia build` 和 `gaia infer` CLI 命令以及服务器摄入管线驱动。测试覆盖位于 `tests/libs/graph_ir/`。
-
-## 目标状态
-
-Gaia IR 编译器已趋于稳定，无重大变更计划。单例局部规范化未来可能支持包内语义合并，但这不是优先事项。
+旧的 Typst loader、`gaia build`、raw graph、local parameterization 等内容仍保留在仓库中，主要作为早期实验和背景材料。它们不是当前 Gaia Lang v5 Phase 1 编译器的 canonical contract。

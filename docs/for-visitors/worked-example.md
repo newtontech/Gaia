@@ -101,9 +101,9 @@ What happened:
 
 No human had to decide which claim wins. The structure of the reasoning determined the outcome.
 
-## Step 4: Publish
+## Step 4: Register
 
-Running `gaia publish` sends the package to the shared knowledge base. It now lives alongside packages from other papers, connected through shared claims and cross-references.
+Running `gaia register` submits the tagged package version to the official registry. Once accepted, it becomes a discoverable Gaia package that other packages can depend on and reference.
 
 ## What Happens Next
 

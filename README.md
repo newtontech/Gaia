@@ -4,132 +4,253 @@
 [![codecov](https://codecov.io/gh/SiliconEinstein/Gaia/graph/badge.svg)](https://codecov.io/gh/SiliconEinstein/Gaia)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-Large Knowledge Model (LKM) — a reasoning hypergraph for knowledge representation and probabilistic inference.
+Gaia is a knowledge-package authoring toolkit.
 
-Gaia packages knowledge as **Typst documents** with typed declarations (claims, settings, questions, actions, relations). The compiler extracts a **factor graph** (Graph IR), a review step assigns priors and parameters, and **loopy belief propagation** computes posterior beliefs.
+As of April 2026, the active author-side workflow is:
 
-## Quick Start
+```text
+author Python package
+  -> gaia compile
+  -> gaia check
+  -> git push + git tag
+  -> gaia register
+```
+
+The official registry is currently a **GitHub-backed source registry**:
+
+- authors publish tagged source releases in their own GitHub repos
+- the registry records metadata such as `repo`, `git_tag`, `git_sha`, `ir_hash`, and dependencies
+- registry CI re-clones the tagged source and recompiles it before merge
+- Phase 1 does not provide wheel publishing or install-by-name
+
+Older Typst, BP, storage, and server experiments still exist in this repo, but they are not the current Gaia Lang v5 author workflow.
+
+## Install Gaia
+
+To work on Gaia itself:
 
 ```bash
-# Install (requires Python 3.12+, uv)
 uv sync
-
-# Create a new knowledge package
-gaia init my_package && cd my_package
-
-# Build — compile Typst → Graph IR, generate markdown and proof state
-gaia build --proof-state
-
-# Run all tests
-pytest
+uv run gaia --help
 ```
 
-## Authoring a Package
+To author a separate Gaia knowledge package, add Gaia as a dependency from a local checkout or Git URL. Until `gaia-lang` is published to a package index, the simplest options are:
 
-A Gaia package is a Typst project:
+```bash
+# From a local checkout
+uv add --editable /path/to/Gaia
 
-```
-my_package/
-  typst.toml          # package manifest (name, version, entrypoint)
-  lib.typ             # entry: imports runtime, includes module files
-  gaia.typ            # runtime import shim
-  motivation.typ      # module — questions that motivate the work
-  reasoning.typ       # module — claims with proofs
-  gaia-deps.yml       # (optional) cross-package references
+# Or directly from GitHub
+uv add git+https://github.com/SiliconEinstein/Gaia.git
 ```
 
-Declarations use five functions — each produces a labeled, extractable figure:
+After that, run the CLI inside the package repo with `uv run gaia ...`.
 
-```typst
-#import "gaia.typ": *
-#show: gaia-style
+## Create a Package
 
-#setting[The universe is spatially flat.] <setting.flat_universe>
+### 1. Scaffold a normal Python package
 
-#claim(kind: "observation")[
-  Type Ia supernovae show accelerating expansion.
-] <observation.sn_data>
-
-#claim(from: (<observation.sn_data>, <setting.flat_universe>))[
-  Dark energy accounts for ~68% of total energy density.
-][
-  Given SN data @observation.sn_data and flatness @setting.flat_universe,
-  the energy budget requires a dark energy component.
-] <reasoning.dark_energy>
-
-#relation(type: "contradiction", between: (<reasoning.dark_energy>, <other.qft_prediction>))[
-  The observed value differs from QFT predictions by ~120 orders of magnitude.
-] <reasoning.vacuum_catastrophe>
+```bash
+uv init --lib galileo-falling-bodies-gaia
+cd galileo-falling-bodies-gaia
+uv add git+https://github.com/SiliconEinstein/Gaia.git
+mv src/galileo_falling_bodies_gaia src/galileo_falling_bodies
 ```
 
-Labels follow `<filename.name>` convention. `from:` declares premises (reasoning edges). `between:` declares structural constraints. See [language spec](docs/foundations/language/gaia-language-spec.md) for the full reference.
+`uv init --lib` creates the recommended `src/` layout. Gaia currently supports both:
 
-## Pipeline
+- `src/<import_name>/`
+- `<import_name>/`
 
-```
-gaia build                Typst → load → compile → canonicalize → Graph IR
-gaia build --proof-state                          → proof state report
-gaia infer                mock review → local parameterization → BP → beliefs
-gaia publish --local      → storage (LanceDB + graph DB)
-```
+Important: the current Gaia CLI derives `import_name` from `project.name.removesuffix("-gaia")`. For `galileo-falling-bodies-gaia`, the expected import package is therefore `galileo_falling_bodies`, not `galileo_falling_bodies_gaia`.
 
-### Proof State
+### 2. Add Gaia package metadata
 
-Every node is classified after compilation:
+Edit `pyproject.toml` so it contains:
 
-| Category | Meaning |
-|----------|---------|
-| **established** | Has proof (conclusion of a reasoning factor or relation) |
-| **assumption** | Setting — contextual choice, no proof needed, but challengeable |
-| **hole** | Used as premise but has no proof in this package, including observations without experimental justification |
-| **imported** | External reference (from another package via `gaia-deps.yml`) |
-| **question** | Open inquiry |
-| **standalone** | Declared but unreferenced and unproven |
+```toml
+[project]
+name = "galileo-falling-bodies-gaia"
+version = "4.0.3"
+description = "Galileo's falling bodies argument"
+requires-python = ">=3.12"
+# Keep the Gaia dependency entry that `uv add` created in project.dependencies
 
-Gaia does not currently expose an `axiom` proof-state bucket or API key. If future inference or explanation tooling needs multiple alternative starting-point sets, those will be modeled as explicit `assumption basis` / proof-view metadata layered on top of the same graph, not as a node-level type.
-
-## Architecture
-
-```
-cli/                 → gaia CLI (build, init, publish, search, clean)
-libs/lang/           → Typst DSL loader, compiler, proof state analysis
-libs/graph_ir/       → Graph IR: RawGraph → LocalCanonicalGraph → factors
-libs/inference/      → Belief propagation on factor graphs
-libs/storage/        → Storage backends (LanceDB, Neo4j/Kuzu, vector)
-libs/typst/          → Typst runtime library (gaia-lang-v4/)
-libs/pipeline.py     → Unified pipeline: build → review → infer → publish
-services/gateway/    → FastAPI HTTP API
-frontend/            → React dashboard
+[tool.gaia]
+type = "knowledge-package"
+namespace = "reg"
+uuid = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
 ```
 
-### Storage
+Notes:
 
-| Backend | Purpose |
-|---------|---------|
-| **LanceDB** | Knowledge content, metadata, BM25 full-text search |
-| **Neo4j / Kuzu** | Graph topology (Knowledge → Chain via :PREMISE/:CONCLUSION) |
-| **Vector Index** | Embedding similarity search |
+- `[project].name` must end with `-gaia`
+- `[tool.gaia].type` must be `"knowledge-package"`
+- `[tool.gaia].uuid` is required for registration
+- `namespace` becomes part of each generated QID
+
+### 3. Write package source with the Python DSL
+
+Create `src/galileo_falling_bodies/__init__.py`:
+
+```python
+from gaia.lang import Package, claim, deduction, setting
+
+
+with Package("galileo_falling_bodies", namespace="reg", version="4.0.3") as pkg:
+    vacuum = setting("The experiment is conducted in a vacuum.")
+    observation = claim("Objects of different mass fall at the same rate in a vacuum.")
+    conclusion = claim("Mass alone does not determine falling speed.")
+
+    deduction(
+        premises=[vacuum, observation],
+        conclusion=conclusion,
+        steps=["The vacuum removes drag as a confounder."],
+        reason="The controlled observation rules out the Aristotelian explanation.",
+    )
+
+
+__all__ = ["pkg", "vacuum", "observation", "conclusion"]
+```
+
+The important part is that the module exports a `Package` object and the knowledge declarations you want compiled with stable labels.
+
+### 4. Compile and validate
+
+```bash
+uv run gaia compile .
+uv run gaia check .
+```
+
+This writes:
+
+```text
+.gaia/
+  ir.json
+  ir_hash
+```
+
+What the commands do:
+
+- `gaia compile` executes the Python package, collects `Knowledge` / `Strategy` / `Operator`, and writes a `LocalCanonicalGraph`
+- `gaia check` recompiles from source and validates schema legality, artifact consistency, and registration preconditions
+
+## Submit to the Official Registry
+
+### 1. Push the package repo to GitHub
+
+Phase 1 registry support is GitHub-only. The package repo must have a GitHub `origin`.
+
+```bash
+git add .
+git commit -m "Create Gaia package"
+git branch -M main
+git remote add origin https://github.com/<you>/GalileoFallingBodies.gaia.git
+git push -u origin main
+```
+
+### 2. Tag the version you want to register
+
+`gaia register` expects:
+
+- a clean git worktree
+- `HEAD` to match the version tag being registered
+- the tag to already be pushed to `origin`
+
+```bash
+git tag v4.0.3
+git push origin v4.0.3
+```
+
+By default, `gaia register` uses `v<version>` from `pyproject.toml`.
+
+### 3. Create the registry PR
+
+Clone the registry repo locally:
+
+```bash
+git clone https://github.com/SiliconEinstein/gaia-registry.git
+```
+
+Then from the package repo:
+
+```bash
+uv run gaia register . \
+  --registry-dir ../gaia-registry \
+  --create-pr
+```
+
+What `gaia register` does:
+
+- reads package metadata from `pyproject.toml`
+- verifies `.gaia/ir_hash` matches the current source
+- verifies the worktree is clean
+- infers the GitHub repo URL from `origin` unless `--repo` is given
+- verifies the target tag exists remotely
+- updates registry metadata under `packages/<package-name>/`
+- optionally pushes the registry branch and opens a PR when `--create-pr` is set
+
+Useful options:
+
+```bash
+# Register a non-default tag
+uv run gaia register . --tag v4.0.4 --registry-dir ../gaia-registry
+
+# Override the inferred GitHub repo URL
+uv run gaia register . \
+  --repo https://github.com/<you>/GalileoFallingBodies.gaia \
+  --registry-dir ../gaia-registry
+```
+
+`--create-pr` uses GitHub CLI, so you must already be authenticated with `gh auth login`.
+
+### 4. Wait for registry CI
+
+After the PR is opened, registry CI will:
+
+- clone the tagged source release from GitHub
+- checkout the registered `git_tag` / `git_sha`
+- rerun `gaia compile`
+- compare the resulting `ir_hash`
+- rerun `gaia check`
+- verify Gaia dependencies are already registered
+
+If those checks pass and the PR is merged, that version is officially registered.
+
+## Current CLI
+
+The active CLI surface is:
+
+```text
+gaia compile
+gaia check
+gaia register
+```
+
+`gaia build`, `gaia infer`, and `gaia publish` belong to older experiments and are not part of the current Gaia Lang v5 author workflow.
+
+## Code Map
+
+| Path | Purpose |
+|------|---------|
+| `gaia/lang/` | Python DSL runtime and compiler input model |
+| `gaia/ir/` | IR schema, validation, and lowering helpers |
+| `gaia/cli/` | `compile`, `check`, `register` commands |
+| `tests/gaia/lang/` | DSL and compiler tests |
+| `tests/cli/` | CLI tests |
 
 ## Documentation
 
 | Path | Content |
 |------|---------|
-| [docs/foundations/language/](docs/foundations/language/) | Language spec, design, design rationale |
-| [docs/foundations/](docs/foundations/) | Domain model, Graph IR, BP theory, storage schema |
-| [docs/specs/](docs/specs/) | Design specs (Graph IR compiler, v4 DSL, etc.) |
-| [docs/plans/](docs/plans/) | Implementation plans |
-| [docs/module-map.md](docs/module-map.md) | Current repo structure and module boundaries |
+| [docs/specs/2026-04-02-gaia-lang-v5-python-dsl-design.md](docs/specs/2026-04-02-gaia-lang-v5-python-dsl-design.md) | Gaia Lang v5 package model and CLI |
+| [docs/specs/2026-04-02-gaia-registry-design.md](docs/specs/2026-04-02-gaia-registry-design.md) | Phase 1 source-registry design |
+| [docs/for-users/cli-commands.md](docs/for-users/cli-commands.md) | User-facing CLI command reference |
 
 ## Testing
 
 ```bash
-pytest                                     # all tests (auto-skips Neo4j if unavailable)
-pytest --cov=libs --cov=services tests     # with coverage
-ruff check . && ruff format --check .      # lint
+pytest
+ruff check .
+ruff format --check .
 ```
-
-## Tech Stack
-
-**Backend:** Python 3.12+, FastAPI, Pydantic v2, LanceDB, Neo4j/Kuzu, NumPy, PyArrow, typst-py
-
-**Frontend:** React, TypeScript, Vite, Ant Design, React Query, vis-network, KaTeX
