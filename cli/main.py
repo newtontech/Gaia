@@ -13,11 +13,15 @@ if __package__ in {None, ""}:
 
 import typer
 
+from cli.commands.compile import compile_command
+
 app = typer.Typer(
     name="gaia",
     help="Gaia — proof assistant for probabilistic defeasible reasoning.",
     no_args_is_help=True,
 )
+
+app.command(name="compile")(compile_command)
 
 
 @app.command()
