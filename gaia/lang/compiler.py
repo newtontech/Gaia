@@ -20,12 +20,20 @@ def _make_qid(namespace: str, package_name: str, label: str) -> str:
     return f"{namespace}:{package_name}::{label}"
 
 
+def _is_local(k: Knowledge, pkg: Package) -> bool:
+    """Check if a Knowledge node belongs to this package (vs imported from another)."""
+    return k in pkg.knowledge
+
+
 def _resolve_id(
     k: Knowledge, namespace: str, package_name: str, knowledge_map: dict[int, str]
 ) -> str:
+    # If the knowledge has a pre-existing QID (foreign import), preserve it
+    if id(k) in knowledge_map:
+        return knowledge_map[id(k)]
     if k.label:
         return _make_qid(namespace, package_name, k.label)
-    return knowledge_map.get(id(k), f"_anon_{id(k)}")
+    return f"_anon_{id(k)}"
 
 
 def _strategy_id(
@@ -60,7 +68,7 @@ def compile_package(pkg: Package) -> dict[str, Any]:
     ns = pkg.namespace
     pn = pkg.name
 
-    # Build knowledge map for anonymous nodes
+    # Build knowledge map: local nodes get QIDs, foreign nodes keep their original identity
     knowledge_map: dict[int, str] = {}
     anon_counter = 0
     for k in pkg.knowledge:
@@ -70,8 +78,36 @@ def compile_package(pkg: Package) -> dict[str, Any]:
             knowledge_map[id(k)] = _make_qid(ns, pn, f"_anon_{anon_counter:03d}")
             anon_counter += 1
 
-    # Determine input claims (not conclusion of any strategy)
+    # Register foreign knowledge (referenced but not declared in this package)
+    all_referenced: list[Knowledge] = []
+    for s in pkg.strategies:
+        all_referenced.extend(s.premises)
+        all_referenced.extend(s.background)
+        if s.conclusion:
+            all_referenced.append(s.conclusion)
+    for o in pkg.operators:
+        all_referenced.extend(o.variables)
+        if o.conclusion:
+            all_referenced.append(o.conclusion)
+
+    for k in all_referenced:
+        if id(k) not in knowledge_map:
+            # Foreign knowledge: preserve its label as a foreign QID marker
+            if k.label:
+                knowledge_map[id(k)] = f"external::{k.label}"
+            else:
+                knowledge_map[id(k)] = f"external::_anon_{anon_counter:03d}"
+                anon_counter += 1
+
+    # Determine input claims: must be local, type=claim, not a strategy conclusion,
+    # not a helper claim (operator conclusion), and not a formal_expr internal node
     conclusion_ids = {id(s.conclusion) for s in pkg.strategies if s.conclusion}
+    operator_conclusion_ids = {id(o.conclusion) for o in pkg.operators if o.conclusion}
+    helper_ids = {
+        id(k)
+        for k in pkg.knowledge
+        if k.metadata.get("helper_kind") or k.metadata.get("helper_visibility") == "formal_internal"
+    }
 
     # Compile knowledge
     ir_knowledge = []
@@ -85,7 +121,12 @@ def compile_package(pkg: Package) -> dict[str, Any]:
                 "content": k.content,
                 "content_hash": _content_hash(k),
                 "parameters": k.parameters,
-                "is_input": k.type == "claim" and id(k) not in conclusion_ids,
+                "is_input": (
+                    k.type == "claim"
+                    and id(k) not in conclusion_ids
+                    and id(k) not in operator_conclusion_ids
+                    and id(k) not in helper_ids
+                ),
                 "metadata": k.metadata,
             }
         )

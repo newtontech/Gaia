@@ -63,6 +63,7 @@ def claim(
             type="noisy_and",
             premises=list(given),
             conclusion=k,
+            background=background or [],
         )
         k.strategy = s
     return k
