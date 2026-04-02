@@ -51,7 +51,7 @@ markers = [
 ]
 
 [project.scripts]
-gaia = "cli.main:app"
+gaia = "gaia.cli.main:app"
 
 [tool.coverage.run]
 omit = [

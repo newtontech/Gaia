@@ -4,7 +4,7 @@ import json
 
 from typer.testing import CliRunner
 
-from cli.main import app
+from gaia.cli.main import app
 
 runner = CliRunner()
 
