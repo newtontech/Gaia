@@ -46,7 +46,7 @@ async def ingest_gaia_ir(storage: StorageManager, ir_dir: Path, version: str) ->
     """Pipeline A: Gaia IR → lower → integrate."""
     import json
 
-    from gaia.gaia_ir.graphs import LocalCanonicalGraph
+    from gaia.ir.graphs import LocalCanonicalGraph
     from gaia.lkm.core.lower import lower
 
     graph_path = ir_dir / "local_canonical_graph.json"
