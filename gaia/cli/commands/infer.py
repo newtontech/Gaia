@@ -19,6 +19,11 @@ def _write_json(path, payload) -> None:
 
 def infer_command(
     path: str = typer.Argument(".", help="Path to knowledge package directory"),
+    review: str | None = typer.Option(
+        None,
+        "--review",
+        help="Review sidecar name from <package>/reviews/<name>.py or 'review' for legacy review.py.",
+    ),
 ) -> None:
     """Run BP using the current IR structure plus the package review sidecar."""
     try:
@@ -55,11 +60,11 @@ def infer_command(
         raise typer.Exit(1)
 
     try:
-        loaded_review = load_gaia_review(loaded)
+        loaded_review = load_gaia_review(loaded, review_name=review)
         if loaded_review is None:
             raise GaiaCliError(
-                "Error: missing review sidecar. Create <package>/review.py with "
-                "REVIEW = ReviewBundle(...)."
+                "Error: missing review sidecar. Create <package>/review.py or "
+                "<package>/reviews/<name>.py with REVIEW = ReviewBundle(...)."
             )
         resolved_review = resolve_gaia_review(loaded_review, compiled)
     except GaiaCliError as exc:
@@ -98,9 +103,11 @@ def infer_command(
 
     gaia_dir = loaded.pkg_path / ".gaia"
     gaia_dir.mkdir(exist_ok=True)
+    review_dir = gaia_dir / "reviews" / loaded_review.name
+    review_dir.mkdir(parents=True, exist_ok=True)
 
     _write_json(
-        gaia_dir / "parameterization.json",
+        review_dir / "parameterization.json",
         resolved_review.to_json(ir_hash=compiled.graph.ir_hash),
     )
 
@@ -118,7 +125,7 @@ def infer_command(
         ],
         "diagnostics": asdict(result.diagnostics),
     }
-    _write_json(gaia_dir / "beliefs.json", beliefs_payload)
+    _write_json(review_dir / "beliefs.json", beliefs_payload)
 
     typer.echo(
         f"Inferred {len(result.beliefs)} beliefs from "
@@ -129,4 +136,5 @@ def infer_command(
         f"BP converged: {result.diagnostics.converged} "
         f"after {result.diagnostics.iterations_run} iterations"
     )
-    typer.echo(f"Output: {gaia_dir / 'beliefs.json'}")
+    typer.echo(f"Review: {loaded_review.name}")
+    typer.echo(f"Output: {review_dir / 'beliefs.json'}")

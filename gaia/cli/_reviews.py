@@ -14,6 +14,8 @@ from gaia.review import ClaimReview, GeneratedClaimReview, ReviewBundle, Strateg
 
 @dataclass
 class LoadedGaiaReview:
+    name: str
+    module_name: str
     module_path: Path
     bundle: ReviewBundle
 
@@ -48,13 +50,35 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def load_gaia_review(loaded: LoadedGaiaPackage) -> LoadedGaiaReview | None:
-    """Load `<package>.review` if present."""
-    review_path = loaded.source_root / loaded.import_name / "review.py"
-    if not review_path.exists():
-        return None
+def _discover_review_candidates(loaded: LoadedGaiaPackage) -> dict[str, tuple[str, Path]]:
+    package_dir = loaded.source_root / loaded.import_name
+    candidates: dict[str, tuple[str, Path]] = {}
 
-    module_name = f"{loaded.import_name}.review"
+    legacy_path = package_dir / "review.py"
+    if legacy_path.exists():
+        candidates["review"] = (f"{loaded.import_name}.review", legacy_path)
+
+    reviews_dir = package_dir / "reviews"
+    if reviews_dir.exists():
+        for path in sorted(reviews_dir.glob("*.py")):
+            if path.name == "__init__.py":
+                continue
+            review_name = path.stem
+            if review_name in candidates:
+                raise GaiaCliError(
+                    f"Error: duplicate review name {review_name!r} in package review sidecars."
+                )
+            candidates[review_name] = (f"{loaded.import_name}.reviews.{review_name}", path)
+
+    return candidates
+
+
+def _load_review_candidate(
+    *,
+    review_name: str,
+    module_name: str,
+    module_path: Path,
+) -> LoadedGaiaReview:
     try:
         module = _import_fresh(module_name)
     except ModuleNotFoundError as exc:
@@ -67,9 +91,55 @@ def load_gaia_review(loaded: LoadedGaiaPackage) -> LoadedGaiaReview | None:
     bundle = getattr(module, "REVIEW", None)
     if not isinstance(bundle, ReviewBundle):
         raise GaiaCliError(
-            "Error: review.py must export REVIEW = ReviewBundle(...)."
+            f"Error: {module_path.name} must export REVIEW = ReviewBundle(...)."
         )
-    return LoadedGaiaReview(module_path=review_path, bundle=bundle)
+    return LoadedGaiaReview(
+        name=review_name,
+        module_name=module_name,
+        module_path=module_path,
+        bundle=bundle,
+    )
+
+
+def load_gaia_review(
+    loaded: LoadedGaiaPackage,
+    *,
+    review_name: str | None = None,
+) -> LoadedGaiaReview | None:
+    """Load a package review sidecar.
+
+    Supports:
+    - legacy `<package>/review.py`
+    - multi-review `<package>/reviews/<name>.py`
+    """
+    candidates = _discover_review_candidates(loaded)
+    if not candidates:
+        return None
+
+    if review_name is None:
+        if len(candidates) == 1:
+            review_name = next(iter(candidates))
+        else:
+            available = ", ".join(sorted(candidates))
+            raise GaiaCliError(
+                "Error: multiple review sidecars found; choose one with "
+                f"`gaia infer --review <name>`. Available: {available}"
+            )
+    elif review_name not in candidates:
+        available = ", ".join(sorted(candidates))
+        raise GaiaCliError(
+            f"Error: unknown review sidecar {review_name!r}. Available: {available}"
+        )
+
+    module_name, module_path = candidates[review_name]
+    loaded_review = _load_review_candidate(
+        review_name=review_name,
+        module_name=module_name,
+        module_path=module_path,
+    )
+    if loaded_review is None:
+        return None
+    return loaded_review
 
 
 def resolve_gaia_review(loaded_review, compiled) -> ResolvedGaiaReview:
