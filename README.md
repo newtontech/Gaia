@@ -260,7 +260,8 @@ gaia register
 
 | Path | Content |
 |------|---------|
-| [docs/specs/2026-04-02-gaia-lang-v5-python-dsl-design.md](docs/specs/2026-04-02-gaia-lang-v5-python-dsl-design.md) | Gaia Lang v5 package model and CLI |
+| [docs/specs/2026-04-02-gaia-lang-v5-python-dsl-design.md](docs/specs/2026-04-02-gaia-lang-v5-python-dsl-design.md) | Current Gaia Lang Phase 1 package model and CLI |
+| [docs/specs/2026-04-03-gaia-lang-future-extensions-design.md](docs/specs/2026-04-03-gaia-lang-future-extensions-design.md) | Future parameterization, rendering, and inference-adjacent design |
 | [docs/specs/2026-04-02-gaia-registry-design.md](docs/specs/2026-04-02-gaia-registry-design.md) | Phase 1 source-registry design |
 | [docs/for-users/cli-commands.md](docs/for-users/cli-commands.md) | User-facing CLI command reference |
 
