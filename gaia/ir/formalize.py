@@ -219,8 +219,17 @@ def _opposite_truth_name(left: str, right: str) -> str:
 
 
 def _build_deduction(builder: _TemplateBuilder) -> list[Operator]:
-    if len(builder.premises) < 2:
-        raise ValueError("deduction formalization requires at least 2 premises")
+    if len(builder.premises) < 1:
+        raise ValueError("deduction formalization requires at least 1 premise")
+    if len(builder.premises) == 1:
+        # Single premise: direct implication, no conjunction needed
+        return [
+            Operator(
+                operator="implication",
+                variables=[builder.premises[0]],
+                conclusion=builder.conclusion,
+            ),
+        ]
     conjunction = builder.add_helper("conjunction", _all_true_name(builder.premises))
     return [
         Operator(operator="conjunction", variables=builder.premises, conclusion=conjunction.id),

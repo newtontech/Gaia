@@ -117,8 +117,8 @@ def deduction(
     reason: str = "",
 ) -> Strategy:
     """Deduction lowered via the canonical IR formalizer at compile time."""
-    if len(premises) < 2:
-        raise ValueError("deduction() requires at least 2 premises")
+    if len(premises) < 1:
+        raise ValueError("deduction() requires at least 1 premise")
     return _named_strategy(
         "deduction",
         premises=premises,
