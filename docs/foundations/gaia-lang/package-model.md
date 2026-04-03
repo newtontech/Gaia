@@ -53,27 +53,29 @@ Package 执行时会收集三类运行时对象：
 - `Strategy`
 - `Operator`
 
-这些对象由 `with Package(...) as pkg:` 作用域中的 DSL 调用注册进包上下文，然后由 `gaia compile` 降低为 Gaia IR。
+这些对象由模块执行时的 DSL 调用自动注册进包上下文，然后由 `gaia compile` 降低为 Gaia IR。包身份来自 `pyproject.toml`。
 
 ```python
-from gaia.lang import Package, claim, contradiction, deduction, setting
+from gaia.lang import claim, contradiction, deduction, setting
 
+vacuum = setting("The experiment is conducted in a vacuum.")
+observation = claim("Objects of different mass fall at the same rate in a vacuum.")
+conclusion = claim("Mass alone does not determine falling speed.")
 
-with Package("galileo_falling_bodies", namespace="reg", version="4.0.3") as pkg:
-    vacuum = setting("The experiment is conducted in a vacuum.")
-    observation = claim("Objects of different mass fall at the same rate in a vacuum.")
-    conclusion = claim("Mass alone does not determine falling speed.")
+deduction(
+    premises=[vacuum, observation],
+    conclusion=conclusion,
+    reason="The controlled observation removes drag as a confounder.",
+)
 
-    deduction(
-        premises=[vacuum, observation],
-        conclusion=conclusion,
-        reason="The controlled observation removes drag as a confounder.",
-    )
+heavier_bodies_fall_faster = claim("Heavier bodies necessarily fall faster.")
+conflict = contradiction(
+    conclusion,
+    heavier_bodies_fall_faster,
+    reason="The two claims cannot both be true under the same experimental setup.",
+)
 
-    contradiction(
-        variables=[conclusion, claim("Heavier bodies necessarily fall faster.")],
-        reason="The two claims cannot both be true under the same experimental setup.",
-    )
+__all__ = ["vacuum", "observation", "conclusion", "heavier_bodies_fall_faster", "conflict"]
 ```
 
 ## 生命周期

@@ -37,7 +37,7 @@ Python package source
 
 ## 步骤二：执行 DSL 声明
 
-编译器导入包模块并执行 `with Package(...) as pkg:` 中的 DSL 代码。
+编译器导入包模块并执行模块顶层 DSL 声明。
 
 执行期间会注册：
 
@@ -45,7 +45,7 @@ Python package source
 - `Strategy`
 - `Operator`
 
-这些运行时对象由 `gaia.lang.runtime.package.Package` 收集，作为后续 lowering 的输入。
+这些运行时对象由内部 collector 收集，作为后续 lowering 的输入。作者不需要也不能显式声明 `Package(...)`。
 
 ## 步骤三：构建 graph closure
 

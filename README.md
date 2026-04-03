@@ -94,26 +94,23 @@ Notes:
 Create `src/galileo_falling_bodies/__init__.py`:
 
 ```python
-from gaia.lang import Package, claim, deduction, setting
+from gaia.lang import claim, deduction, setting
+
+vacuum = setting("The experiment is conducted in a vacuum.")
+observation = claim("Objects of different mass fall at the same rate in a vacuum.")
+conclusion = claim("Mass alone does not determine falling speed.")
+
+deduction(
+    premises=[vacuum, observation],
+    conclusion=conclusion,
+    reason="The controlled observation rules out the Aristotelian explanation.",
+)
 
 
-with Package("galileo_falling_bodies", namespace="reg", version="4.0.3") as pkg:
-    vacuum = setting("The experiment is conducted in a vacuum.")
-    observation = claim("Objects of different mass fall at the same rate in a vacuum.")
-    conclusion = claim("Mass alone does not determine falling speed.")
-
-    deduction(
-        premises=[vacuum, observation],
-        conclusion=conclusion,
-        steps=["The vacuum removes drag as a confounder."],
-        reason="The controlled observation rules out the Aristotelian explanation.",
-    )
-
-
-__all__ = ["pkg", "vacuum", "observation", "conclusion"]
+__all__ = ["vacuum", "observation", "conclusion"]
 ```
 
-The important part is that the module exports a `Package` object and the knowledge declarations you want compiled with stable labels.
+The important part is that the module declares `Knowledge` / `Strategy` / `Operator` objects directly. Package identity comes from `pyproject.toml`, not from a `Package(...)` block in the DSL.
 
 ### 4. Compile and validate
 
