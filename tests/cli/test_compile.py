@@ -67,6 +67,30 @@ def test_compile_missing_source_dir(tmp_path):
     assert result.exit_code != 0
 
 
+def test_compile_fails_on_invalid_ir_validation(tmp_path):
+    """Compile should fail before writing artifacts when IR validator rejects the graph."""
+    pkg_dir = tmp_path / "invalid_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "invalid-pkg-gaia"\nversion = "0.1.0"\n\n'
+        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "invalid_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        'from gaia.lang import claim, contradiction, setting\n\n'
+        'context = setting("Background context.")\n'
+        'hypothesis = claim("Main hypothesis.")\n'
+        'conflict = contradiction(context, hypothesis)\n'
+        '__all__ = ["context", "hypothesis", "conflict"]\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code != 0
+    assert "must be claim" in result.output
+    assert not (pkg_dir / ".gaia" / "ir.json").exists()
+
+
 def test_compile_labels_assigned(tmp_path):
     """Variable names become labels in the IR."""
     pkg_dir = tmp_path / "label_pkg"
