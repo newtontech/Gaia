@@ -11,6 +11,84 @@ from gaia.ir import LocalCanonicalGraph
 from gaia.ir.validator import validate_local_graph
 
 
+def _knowledge_diagnostics(ir: dict) -> list[str]:
+    """Analyze the knowledge graph and return diagnostic lines."""
+    lines: list[str] = []
+
+    # Collect all claim IDs
+    claims = {k["id"]: k for k in ir["knowledges"] if k["type"] == "claim"}
+    settings = {k["id"]: k for k in ir["knowledges"] if k["type"] == "setting"}
+    questions = {k["id"]: k for k in ir["knowledges"] if k["type"] == "question"}
+
+    # Identify strategy conclusions and premises
+    strategy_conclusions: set[str] = set()
+    strategy_premises: set[str] = set()
+    for s in ir.get("strategies", []):
+        if s.get("conclusion"):
+            strategy_conclusions.add(s["conclusion"])
+        for p in s.get("premises", []):
+            strategy_premises.add(p)
+
+    # Operator conclusions (structural helpers)
+    operator_conclusions: set[str] = set()
+    for o in ir.get("operators", []):
+        if o.get("conclusion"):
+            operator_conclusions.add(o["conclusion"])
+        for v in o.get("variables", []):
+            strategy_premises.add(v)
+
+    # Classify claims
+    independent = []  # leaf nodes — need reviewer prior
+    derived = []  # strategy conclusions — BP propagates belief
+    structural = []  # operator conclusions — deterministic
+    orphaned = []  # not referenced by any strategy or operator
+
+    for cid, k in claims.items():
+        label = k.get("label", cid.split("::")[-1])
+        if cid in operator_conclusions:
+            structural.append(label)
+        elif cid in strategy_conclusions:
+            derived.append(label)
+        elif cid in strategy_premises:
+            independent.append(label)
+        else:
+            orphaned.append(label)
+
+    # Summary
+    lines.append("")
+    lines.append(f"  Settings:  {len(settings)}")
+    lines.append(f"  Questions: {len(questions)}")
+    lines.append(f"  Claims:    {len(claims)}")
+    lines.append(f"    Independent (need prior):  {len(independent)}")
+    lines.append(f"    Derived (BP propagates):   {len(derived)}")
+    lines.append(f"    Structural (deterministic): {len(structural)}")
+    if orphaned:
+        lines.append(f"    Orphaned (no connections): {len(orphaned)}")
+
+    # List independent premises — these are what the reviewer needs to assess
+    if independent:
+        lines.append("")
+        lines.append("  Independent premises (reviewer must assign prior):")
+        for label in sorted(independent):
+            lines.append(f"    - {label}")
+
+    # List derived conclusions
+    if derived:
+        lines.append("")
+        lines.append("  Derived conclusions (belief from BP, prior optional):")
+        for label in sorted(derived):
+            lines.append(f"    - {label}")
+
+    # Warn about orphaned claims
+    if orphaned:
+        lines.append("")
+        lines.append("  Orphaned claims (not connected to any reasoning):")
+        for label in sorted(orphaned):
+            lines.append(f"    - {label}")
+
+    return lines
+
+
 def check_command(
     path: str = typer.Argument(".", help="Path to knowledge package directory"),
 ) -> None:
@@ -67,3 +145,7 @@ def check_command(
         f"{len(ir['strategies'])} strategies, "
         f"{len(ir['operators'])} operators"
     )
+
+    # Knowledge graph diagnostics
+    for line in _knowledge_diagnostics(ir):
+        typer.echo(line)
