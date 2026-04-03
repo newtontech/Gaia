@@ -324,3 +324,44 @@ def test_compile_composite_strategy_preserves_sub_strategy_references(tmp_path):
 
     result = validate_local_graph(LocalCanonicalGraph(**ir))
     assert result.valid, result.errors
+
+
+def test_compile_nested_composite_strategy_collects_recursive_knowledge(tmp_path):
+    pkg_dir = tmp_path / "nested_composite_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "nested-composite-pkg-gaia"\nversion = "0.2.0"\n\n'
+        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "nested_composite_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        'from gaia.lang import abduction, claim, composite, noisy_and\n\n'
+        'observation = claim("Observation.")\n'
+        'hypothesis = claim("Hypothesis.")\n'
+        'intermediate = claim("Intermediate.")\n'
+        'final_claim = claim("Final claim.")\n'
+        'best_explanation = abduction(observation=observation, hypothesis=hypothesis)\n'
+        'support = noisy_and(premises=[hypothesis], conclusion=intermediate)\n'
+        'inner = composite(\n'
+        '    premises=[observation],\n'
+        '    conclusion=intermediate,\n'
+        '    sub_strategies=[best_explanation, support],\n'
+        ')\n'
+        'final_support = noisy_and(premises=[intermediate], conclusion=final_claim)\n'
+        'argument = composite(\n'
+        '    premises=[observation],\n'
+        '    conclusion=final_claim,\n'
+        '    sub_strategies=[inner, final_support],\n'
+        ')\n'
+        '__all__ = ["observation", "hypothesis", "intermediate", "final_claim", "best_explanation", "support", "inner", "final_support", "argument"]\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code == 0, f"Failed: {result.output}"
+
+    ir = json.loads((pkg_dir / ".gaia" / "ir.json").read_text())
+    knowledge_ids = {knowledge["id"] for knowledge in ir["knowledges"]}
+    assert "reg:nested_composite_pkg::hypothesis" in knowledge_ids
+    result = validate_local_graph(LocalCanonicalGraph(**ir))
+    assert result.valid, result.errors

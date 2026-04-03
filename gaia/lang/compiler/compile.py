@@ -190,6 +190,7 @@ def compile_package(pkg: CollectedPackage) -> dict[str, Any]:
     # Build knowledge closure: local declarations + referenced foreign nodes.
     knowledge_nodes: list[Knowledge] = []
     seen_knowledge: set[int] = set()
+    formal_operators: set[int] = set()
 
     def register_knowledge(k: Knowledge) -> None:
         key = id(k)
@@ -198,22 +199,27 @@ def compile_package(pkg: CollectedPackage) -> dict[str, Any]:
         knowledge_nodes.append(k)
         seen_knowledge.add(key)
 
+    def register_strategy_knowledge(strategy: Any) -> None:
+        for premise in strategy.premises:
+            register_knowledge(premise)
+        for background in strategy.background:
+            register_knowledge(background)
+        if strategy.conclusion is not None:
+            register_knowledge(strategy.conclusion)
+        if strategy.formal_expr:
+            for op in strategy.formal_expr:
+                formal_operators.add(id(op))
+                for variable in op.variables:
+                    register_knowledge(variable)
+                if op.conclusion is not None:
+                    register_knowledge(op.conclusion)
+        for sub_strategy in strategy.sub_strategies:
+            register_strategy_knowledge(sub_strategy)
+
     for k in pkg.knowledge:
         register_knowledge(k)
     for s in pkg.strategies:
-        for premise in s.premises:
-            register_knowledge(premise)
-        for background in s.background:
-            register_knowledge(background)
-        if s.conclusion is not None:
-            register_knowledge(s.conclusion)
-        for sub_strategy in s.sub_strategies:
-            for premise in sub_strategy.premises:
-                register_knowledge(premise)
-            for background in sub_strategy.background:
-                register_knowledge(background)
-            if sub_strategy.conclusion is not None:
-                register_knowledge(sub_strategy.conclusion)
+        register_strategy_knowledge(s)
     for o in pkg.operators:
         for variable in o.variables:
             register_knowledge(variable)
@@ -241,12 +247,6 @@ def compile_package(pkg: CollectedPackage) -> dict[str, Any]:
         )
         for k in knowledge_nodes
     ]
-
-    formal_operators: set[int] = set()
-    for s in pkg.strategies:
-        if s.formal_expr:
-            for op in s.formal_expr:
-                formal_operators.add(id(op))
 
     ir_operators = [
         _operator_to_ir(o, knowledge_map, top_level=True)
