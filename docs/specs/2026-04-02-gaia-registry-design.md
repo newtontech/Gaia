@@ -226,7 +226,8 @@ The sandbox job:
 6. runs `gaia compile .`
 7. compares the resulting `.gaia/ir_hash` with the declared registry `ir_hash`
 8. runs `gaia check .`
-9. verifies all Gaia dependencies in `pyproject.toml` are already registered
+9. **validates `namespace`** — each registry enforces that the package's namespace matches the registry identity (e.g., the GitHub Official Registry requires `namespace == "github"`). This ensures that the namespace in published QIDs is trustworthy and reflects the actual source registry. The local CLI does not enforce namespace values, so this is the authoritative validation point.
+10. verifies all Gaia dependencies in `pyproject.toml` are already registered
 
 ### 4.2 Trusted Gate
 

@@ -157,7 +157,7 @@ Without `--create-pr`, the command prints a "next step" message instructing the 
 
 After the PR is created, registry CI (`register.yml`) takes over:
 
-- **Untrusted sandbox job**: Clones the package repo by pinned SHA, installs the Gaia runtime, runs `gaia compile` and `gaia check`, and verifies the resulting `ir_hash` matches the declared value. Also verifies all Gaia dependencies are already registered. Author code is executed here, but the job has no registry write permissions.
+- **Untrusted sandbox job**: Clones the package repo by pinned SHA, installs the Gaia runtime, runs `gaia compile` and `gaia check`, and verifies the resulting `ir_hash` matches the declared value. Also verifies all Gaia dependencies are already registered. **Validates that `namespace` matches the registry** — the GitHub Official Registry requires `namespace == "github"`. Author code is executed here, but the job has no registry write permissions.
 - **Trusted gate job**: Does not execute author code. Verifies UUID uniqueness for new packages, checks ownership policy, labels the PR, and applies the waiting-period policy.
 - **Waiting period**: 72 hours for new packages (community review window), 1 hour for version updates (lower operational risk).
 - **Auto-merge**: After the waiting period expires and all checks pass.
