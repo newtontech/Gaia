@@ -4,7 +4,7 @@
 
 > 相关文档：
 > - [01-product-scope.md](01-product-scope.md)
-> - [../gaia-lang/spec.md](../gaia-lang/spec.md)
+> - [../gaia-lang/dsl.md](../gaia-lang/dsl.md)
 > - [../gaia-ir/01-overview.md](../gaia-ir/01-overview.md)
 
 ## 目的

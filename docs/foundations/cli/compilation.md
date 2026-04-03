@@ -215,7 +215,7 @@ If `.gaia/ir_hash` does not exist, check reports a warning (artifacts missing, r
 
 ## Determinism Guarantee
 
-The same source code always produces the same `ir_hash`. The pipeline enforces this by:
+The same source code always produces the same `ir_hash`, provided the package's DSL declarations are side-effect-free (no network calls, no randomness, no environment-dependent logic). The compiler itself introduces no non-determinism:
 
 - **No LLM calls** -- compilation is purely mechanical
 - **No network access** -- all inputs are local files

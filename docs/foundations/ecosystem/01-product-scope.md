@@ -5,7 +5,7 @@
 > 相关文档：
 > - [01-overview.md](../gaia-ir/01-overview.md)
 > - [../theory/04-reasoning-strategies.md](../theory/04-reasoning-strategies.md)
-> - [../gaia-lang/spec.md](../gaia-lang/spec.md)
+> - [../gaia-lang/dsl.md](../gaia-lang/dsl.md)
 
 ## 目的
 

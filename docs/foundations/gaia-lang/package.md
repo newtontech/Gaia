@@ -46,7 +46,6 @@ dependencies = [
 ]
 
 [tool.gaia]
-namespace = "galileo"
 type = "knowledge-package"
 uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 ```
@@ -65,7 +64,7 @@ uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 | Field | Requirement | Notes |
 |-------|-------------|-------|
 | `type` | Required. Must be `"knowledge-package"`. | The CLI rejects any other value. |
-| `namespace` | Optional. Defaults to `"reg"`. | Used in QID generation: `{namespace}:{package_name}::{label}`. Typical values: `reg` (registry-bound), `paper` (extracted from literature). See [../gaia-ir/03-identity-and-hashing.md](../gaia-ir/03-identity-and-hashing.md). |
+| `namespace` | Optional. Defaults to `"reg"`. | Used in QID generation: `{namespace}:{package_name}::{label}`. Identifies the knowledge source. Generally not needed — the default `reg` is correct for registry-bound packages. See [../gaia-ir/03-identity-and-hashing.md](../gaia-ir/03-identity-and-hashing.md). |
 | `uuid` | Required for registration. | A UUID that uniquely identifies this package in the registry. Generate with `python -c "import uuid; print(uuid.uuid4())"`. Not required during local development. |
 
 ## Naming Convention
@@ -141,8 +140,8 @@ __all__ = ["vacuum_prediction", "air_resistance_hypothesis"]
 ```
 
 These two claims become:
-- `galileo:galileo_falling_bodies::vacuum_prediction`
-- `galileo:galileo_falling_bodies::air_resistance_hypothesis`
+- `reg:galileo_falling_bodies::vacuum_prediction`
+- `reg:galileo_falling_bodies::air_resistance_hypothesis`
 
 ## Version Semantics
 
