@@ -37,9 +37,7 @@ class ResolvedGaiaReview:
                 exclude_none=True,
             ),
             "objects": self.objects,
-            "priors": [
-                record.model_dump(mode="json", exclude_none=True) for record in self.priors
-            ],
+            "priors": [record.model_dump(mode="json", exclude_none=True) for record in self.priors],
             "strategy_params": [
                 record.model_dump(mode="json", exclude_none=True) for record in self.strategy_params
             ],
@@ -90,9 +88,7 @@ def _load_review_candidate(
 
     bundle = getattr(module, "REVIEW", None)
     if not isinstance(bundle, ReviewBundle):
-        raise GaiaCliError(
-            f"Error: {module_path.name} must export REVIEW = ReviewBundle(...)."
-        )
+        raise GaiaCliError(f"Error: {module_path.name} must export REVIEW = ReviewBundle(...).")
     return LoadedGaiaReview(
         name=review_name,
         module_name=module_name,
@@ -127,9 +123,7 @@ def load_gaia_review(
             )
     elif review_name not in candidates:
         available = ", ".join(sorted(candidates))
-        raise GaiaCliError(
-            f"Error: unknown review sidecar {review_name!r}. Available: {available}"
-        )
+        raise GaiaCliError(f"Error: unknown review sidecar {review_name!r}. Available: {available}")
 
     module_name, module_path = candidates[review_name]
     loaded_review = _load_review_candidate(
@@ -161,7 +155,9 @@ def resolve_gaia_review(loaded_review, compiled) -> ResolvedGaiaReview:
         if isinstance(review, ClaimReview):
             knowledge_id = compiled.knowledge_ids_by_object.get(id(review.subject))
             if knowledge_id is None:
-                raise GaiaCliError("Error: review_claim() references a Knowledge outside this package.")
+                raise GaiaCliError(
+                    "Error: review_claim() references a Knowledge outside this package."
+                )
             if review.prior is not None:
                 priors.append(
                     PriorRecord(
@@ -234,7 +230,10 @@ def resolve_gaia_review(loaded_review, compiled) -> ResolvedGaiaReview:
 
             conditional_probabilities: list[float] | None = None
             strategy_type = str(strategy.type)
-            if review.conditional_probability is not None or review.conditional_probabilities is not None:
+            if (
+                review.conditional_probability is not None
+                or review.conditional_probabilities is not None
+            ):
                 if strategy_type == "noisy_and":
                     conditional_probabilities = (
                         list(review.conditional_probabilities)

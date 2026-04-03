@@ -22,9 +22,7 @@ def test_compile_creates_ir_json(tmp_path):
     pkg_src = pkg_dir / "test_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import claim\n\n'
-        'my_claim = claim("A test claim.")\n'
-        '__all__ = ["my_claim"]\n'
+        'from gaia.lang import claim\n\nmy_claim = claim("A test claim.")\n__all__ = ["my_claim"]\n'
     )
 
     result = runner.invoke(app, ["compile", str(pkg_dir)])
@@ -78,10 +76,10 @@ def test_compile_fails_on_invalid_ir_validation(tmp_path):
     pkg_src = pkg_dir / "invalid_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import claim, contradiction, setting\n\n'
+        "from gaia.lang import claim, contradiction, setting\n\n"
         'context = setting("Background context.")\n'
         'hypothesis = claim("Main hypothesis.")\n'
-        'conflict = contradiction(context, hypothesis)\n'
+        "conflict = contradiction(context, hypothesis)\n"
         '__all__ = ["context", "hypothesis", "conflict"]\n'
     )
 
@@ -102,7 +100,7 @@ def test_compile_labels_assigned(tmp_path):
     pkg_src = pkg_dir / "label_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import claim, setting\n\n'
+        "from gaia.lang import claim, setting\n\n"
         'bg = setting("Background context.")\n'
         'hypothesis = claim("Main hypothesis.")\n'
         '__all__ = ["bg", "hypothesis"]\n'
@@ -130,9 +128,7 @@ def test_compile_supports_src_layout(tmp_path):
     pkg_src = src_root / "ver_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import claim\n\n'
-        'c = claim("A claim.")\n'
-        '__all__ = ["c"]\n'
+        'from gaia.lang import claim\n\nc = claim("A claim.")\n__all__ = ["c"]\n'
     )
 
     result = runner.invoke(app, ["compile", str(pkg_dir)])
@@ -153,15 +149,15 @@ def test_compile_preserves_structured_steps_and_provenance(tmp_path):
     pkg_src = pkg_dir / "step_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import claim, noisy_and\n\n'
+        "from gaia.lang import claim, noisy_and\n\n"
         'evidence_a = claim("Evidence A.", provenance=[{"package_id": "paper:alpha", "version": "1.0.0"}])\n'
         'evidence_b = claim("Evidence B.")\n'
         'hypothesis = claim("Hypothesis.")\n'
-        'support = noisy_and(\n'
-        '    premises=[evidence_a, evidence_b],\n'
-        '    conclusion=hypothesis,\n'
+        "support = noisy_and(\n"
+        "    premises=[evidence_a, evidence_b],\n"
+        "    conclusion=hypothesis,\n"
         '    steps=[{"reasoning": "Combine both evidence lines.", "premises": [evidence_a, evidence_b], "conclusion": hypothesis}],\n'
-        ')\n'
+        ")\n"
         '__all__ = ["evidence_a", "evidence_b", "hypothesis", "support"]\n'
     )
 
@@ -169,7 +165,9 @@ def test_compile_preserves_structured_steps_and_provenance(tmp_path):
     assert result.exit_code == 0, f"Failed: {result.output}"
 
     ir = json.loads((pkg_dir / ".gaia" / "ir.json").read_text())
-    evidence_a = next(knowledge for knowledge in ir["knowledges"] if knowledge["label"] == "evidence_a")
+    evidence_a = next(
+        knowledge for knowledge in ir["knowledges"] if knowledge["label"] == "evidence_a"
+    )
     assert evidence_a["provenance"] == [{"package_id": "paper:alpha", "version": "1.0.0"}]
 
     strategy = ir["strategies"][0]
@@ -193,7 +191,7 @@ def test_compile_named_strategy_uses_ir_canonical_formalization(tmp_path):
     pkg_src = pkg_dir / "abduction_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import abduction, claim\n\n'
+        "from gaia.lang import abduction, claim\n\n"
         'observation = claim("Observation.")\n'
         'hypothesis = claim("Hypothesis.")\n'
         'best_explanation = abduction(observation=observation, hypothesis=hypothesis, reason="fit")\n'
@@ -236,10 +234,10 @@ def test_compile_emits_pure_local_canonical_graph(tmp_path):
     pkg_src = pkg_dir / "pure_ir_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import claim, noisy_and\n\n'
+        "from gaia.lang import claim, noisy_and\n\n"
         'premise = claim("Premise.")\n'
         'conclusion = claim("Conclusion.")\n'
-        'support = noisy_and(premises=[premise], conclusion=conclusion)\n'
+        "support = noisy_and(premises=[premise], conclusion=conclusion)\n"
         '__all__ = ["premise", "conclusion", "support"]\n'
     )
 
@@ -264,19 +262,19 @@ def test_compile_elimination_strategy_uses_ir_canonical_formalization(tmp_path):
     pkg_src = pkg_dir / "elimination_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import claim, elimination\n\n'
+        "from gaia.lang import claim, elimination\n\n"
         'exhaustive = claim("The candidates are exhaustive.")\n'
         'bacterial = claim("Bacterial cause.")\n'
         'antibiotics_neg = claim("Antibiotics test is negative.")\n'
         'viral = claim("Viral cause.")\n'
         'viral_test_neg = claim("Viral test is negative.")\n'
         'autoimmune = claim("Autoimmune cause.")\n'
-        'argument = elimination(\n'
-        '    exhaustiveness=exhaustive,\n'
-        '    excluded=[(bacterial, antibiotics_neg), (viral, viral_test_neg)],\n'
-        '    survivor=autoimmune,\n'
+        "argument = elimination(\n"
+        "    exhaustiveness=exhaustive,\n"
+        "    excluded=[(bacterial, antibiotics_neg), (viral, viral_test_neg)],\n"
+        "    survivor=autoimmune,\n"
         '    reason="All alternative causes were excluded.",\n'
-        ')\n'
+        ")\n"
         '__all__ = ["exhaustive", "bacterial", "antibiotics_neg", "viral", "viral_test_neg", "autoimmune", "argument"]\n'
     )
 
@@ -316,18 +314,18 @@ def test_compile_composite_strategy_preserves_sub_strategy_references(tmp_path):
     pkg_src = pkg_dir / "composite_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import abduction, claim, composite, noisy_and\n\n'
+        "from gaia.lang import abduction, claim, composite, noisy_and\n\n"
         'observation = claim("Observation.")\n'
         'hypothesis = claim("Hypothesis.")\n'
         'final_claim = claim("Final claim.")\n'
-        'best_explanation = abduction(observation=observation, hypothesis=hypothesis)\n'
-        'support = noisy_and(premises=[hypothesis], conclusion=final_claim)\n'
-        'argument = composite(\n'
-        '    premises=[observation],\n'
-        '    conclusion=final_claim,\n'
-        '    sub_strategies=[best_explanation, support],\n'
+        "best_explanation = abduction(observation=observation, hypothesis=hypothesis)\n"
+        "support = noisy_and(premises=[hypothesis], conclusion=final_claim)\n"
+        "argument = composite(\n"
+        "    premises=[observation],\n"
+        "    conclusion=final_claim,\n"
+        "    sub_strategies=[best_explanation, support],\n"
         '    reason="Compose the abductive and support sub-arguments.",\n'
-        ')\n'
+        ")\n"
         '__all__ = ["observation", "hypothesis", "final_claim", "best_explanation", "support", "argument"]\n'
     )
 
@@ -360,24 +358,24 @@ def test_compile_nested_composite_strategy_collects_recursive_knowledge(tmp_path
     pkg_src = pkg_dir / "nested_composite_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import abduction, claim, composite, noisy_and\n\n'
+        "from gaia.lang import abduction, claim, composite, noisy_and\n\n"
         'observation = claim("Observation.")\n'
         'hypothesis = claim("Hypothesis.")\n'
         'intermediate = claim("Intermediate.")\n'
         'final_claim = claim("Final claim.")\n'
-        'best_explanation = abduction(observation=observation, hypothesis=hypothesis)\n'
-        'support = noisy_and(premises=[hypothesis], conclusion=intermediate)\n'
-        'inner = composite(\n'
-        '    premises=[observation],\n'
-        '    conclusion=intermediate,\n'
-        '    sub_strategies=[best_explanation, support],\n'
-        ')\n'
-        'final_support = noisy_and(premises=[intermediate], conclusion=final_claim)\n'
-        'argument = composite(\n'
-        '    premises=[observation],\n'
-        '    conclusion=final_claim,\n'
-        '    sub_strategies=[inner, final_support],\n'
-        ')\n'
+        "best_explanation = abduction(observation=observation, hypothesis=hypothesis)\n"
+        "support = noisy_and(premises=[hypothesis], conclusion=intermediate)\n"
+        "inner = composite(\n"
+        "    premises=[observation],\n"
+        "    conclusion=intermediate,\n"
+        "    sub_strategies=[best_explanation, support],\n"
+        ")\n"
+        "final_support = noisy_and(premises=[intermediate], conclusion=final_claim)\n"
+        "argument = composite(\n"
+        "    premises=[observation],\n"
+        "    conclusion=final_claim,\n"
+        "    sub_strategies=[inner, final_support],\n"
+        ")\n"
         '__all__ = ["observation", "hypothesis", "intermediate", "final_claim", "best_explanation", "support", "inner", "final_support", "argument"]\n'
     )
 

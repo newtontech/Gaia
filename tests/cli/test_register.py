@@ -37,7 +37,7 @@ def _write_package(pkg_dir) -> None:
     pkg_src = pkg_dir / "register_demo"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import claim\n\n'
+        "from gaia.lang import claim\n\n"
         'exported_claim = claim("A release-ready claim.")\n'
         '__all__ = ["exported_claim"]\n'
     )

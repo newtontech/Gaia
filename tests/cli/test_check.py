@@ -18,7 +18,7 @@ def _write_package(pkg_dir, *, content: str = "A test claim.") -> None:
     pkg_src = pkg_dir / "check_demo"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        'from gaia.lang import claim\n\n'
+        "from gaia.lang import claim\n\n"
         f'main_claim = claim("{content}")\n'
         '__all__ = ["main_claim"]\n'
     )
@@ -44,7 +44,7 @@ def test_check_fails_when_compiled_artifacts_are_stale(tmp_path):
     assert compile_result.exit_code == 0, compile_result.output
 
     (pkg_dir / "check_demo" / "__init__.py").write_text(
-        'from gaia.lang import claim\n\n'
+        "from gaia.lang import claim\n\n"
         'main_claim = claim("Updated claim.")\n'
         '__all__ = ["main_claim"]\n'
     )
