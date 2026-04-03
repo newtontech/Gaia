@@ -15,7 +15,7 @@ def _write_base_package(pkg_dir, *, name: str, version: str = "1.0.0") -> None:
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         f'[project]\nname = "{name}-gaia"\nversion = "{version}"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     (pkg_dir / name).mkdir()
 
@@ -163,7 +163,7 @@ def test_infer_supports_generated_interface_claim_review(tmp_path):
     assert len(generated_reviews) == 1
     assert generated_reviews[0]["role"] == "alternative_explanation"
     assert parameterization["priors"][2]["knowledge_id"].startswith(
-        "reg:abduction_demo::__alternative_explanation_"
+        "github:abduction_demo::__alternative_explanation_"
     )
 
 

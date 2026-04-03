@@ -38,17 +38,17 @@ class TestStrategyFormalize:
         leaf = Strategy(
             scope="local",
             type="deduction",
-            premises=["reg:test::a", "reg:test::b"],
-            conclusion="reg:test::c",
-            background=["reg:test::ctx"],
+            premises=["github:test::a", "github:test::b"],
+            conclusion="github:test::c",
+            background=["github:test::ctx"],
             steps=[Step(reasoning="combine the two premises")],
             metadata={"source": "unit-test"},
         )
 
-        result = leaf.formalize(namespace="reg", package_name="test")
+        result = leaf.formalize(namespace="github", package_name="test")
 
         assert isinstance(result.strategy, FormalStrategy)
-        assert result.strategy.background == ["reg:test::ctx"]
+        assert result.strategy.background == ["github:test::ctx"]
         assert len(result.strategy.steps or []) == 1
         assert result.strategy.steps[0].reasoning == "combine the two premises"
         assert result.strategy.metadata["source"] == "unit-test"
@@ -59,7 +59,7 @@ class TestStrategyFormalize:
         assert len(result.knowledges) == 1
 
         conjunction = result.knowledges[0]
-        assert conjunction.id.startswith("reg:test::__")
+        assert conjunction.id.startswith("github:test::__")
         assert conjunction.label is not None
         assert conjunction.label.startswith("__")
         assert conjunction.type == KnowledgeType.CLAIM
@@ -70,47 +70,49 @@ class TestStrategyFormalize:
         assert result.strategy.formal_expr.operators[0].conclusion == conjunction.id
 
     def test_formalize_rejects_strategy_without_conclusion(self):
-        leaf = Strategy(scope="local", type="deduction", premises=["reg:test::a", "reg:test::b"])
+        leaf = Strategy(
+            scope="local", type="deduction", premises=["github:test::a", "github:test::b"]
+        )
 
         with pytest.raises(ValueError, match="requires the strategy to set a conclusion"):
-            leaf.formalize(namespace="reg", package_name="test")
+            leaf.formalize(namespace="github", package_name="test")
 
     def test_formalize_rejects_composite_strategy(self):
         composite = CompositeStrategy(
             scope="local",
             type="abduction",
-            premises=["reg:test::obs"],
-            conclusion="reg:test::h",
+            premises=["github:test::obs"],
+            conclusion="github:test::h",
             sub_strategies=["lcs_child"],
         )
 
         with pytest.raises(TypeError, match="CompositeStrategy cannot be directly formalized"):
-            composite.formalize(namespace="reg", package_name="test")
+            composite.formalize(namespace="github", package_name="test")
 
     def test_formalize_rejects_already_formal_strategy(self):
         formal = FormalStrategy(
             scope="local",
             type="deduction",
-            premises=["reg:test::a", "reg:test::b"],
-            conclusion="reg:test::c",
+            premises=["github:test::a", "github:test::b"],
+            conclusion="github:test::c",
             formal_expr=FormalExpr(
                 operators=[
                     Operator(
                         operator="conjunction",
-                        variables=["reg:test::a", "reg:test::b"],
-                        conclusion="reg:test::m",
+                        variables=["github:test::a", "github:test::b"],
+                        conclusion="github:test::m",
                     ),
                     Operator(
                         operator="implication",
-                        variables=["reg:test::m"],
-                        conclusion="reg:test::c",
+                        variables=["github:test::m"],
+                        conclusion="github:test::c",
                     ),
                 ]
             ),
         )
 
         with pytest.raises(TypeError, match="already formalized"):
-            formal.formalize(namespace="reg", package_name="test")
+            formal.formalize(namespace="github", package_name="test")
 
 
 class TestFormalizeNamedStrategy:
@@ -118,17 +120,17 @@ class TestFormalizeNamedStrategy:
         result_a = formalize_named_strategy(
             scope="local",
             type_="abduction",
-            premises=["reg:test::obs"],
-            conclusion="reg:test::h",
-            namespace="reg",
+            premises=["github:test::obs"],
+            conclusion="github:test::h",
+            namespace="github",
             package_name="test",
         )
         result_b = formalize_named_strategy(
             scope="local",
             type_="abduction",
-            premises=["reg:test::obs"],
-            conclusion="reg:test::h",
-            namespace="reg",
+            premises=["github:test::obs"],
+            conclusion="github:test::h",
+            namespace="github",
             package_name="test",
         )
 
@@ -143,10 +145,10 @@ class TestFormalizeNamedStrategy:
     @pytest.mark.parametrize(
         ("type_", "premises"),
         [
-            ("deduction", ["reg:test::a", "reg:test::b"]),
-            ("mathematical_induction", ["reg:test::base", "reg:test::step"]),
-            ("analogy", ["reg:test::source_law", "reg:test::bridge"]),
-            ("extrapolation", ["reg:test::known_law", "reg:test::continuity"]),
+            ("deduction", ["github:test::a", "github:test::b"]),
+            ("mathematical_induction", ["github:test::base", "github:test::step"]),
+            ("analogy", ["github:test::source_law", "github:test::bridge"]),
+            ("extrapolation", ["github:test::known_law", "github:test::continuity"]),
         ],
     )
     def test_conjunction_templates(self, type_: str, premises: list[str]):
@@ -154,8 +156,8 @@ class TestFormalizeNamedStrategy:
             scope="local",
             type_=type_,
             premises=premises,
-            conclusion="reg:test::out",
-            namespace="reg",
+            conclusion="github:test::out",
+            namespace="github",
             package_name="test",
         )
 
@@ -171,9 +173,9 @@ class TestFormalizeNamedStrategy:
         result = formalize_named_strategy(
             scope="local",
             type_="abduction",
-            premises=["reg:test::obs"],
-            conclusion="reg:test::h",
-            namespace="reg",
+            premises=["github:test::obs"],
+            conclusion="github:test::h",
+            namespace="github",
             package_name="test",
         )
 
@@ -187,9 +189,9 @@ class TestFormalizeNamedStrategy:
         )
         assert result.strategy.metadata["interface_roles"] == {
             "alternative_explanation": [result.strategy.premises[1]],
-            "observation": ["reg:test::obs"],
+            "observation": ["github:test::obs"],
         }
-        assert result.strategy.premises[0] == "reg:test::obs"
+        assert result.strategy.premises[0] == "github:test::obs"
 
         alternative_explanation = _knowledge_for_role(result.knowledges, "alternative_explanation")
         disjunction = _knowledge_for_role(result.knowledges, "disjunction_result")
@@ -199,15 +201,15 @@ class TestFormalizeNamedStrategy:
         assert alternative_explanation.metadata["visibility"] == "strategy_interface"
         assert equivalence.metadata["generated_kind"] == "helper_claim"
         assert equivalence.metadata["helper_kind"] == "equivalence_result"
-        assert result.strategy.premises == ["reg:test::obs", alternative_explanation.id]
+        assert result.strategy.premises == ["github:test::obs", alternative_explanation.id]
         assert result.strategy.formal_expr.operators[0].variables == [
-            "reg:test::h",
+            "github:test::h",
             alternative_explanation.id,
         ]
         assert result.strategy.formal_expr.operators[0].conclusion == disjunction.id
         assert result.strategy.formal_expr.operators[1].variables == [
             disjunction.id,
-            "reg:test::obs",
+            "github:test::obs",
         ]
         assert result.strategy.formal_expr.operators[1].conclusion == equivalence.id
 
@@ -215,9 +217,9 @@ class TestFormalizeNamedStrategy:
         result = formalize_named_strategy(
             scope="local",
             type_="abduction",
-            premises=["reg:test::obs", "reg:test::alt"],
-            conclusion="reg:test::h",
-            namespace="reg",
+            premises=["github:test::obs", "github:test::alt"],
+            conclusion="github:test::h",
+            namespace="github",
             package_name="test",
         )
 
@@ -228,10 +230,10 @@ class TestFormalizeNamedStrategy:
                 "equivalence_result": 1,
             }
         )
-        assert result.strategy.premises == ["reg:test::obs", "reg:test::alt"]
+        assert result.strategy.premises == ["github:test::obs", "github:test::alt"]
         assert result.strategy.metadata["interface_roles"] == {
-            "alternative_explanation": ["reg:test::alt"],
-            "observation": ["reg:test::obs"],
+            "alternative_explanation": ["github:test::alt"],
+            "observation": ["github:test::obs"],
         }
 
     def test_induction_deferred(self):
@@ -239,9 +241,9 @@ class TestFormalizeNamedStrategy:
             formalize_named_strategy(
                 scope="local",
                 type_="induction",
-                premises=["reg:test::obs_1", "reg:test::obs_2"],
-                conclusion="reg:test::law",
-                namespace="reg",
+                premises=["github:test::obs_1", "github:test::obs_2"],
+                conclusion="github:test::law",
+                namespace="github",
                 package_name="test",
             )
 
@@ -250,9 +252,9 @@ class TestFormalizeNamedStrategy:
             formalize_named_strategy(
                 scope="local",
                 type_="reductio",
-                premises=["reg:test::r"],
-                conclusion="reg:test::not_p",
-                namespace="reg",
+                premises=["github:test::r"],
+                conclusion="github:test::not_p",
+                namespace="github",
                 package_name="test",
             )
 
@@ -261,14 +263,14 @@ class TestFormalizeNamedStrategy:
             scope="local",
             type_="elimination",
             premises=[
-                "reg:test::exhaustive",
-                "reg:test::h1",
-                "reg:test::e1",
-                "reg:test::h2",
-                "reg:test::e2",
+                "github:test::exhaustive",
+                "github:test::h1",
+                "github:test::e1",
+                "github:test::h2",
+                "github:test::e2",
             ],
-            conclusion="reg:test::h3",
-            namespace="reg",
+            conclusion="github:test::h3",
+            namespace="github",
             package_name="test",
         )
 
@@ -289,9 +291,9 @@ class TestFormalizeNamedStrategy:
             }
         )
         assert result.strategy.metadata["interface_roles"] == {
-            "eliminated_candidate": ["reg:test::h1", "reg:test::h2"],
-            "elimination_evidence": ["reg:test::e1", "reg:test::e2"],
-            "exhaustiveness": ["reg:test::exhaustive"],
+            "eliminated_candidate": ["github:test::h1", "github:test::h2"],
+            "elimination_evidence": ["github:test::e1", "github:test::e2"],
+            "exhaustiveness": ["github:test::exhaustive"],
         }
 
     def test_case_analysis_template(self):
@@ -299,14 +301,14 @@ class TestFormalizeNamedStrategy:
             scope="local",
             type_="case_analysis",
             premises=[
-                "reg:test::exhaustive",
-                "reg:test::a1",
-                "reg:test::p1",
-                "reg:test::a2",
-                "reg:test::p2",
+                "github:test::exhaustive",
+                "github:test::a1",
+                "github:test::p1",
+                "github:test::a2",
+                "github:test::p2",
             ],
-            conclusion="reg:test::c",
-            namespace="reg",
+            conclusion="github:test::c",
+            namespace="github",
             package_name="test",
         )
 
@@ -326,9 +328,9 @@ class TestFormalizeNamedStrategy:
             }
         )
         assert result.strategy.metadata["interface_roles"] == {
-            "case": ["reg:test::a1", "reg:test::a2"],
-            "case_support": ["reg:test::p1", "reg:test::p2"],
-            "exhaustiveness": ["reg:test::exhaustive"],
+            "case": ["github:test::a1", "github:test::a2"],
+            "case_support": ["github:test::p1", "github:test::p2"],
+            "exhaustiveness": ["github:test::exhaustive"],
         }
 
     def test_case_analysis_open_world_variant_deferred(self):
@@ -337,14 +339,14 @@ class TestFormalizeNamedStrategy:
                 scope="local",
                 type_="case_analysis",
                 premises=[
-                    "reg:test::exhaustive",
-                    "reg:test::a1",
-                    "reg:test::p1",
-                    "reg:test::a2",
-                    "reg:test::p2",
+                    "github:test::exhaustive",
+                    "github:test::a1",
+                    "github:test::p1",
+                    "github:test::a2",
+                    "github:test::p2",
                 ],
-                conclusion="reg:test::c",
-                namespace="reg",
+                conclusion="github:test::c",
+                namespace="github",
                 package_name="test",
                 metadata={"include_other_relevant_case": True},
             )
@@ -354,9 +356,9 @@ class TestFormalizeNamedStrategy:
             formalize_named_strategy(
                 scope="local",
                 type_="infer",
-                premises=["reg:test::a"],
-                conclusion="reg:test::b",
-                namespace="reg",
+                premises=["github:test::a"],
+                conclusion="github:test::b",
+                namespace="github",
                 package_name="test",
             )
 

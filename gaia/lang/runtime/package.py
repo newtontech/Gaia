@@ -17,7 +17,7 @@ except ImportError:
 class CollectedPackage:
     """Internal collector for declarations belonging to a knowledge package."""
 
-    def __init__(self, name: str, *, namespace: str = "reg", version: str = "0.1.0"):
+    def __init__(self, name: str, *, namespace: str = "github", version: str = "0.1.0"):
         self.name = name
         self.namespace = namespace
         self.version = version
@@ -98,9 +98,9 @@ def _load_inferred_package(pyproject: Path) -> CollectedPackage | None:
     if not isinstance(version, str) or not version:
         return None
 
-    namespace = gaia.get("namespace", "reg")
+    namespace = gaia.get("namespace", "github")
     if not isinstance(namespace, str) or not namespace:
-        namespace = "reg"
+        namespace = "github"
 
     pkg = CollectedPackage(
         _project_to_import_name(project_name),

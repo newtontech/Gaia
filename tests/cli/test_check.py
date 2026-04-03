@@ -13,7 +13,7 @@ def _write_package(pkg_dir, *, content: str = "A test claim.") -> None:
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "check-demo-gaia"\nversion = "1.2.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     pkg_src = pkg_dir / "check_demo"
     pkg_src.mkdir()

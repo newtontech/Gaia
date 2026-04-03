@@ -7,7 +7,7 @@ from gaia.ir import (
     LocalCanonicalGraph,
 )
 
-NS = "reg"
+NS = "github"
 PKG = "test"
 
 
@@ -21,13 +21,13 @@ def _local_graph(**kwargs):
 class TestLocalCanonicalGraph:
     def test_auto_hash(self):
         g = _local_graph(
-            knowledges=[Knowledge(id="reg:test::k1", type="claim", content="A")],
+            knowledges=[Knowledge(id="github:test::k1", type="claim", content="A")],
             strategies=[
                 Strategy(
                     scope="local",
                     type="infer",
-                    premises=["reg:test::k1"],
-                    conclusion="reg:test::k1",
+                    premises=["github:test::k1"],
+                    conclusion="github:test::k1",
                 )
             ],
         )
@@ -36,28 +36,28 @@ class TestLocalCanonicalGraph:
     def test_deterministic_hash(self):
         def make():
             return _local_graph(
-                knowledges=[Knowledge(id="reg:test::k1", type="claim", content="A")],
+                knowledges=[Knowledge(id="github:test::k1", type="claim", content="A")],
             )
 
         assert make().ir_hash == make().ir_hash
 
     def test_different_content_different_hash(self):
-        g1 = _local_graph(knowledges=[Knowledge(id="reg:test::k1", type="claim", content="A")])
-        g2 = _local_graph(knowledges=[Knowledge(id="reg:test::k1", type="claim", content="B")])
+        g1 = _local_graph(knowledges=[Knowledge(id="github:test::k1", type="claim", content="A")])
+        g2 = _local_graph(knowledges=[Knowledge(id="github:test::k1", type="claim", content="B")])
         assert g1.ir_hash != g2.ir_hash
 
     def test_with_operators(self):
         g = _local_graph(
             knowledges=[
-                Knowledge(id="reg:test::a", type="claim"),
-                Knowledge(id="reg:test::b", type="claim"),
-                Knowledge(id="reg:test::eq", type="claim"),
+                Knowledge(id="github:test::a", type="claim"),
+                Knowledge(id="github:test::b", type="claim"),
+                Knowledge(id="github:test::eq", type="claim"),
             ],
             operators=[
                 Operator(
                     operator="equivalence",
-                    variables=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::eq",
+                    variables=["github:test::a", "github:test::b"],
+                    conclusion="github:test::eq",
                 ),
             ],
         )
@@ -68,13 +68,13 @@ class TestLocalCanonicalGraph:
         assert g.scope == "local"
 
     def test_hash_independent_of_entity_order(self):
-        k1 = Knowledge(id="reg:test::k1", type="claim", content="A")
-        k2 = Knowledge(id="reg:test::k2", type="claim", content="B")
+        k1 = Knowledge(id="github:test::k1", type="claim", content="A")
+        k2 = Knowledge(id="github:test::k2", type="claim", content="B")
         s = Strategy(
             scope="local",
             type="infer",
-            premises=["reg:test::k1"],
-            conclusion="reg:test::k2",
+            premises=["github:test::k1"],
+            conclusion="github:test::k2",
         )
 
         g1 = _local_graph(knowledges=[k1, k2], strategies=[s])
@@ -90,8 +90,8 @@ class TestLocalCanonicalGraph:
                 Knowledge(label="beta", type="setting", content="Beta setting"),
             ],
         )
-        assert g.knowledges[0].id == "reg:test::alpha"
-        assert g.knowledges[1].id == "reg:test::beta"
+        assert g.knowledges[0].id == "github:test::alpha"
+        assert g.knowledges[1].id == "github:test::beta"
 
     def test_local_graph_preserves_explicit_id(self):
         """Knowledge with explicit id is not overwritten by auto-assign."""

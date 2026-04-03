@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "local_variables": [
     {
-      "id": "reg:dark_energy::flat_universe",
+      "id": "github:dark_energy::flat_universe",
       "type": "setting",
       "visibility": "public",
       "content": "The universe is spatially flat on large scales.",
@@ -14,7 +14,7 @@
       "metadata": null
     },
     {
-      "id": "reg:dark_energy::gr_valid",
+      "id": "github:dark_energy::gr_valid",
       "type": "setting",
       "visibility": "public",
       "content": "General relativity is valid at cosmological scales.",
@@ -25,7 +25,7 @@
       "metadata": null
     },
     {
-      "id": "reg:dark_energy::main_question",
+      "id": "github:dark_energy::main_question",
       "type": "question",
       "visibility": "public",
       "content": "What is the physical nature of dark energy?",
@@ -36,7 +36,7 @@
       "metadata": null
     },
     {
-      "id": "reg:dark_energy::sn_observation",
+      "id": "github:dark_energy::sn_observation",
       "type": "claim",
       "visibility": "public",
       "content": "Type Ia supernovae data shows the universe \" s expansion is accelerating.",
@@ -47,7 +47,7 @@
       "metadata": null
     },
     {
-      "id": "reg:dark_energy::cmb_data",
+      "id": "github:dark_energy::cmb_data",
       "type": "claim",
       "visibility": "public",
       "content": "CMB anisotropy data is consistent with a flat universe model.",
@@ -58,7 +58,7 @@
       "metadata": null
     },
     {
-      "id": "reg:dark_energy::mcmc_fit",
+      "id": "github:dark_energy::mcmc_fit",
       "type": "claim",
       "visibility": "public",
       "content": "MCMC fitting of Type Ia supernovae data using emcee   to obtain the posterior distribution of the dark energy density parameter.",
@@ -69,7 +69,7 @@
       "metadata": null
     },
     {
-      "id": "reg:dark_energy::dark_energy_fraction",
+      "id": "github:dark_energy::dark_energy_fraction",
       "type": "claim",
       "visibility": "public",
       "content": "Dark energy accounts for approximately 68% of the total energy density of the universe.",
@@ -80,7 +80,7 @@
       "metadata": null
     },
     {
-      "id": "reg:dark_energy::qft_vacuum_energy",
+      "id": "github:dark_energy::qft_vacuum_energy",
       "type": "claim",
       "visibility": "public",
       "content": "Quantum field theory predicts a vacuum energy density roughly 120 orders of magnitude   larger than the observed dark energy density.",
@@ -91,7 +91,7 @@
       "metadata": null
     },
     {
-      "id": "reg:dark_energy::vacuum_catastrophe",
+      "id": "github:dark_energy::vacuum_catastrophe",
       "type": "claim",
       "visibility": "public",
       "content": "The cosmological constant interpretation of dark energy differs from   quantum field theory \" s vacuum energy prediction by 120 orders of magnitude.",
@@ -102,7 +102,7 @@
       "metadata": null
     },
     {
-      "id": "reg:dark_energy::cross_validation",
+      "id": "github:dark_energy::cross_validation",
       "type": "claim",
       "visibility": "public",
       "content": "The dark energy fraction is consistent with independent CMB power spectrum analysis.",
@@ -113,7 +113,7 @@
       "metadata": null
     },
     {
-      "id": "reg:dark_energy::cmb_power_spectrum",
+      "id": "github:dark_energy::cmb_power_spectrum",
       "type": "claim",
       "visibility": "public",
       "content": "CMB power spectrum analysis from Planck satellite data",
@@ -130,9 +130,9 @@
       "factor_type": "strategy",
       "subtype": "noisy_and",
       "premises": [
-        "reg:dark_energy::sn_observation"
+        "github:dark_energy::sn_observation"
       ],
-      "conclusion": "reg:dark_energy::mcmc_fit",
+      "conclusion": "github:dark_energy::mcmc_fit",
       "background": null,
       "steps": null,
       "source_package": "dark_energy",
@@ -144,13 +144,13 @@
       "factor_type": "strategy",
       "subtype": "noisy_and",
       "premises": [
-        "reg:dark_energy::sn_observation",
-        "reg:dark_energy::cmb_data"
+        "github:dark_energy::sn_observation",
+        "github:dark_energy::cmb_data"
       ],
-      "conclusion": "reg:dark_energy::dark_energy_fraction",
+      "conclusion": "github:dark_energy::dark_energy_fraction",
       "background": [
-        "reg:dark_energy::flat_universe",
-        "reg:dark_energy::gr_valid"
+        "github:dark_energy::flat_universe",
+        "github:dark_energy::gr_valid"
       ],
       "steps": null,
       "source_package": "dark_energy",
@@ -162,10 +162,10 @@
       "factor_type": "strategy",
       "subtype": "noisy_and",
       "premises": [
-        "reg:dark_energy::dark_energy_fraction",
-        "reg:dark_energy::cmb_power_spectrum"
+        "github:dark_energy::dark_energy_fraction",
+        "github:dark_energy::cmb_power_spectrum"
       ],
-      "conclusion": "reg:dark_energy::cross_validation",
+      "conclusion": "github:dark_energy::cross_validation",
       "background": null,
       "steps": null,
       "source_package": "dark_energy",
@@ -177,10 +177,10 @@
       "factor_type": "operator",
       "subtype": "contradiction",
       "premises": [
-        "reg:dark_energy::dark_energy_fraction",
-        "reg:dark_energy::qft_vacuum_energy"
+        "github:dark_energy::dark_energy_fraction",
+        "github:dark_energy::qft_vacuum_energy"
       ],
-      "conclusion": "reg:dark_energy::vacuum_catastrophe",
+      "conclusion": "github:dark_energy::vacuum_catastrophe",
       "background": null,
       "steps": null,
       "source_package": "dark_energy",

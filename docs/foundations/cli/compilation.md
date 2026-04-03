@@ -34,7 +34,7 @@ Source: `gaia/cli/commands/compile.py`
 - `[project].name` -- required, used to derive the Python import name
 - `[project].version` -- required, becomes `CollectedPackage.version`
 - `[tool.gaia].type` -- must be `"knowledge-package"` or the command aborts
-- `[tool.gaia].namespace` -- optional, defaults to `"reg"`
+- `[tool.gaia].namespace` -- optional, defaults to `"github"`
 
 The Python import name is derived from the project name:
 
@@ -92,9 +92,9 @@ Each knowledge node receives a stable Qualified Node ID. The assignment logic (`
 
 | Case | QID Format | Example |
 |------|-----------|---------|
-| **Local, labeled** | `{namespace}:{package_name}::{label}` | `reg:galileo_falling_bodies::vacuum_prediction` |
-| **Local, anonymous** | `{namespace}:{package_name}::_anon_{counter:03d}` | `reg:galileo_falling_bodies::_anon_000` |
-| **Foreign (imported)** | Preserved from source package | `reg:newton_principia::third_law` |
+| **Local, labeled** | `{namespace}:{package_name}::{label}` | `github:galileo_falling_bodies::vacuum_prediction` |
+| **Local, anonymous** | `{namespace}:{package_name}::_anon_{counter:03d}` | `github:galileo_falling_bodies::_anon_000` |
+| **Foreign (imported)** | Preserved from source package | `github:newton_principia::third_law` |
 
 For foreign nodes, the compiler checks in order:
 
@@ -165,7 +165,7 @@ The compile command runs `validate_local_graph()` (`gaia/ir/validator.py`) on th
 - All IDs are valid QID format
 - No duplicate IDs or labels
 - Local-layer nodes have content
-- Graph namespace is `reg` or `paper`
+- Graph namespace is a non-empty string
 
 **Operator checks:**
 - Top-level operators have `operator_id` (with `lco_` prefix) and `scope`

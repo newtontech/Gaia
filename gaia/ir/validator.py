@@ -110,13 +110,8 @@ def _validate_knowledges(
                     result.error(f"Knowledge label '{label}': duplicate in local graph")
                 seen.add(label)
 
-    # graph namespace sanity check (local scope only)
-    if scope == "local" and graph_namespace is not None:
-        allowed_namespaces = {"reg", "paper"}
-        if graph_namespace not in allowed_namespaces:
-            result.error(
-                f"Graph namespace '{graph_namespace}' must be one of: {allowed_namespaces}"
-            )
+    # graph namespace is a free-form string (e.g. "github", "paper", "dp")
+    # — no validation constraint on allowed values.
 
     return lookup
 

@@ -3,7 +3,7 @@
   "version": "4.0.0",
   "local_variables": [
     {
-      "id": "reg:galileo_falling_bodies::motivation__main_question",
+      "id": "github:galileo_falling_bodies::motivation__main_question",
       "type": "question",
       "visibility": "public",
       "content": "下落的速率是否真正取决于物体的重量？   如果 \" 重者下落更快 \" 只是空气阻力造成的表象，   那么在思想实验、控制条件实验以及真空极限下，   应当分别看到怎样的结果？",
@@ -14,7 +14,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::setting__thought_experiment_env",
+      "id": "github:galileo_falling_bodies::setting__thought_experiment_env",
       "type": "setting",
       "visibility": "public",
       "content": "想象一个重球   H   和一个轻球   L   从同一高度落下。   先分别考虑它们各自的 \" 自然下落速度 \" ，   再考虑把二者用细绳绑成复合体   H L   后一起下落，会得到什么结果。",
@@ -25,7 +25,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::setting__vacuum_env",
+      "id": "github:galileo_falling_bodies::setting__vacuum_env",
       "type": "setting",
       "visibility": "public",
       "content": "一个理想化的无空气阻力环境，   只保留重力作用，不让介质阻力参与落体过程。",
@@ -36,7 +36,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::aristotle__everyday_observation",
+      "id": "github:galileo_falling_bodies::aristotle__everyday_observation",
       "type": "claim",
       "visibility": "public",
       "content": "日常生活中，石头比羽毛下落更快、   铁球比木球更快，似乎重者总是先着地。",
@@ -47,7 +47,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::aristotle__heavier_falls_faster",
+      "id": "github:galileo_falling_bodies::aristotle__heavier_falls_faster",
       "type": "claim",
       "visibility": "public",
       "content": "物体下落的速度与其重量成正比——重者下落更快。",
@@ -58,7 +58,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::galileo__medium_density_observation",
+      "id": "github:galileo_falling_bodies::galileo__medium_density_observation",
       "type": "claim",
       "visibility": "public",
       "content": "在水、油、空气等不同介质中比较轻重物体的下落，   会发现介质越稠密，速度差异越明显；介质越稀薄，差异越不明显。",
@@ -69,7 +69,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::galileo__inclined_plane_observation",
+      "id": "github:galileo_falling_bodies::galileo__inclined_plane_observation",
       "type": "claim",
       "visibility": "public",
       "content": "伽利略的斜面实验把下落过程放慢到可测量尺度后显示：   不同重量的小球在相同斜面条件下呈现近似一致的加速趋势，   与 \" 重量越大速度越大 \" 的简单比例律并不相符。",
@@ -80,7 +80,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::galileo__composite_is_slower",
+      "id": "github:galileo_falling_bodies::galileo__composite_is_slower",
       "type": "claim",
       "visibility": "public",
       "content": "假设 \" 重者下落更快 \" ，将重球（ H ）与轻球（ L ）绑成复合体（ H L ），   则   H L   的下落速度慢于   H   单独下落。",
@@ -91,7 +91,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::galileo__composite_is_faster",
+      "id": "github:galileo_falling_bodies::galileo__composite_is_faster",
       "type": "claim",
       "visibility": "public",
       "content": "假设 \" 重者下落更快 \" ，将重球（ H ）与轻球（ L ）绑成复合体（ H L ），   则   H L   的下落速度快于   H   单独下落。",
@@ -102,7 +102,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::galileo__tied_balls_contradiction",
+      "id": "github:galileo_falling_bodies::galileo__tied_balls_contradiction",
       "type": "claim",
       "visibility": "public",
       "content": "将重球（ H ）与轻球（ L ）绑成复合体（ H L ），   \" H L   慢于   H \" 与 \" H L   快于   H \" 两个预测互相矛盾。",
@@ -113,7 +113,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::galileo__air_resistance_is_confound",
+      "id": "github:galileo_falling_bodies::galileo__air_resistance_is_confound",
       "type": "claim",
       "visibility": "public",
       "content": "日常观察到的速度差异更应被解释为介质阻力造成的表象，   而不是重量本身决定自由落体速度的证据。",
@@ -124,7 +124,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::galileo__vacuum_prediction",
+      "id": "github:galileo_falling_bodies::galileo__vacuum_prediction",
       "type": "claim",
       "visibility": "public",
       "content": "在真空中，不同重量的物体应以相同速率下落。",
@@ -135,7 +135,7 @@
       "metadata": null
     },
     {
-      "id": "reg:galileo_falling_bodies::follow_up__follow_up_question",
+      "id": "github:galileo_falling_bodies::follow_up__follow_up_question",
       "type": "question",
       "visibility": "public",
       "content": "能否在足够接近真空的条件下直接比较重球与轻球的下落时间？   如果日常差异确实来自空气阻力，   那么真正决定性的实验应当在几乎无介质的环境中完成。",
@@ -152,9 +152,9 @@
       "factor_type": "strategy",
       "subtype": "noisy_and",
       "premises": [
-        "reg:galileo_falling_bodies::aristotle__everyday_observation"
+        "github:galileo_falling_bodies::aristotle__everyday_observation"
       ],
-      "conclusion": "reg:galileo_falling_bodies::aristotle__heavier_falls_faster",
+      "conclusion": "github:galileo_falling_bodies::aristotle__heavier_falls_faster",
       "background": null,
       "steps": null,
       "source_package": "galileo_falling_bodies",
@@ -166,11 +166,11 @@
       "factor_type": "strategy",
       "subtype": "noisy_and",
       "premises": [
-        "reg:galileo_falling_bodies::aristotle__heavier_falls_faster"
+        "github:galileo_falling_bodies::aristotle__heavier_falls_faster"
       ],
-      "conclusion": "reg:galileo_falling_bodies::galileo__composite_is_slower",
+      "conclusion": "github:galileo_falling_bodies::galileo__composite_is_slower",
       "background": [
-        "reg:galileo_falling_bodies::setting__thought_experiment_env"
+        "github:galileo_falling_bodies::setting__thought_experiment_env"
       ],
       "steps": null,
       "source_package": "galileo_falling_bodies",
@@ -182,11 +182,11 @@
       "factor_type": "strategy",
       "subtype": "noisy_and",
       "premises": [
-        "reg:galileo_falling_bodies::aristotle__heavier_falls_faster"
+        "github:galileo_falling_bodies::aristotle__heavier_falls_faster"
       ],
-      "conclusion": "reg:galileo_falling_bodies::galileo__composite_is_faster",
+      "conclusion": "github:galileo_falling_bodies::galileo__composite_is_faster",
       "background": [
-        "reg:galileo_falling_bodies::setting__thought_experiment_env"
+        "github:galileo_falling_bodies::setting__thought_experiment_env"
       ],
       "steps": null,
       "source_package": "galileo_falling_bodies",
@@ -198,9 +198,9 @@
       "factor_type": "strategy",
       "subtype": "noisy_and",
       "premises": [
-        "reg:galileo_falling_bodies::galileo__medium_density_observation"
+        "github:galileo_falling_bodies::galileo__medium_density_observation"
       ],
-      "conclusion": "reg:galileo_falling_bodies::galileo__air_resistance_is_confound",
+      "conclusion": "github:galileo_falling_bodies::galileo__air_resistance_is_confound",
       "background": null,
       "steps": null,
       "source_package": "galileo_falling_bodies",
@@ -212,13 +212,13 @@
       "factor_type": "strategy",
       "subtype": "noisy_and",
       "premises": [
-        "reg:galileo_falling_bodies::galileo__tied_balls_contradiction",
-        "reg:galileo_falling_bodies::galileo__air_resistance_is_confound",
-        "reg:galileo_falling_bodies::galileo__inclined_plane_observation"
+        "github:galileo_falling_bodies::galileo__tied_balls_contradiction",
+        "github:galileo_falling_bodies::galileo__air_resistance_is_confound",
+        "github:galileo_falling_bodies::galileo__inclined_plane_observation"
       ],
-      "conclusion": "reg:galileo_falling_bodies::galileo__vacuum_prediction",
+      "conclusion": "github:galileo_falling_bodies::galileo__vacuum_prediction",
       "background": [
-        "reg:galileo_falling_bodies::setting__vacuum_env"
+        "github:galileo_falling_bodies::setting__vacuum_env"
       ],
       "steps": null,
       "source_package": "galileo_falling_bodies",
@@ -230,10 +230,10 @@
       "factor_type": "operator",
       "subtype": "contradiction",
       "premises": [
-        "reg:galileo_falling_bodies::galileo__composite_is_slower",
-        "reg:galileo_falling_bodies::galileo__composite_is_faster"
+        "github:galileo_falling_bodies::galileo__composite_is_slower",
+        "github:galileo_falling_bodies::galileo__composite_is_faster"
       ],
-      "conclusion": "reg:galileo_falling_bodies::galileo__tied_balls_contradiction",
+      "conclusion": "github:galileo_falling_bodies::galileo__tied_balls_contradiction",
       "background": null,
       "steps": null,
       "source_package": "galileo_falling_bodies",

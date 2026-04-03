@@ -17,25 +17,25 @@ class TestCromwellEps:
 
 class TestPriorRecord:
     def test_creation(self):
-        r = PriorRecord(knowledge_id="reg:test::abc", value=0.7, source_id="src_001")
-        assert r.knowledge_id == "reg:test::abc"
+        r = PriorRecord(knowledge_id="github:test::abc", value=0.7, source_id="src_001")
+        assert r.knowledge_id == "github:test::abc"
         assert r.value == 0.7
         assert r.created_at is not None
 
     def test_cromwell_clamp_low(self):
-        r = PriorRecord(knowledge_id="reg:test::k1", value=0.0, source_id="s")
+        r = PriorRecord(knowledge_id="github:test::k1", value=0.0, source_id="s")
         assert r.value == CROMWELL_EPS
 
     def test_cromwell_clamp_high(self):
-        r = PriorRecord(knowledge_id="reg:test::k1", value=1.0, source_id="s")
+        r = PriorRecord(knowledge_id="github:test::k1", value=1.0, source_id="s")
         assert r.value == 1 - CROMWELL_EPS
 
     def test_negative_clamped(self):
-        r = PriorRecord(knowledge_id="reg:test::k1", value=-0.5, source_id="s")
+        r = PriorRecord(knowledge_id="github:test::k1", value=-0.5, source_id="s")
         assert r.value == CROMWELL_EPS
 
     def test_in_range_unchanged(self):
-        r = PriorRecord(knowledge_id="reg:test::k1", value=0.5, source_id="s")
+        r = PriorRecord(knowledge_id="github:test::k1", value=0.5, source_id="s")
         assert r.value == 0.5
 
 

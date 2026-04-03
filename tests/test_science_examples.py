@@ -12,7 +12,7 @@ from gaia.bp.exact import exact_inference
 from gaia.ir import Knowledge, Operator, Strategy, LocalCanonicalGraph
 
 
-NS, PKG_G, PKG_N, PKG_E = "reg", "galileo", "newton", "einstein"
+NS, PKG_G, PKG_N, PKG_E = "github", "galileo", "newton", "einstein"
 
 
 def _qid(pkg: str, label: str) -> str:

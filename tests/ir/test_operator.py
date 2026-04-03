@@ -140,8 +140,8 @@ class TestOperatorScope:
             operator_id="lco_abc",
             scope="local",
             operator="equivalence",
-            variables=["reg:test::a", "reg:test::b"],
-            conclusion="reg:test::h",
+            variables=["github:test::a", "github:test::b"],
+            conclusion="github:test::h",
         )
         assert op.operator_id == "lco_abc"
         assert op.scope == "local"

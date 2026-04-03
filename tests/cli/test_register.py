@@ -30,7 +30,7 @@ def _write_package(pkg_dir) -> None:
         '  "aristotle-mechanics-gaia >= 1.0.0",\n'
         "]\n\n"
         "[tool.gaia]\n"
-        'namespace = "reg"\n'
+        'namespace = "github"\n'
         'type = "knowledge-package"\n'
         'uuid = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"\n'
     )

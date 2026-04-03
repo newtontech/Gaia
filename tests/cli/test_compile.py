@@ -17,7 +17,7 @@ def test_compile_creates_ir_json(tmp_path):
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "test-pkg-gaia"\nversion = "1.0.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     pkg_src = pkg_dir / "test_pkg"
     pkg_src.mkdir()
@@ -59,7 +59,7 @@ def test_compile_missing_source_dir(tmp_path):
     """Error when derived source directory does not exist."""
     (tmp_path / "pyproject.toml").write_text(
         '[project]\nname = "missing-gaia"\nversion = "1.0.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     result = runner.invoke(app, ["compile", str(tmp_path)])
     assert result.exit_code != 0
@@ -71,7 +71,7 @@ def test_compile_fails_on_invalid_ir_validation(tmp_path):
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "invalid-pkg-gaia"\nversion = "0.1.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     pkg_src = pkg_dir / "invalid_pkg"
     pkg_src.mkdir()
@@ -95,7 +95,7 @@ def test_compile_labels_assigned(tmp_path):
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "label-pkg-gaia"\nversion = "0.1.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     pkg_src = pkg_dir / "label_pkg"
     pkg_src.mkdir()
@@ -121,7 +121,7 @@ def test_compile_supports_src_layout(tmp_path):
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "ver-pkg-gaia"\nversion = "2.3.4"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     src_root = pkg_dir / "src"
     src_root.mkdir()
@@ -144,7 +144,7 @@ def test_compile_preserves_structured_steps_and_provenance(tmp_path):
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "step-pkg-gaia"\nversion = "0.3.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     pkg_src = pkg_dir / "step_pkg"
     pkg_src.mkdir()
@@ -174,8 +174,8 @@ def test_compile_preserves_structured_steps_and_provenance(tmp_path):
     assert strategy["steps"] == [
         {
             "reasoning": "Combine both evidence lines.",
-            "premises": ["reg:step_pkg::evidence_a", "reg:step_pkg::evidence_b"],
-            "conclusion": "reg:step_pkg::hypothesis",
+            "premises": ["github:step_pkg::evidence_a", "github:step_pkg::evidence_b"],
+            "conclusion": "github:step_pkg::hypothesis",
         }
     ]
 
@@ -186,7 +186,7 @@ def test_compile_named_strategy_uses_ir_canonical_formalization(tmp_path):
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "abduction-pkg-gaia"\nversion = "0.2.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     pkg_src = pkg_dir / "abduction_pkg"
     pkg_src.mkdir()
@@ -229,7 +229,7 @@ def test_compile_emits_pure_local_canonical_graph(tmp_path):
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "pure-ir-pkg-gaia"\nversion = "0.4.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     pkg_src = pkg_dir / "pure_ir_pkg"
     pkg_src.mkdir()
@@ -257,7 +257,7 @@ def test_compile_elimination_strategy_uses_ir_canonical_formalization(tmp_path):
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "elimination-pkg-gaia"\nversion = "0.2.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     pkg_src = pkg_dir / "elimination_pkg"
     pkg_src.mkdir()
@@ -287,12 +287,15 @@ def test_compile_elimination_strategy_uses_ir_canonical_formalization(tmp_path):
     assert strategy["type"] == "elimination"
     assert strategy["metadata"]["formalization_template"] == "elimination"
     assert strategy["metadata"]["interface_roles"] == {
-        "eliminated_candidate": ["reg:elimination_pkg::bacterial", "reg:elimination_pkg::viral"],
-        "elimination_evidence": [
-            "reg:elimination_pkg::antibiotics_neg",
-            "reg:elimination_pkg::viral_test_neg",
+        "eliminated_candidate": [
+            "github:elimination_pkg::bacterial",
+            "github:elimination_pkg::viral",
         ],
-        "exhaustiveness": ["reg:elimination_pkg::exhaustive"],
+        "elimination_evidence": [
+            "github:elimination_pkg::antibiotics_neg",
+            "github:elimination_pkg::viral_test_neg",
+        ],
+        "exhaustiveness": ["github:elimination_pkg::exhaustive"],
     }
     assert [op["operator"] for op in strategy["formal_expr"]["operators"]] == [
         "disjunction",
@@ -309,7 +312,7 @@ def test_compile_composite_strategy_preserves_sub_strategy_references(tmp_path):
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "composite-pkg-gaia"\nversion = "0.2.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     pkg_src = pkg_dir / "composite_pkg"
     pkg_src.mkdir()
@@ -338,8 +341,8 @@ def test_compile_composite_strategy_preserves_sub_strategy_references(tmp_path):
         strategy for strategy in ir["strategies"] if strategy.get("sub_strategies") is not None
     )
     assert composite_strategy["type"] == "infer"
-    assert composite_strategy["premises"] == ["reg:composite_pkg::observation"]
-    assert composite_strategy["conclusion"] == "reg:composite_pkg::final_claim"
+    assert composite_strategy["premises"] == ["github:composite_pkg::observation"]
+    assert composite_strategy["conclusion"] == "github:composite_pkg::final_claim"
     assert len(composite_strategy["sub_strategies"]) == 2
     for child_id in composite_strategy["sub_strategies"]:
         assert child_id in strategy_ids
@@ -353,7 +356,7 @@ def test_compile_nested_composite_strategy_collects_recursive_knowledge(tmp_path
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
         '[project]\nname = "nested-composite-pkg-gaia"\nversion = "0.2.0"\n\n'
-        '[tool.gaia]\nnamespace = "reg"\ntype = "knowledge-package"\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
     pkg_src = pkg_dir / "nested_composite_pkg"
     pkg_src.mkdir()
@@ -384,6 +387,6 @@ def test_compile_nested_composite_strategy_collects_recursive_knowledge(tmp_path
 
     ir = json.loads((pkg_dir / ".gaia" / "ir.json").read_text())
     knowledge_ids = {knowledge["id"] for knowledge in ir["knowledges"]}
-    assert "reg:nested_composite_pkg::hypothesis" in knowledge_ids
+    assert "github:nested_composite_pkg::hypothesis" in knowledge_ids
     result = validate_local_graph(LocalCanonicalGraph(**ir))
     assert result.valid, result.errors

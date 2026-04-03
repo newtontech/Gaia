@@ -34,7 +34,7 @@ def _make_local_var(
     version: str = "1.0.0",
 ) -> LocalVariableNode:
     """Helper to construct a LocalVariableNode with computed content_hash."""
-    qid = f"reg:{package}::{label}"
+    qid = f"github:{package}::{label}"
     ch = compute_content_hash(type_, content, [])
     return LocalVariableNode(
         id=qid,
@@ -70,7 +70,7 @@ class TestIngestVisibility:
         node = _make_local_var("claim1", "test content", "pkg_a")
         await storage.ingest_local_graph("pkg_a", "1.0.0", [node], [])
 
-        result = await storage.get_local_variable("reg:pkg_a::claim1")
+        result = await storage.get_local_variable("github:pkg_a::claim1")
         assert result is None
 
     async def test_merged_nodes_visible(self, storage):
@@ -79,10 +79,10 @@ class TestIngestVisibility:
         await storage.ingest_local_graph("pkg_a", "1.0.0", [node], [])
         await storage.commit_package("pkg_a", "1.0.0")
 
-        result = await storage.get_local_variable("reg:pkg_a::claim1")
+        result = await storage.get_local_variable("github:pkg_a::claim1")
         assert result is not None
         assert result.content == "test content"
-        assert result.id == "reg:pkg_a::claim1"
+        assert result.id == "github:pkg_a::claim1"
 
 
 class TestContentHashDedup:
@@ -91,7 +91,9 @@ class TestContentHashDedup:
         content = "Objects fall at equal rates in vacuum"
         ch = compute_content_hash("claim", content, [])
         gcn_id = new_gcn_id()
-        ref = LocalCanonicalRef(local_id="reg:galileo::vac", package_id="galileo", version="1.0.0")
+        ref = LocalCanonicalRef(
+            local_id="github:galileo::vac", package_id="galileo", version="1.0.0"
+        )
 
         global_var = GlobalVariableNode(
             id=gcn_id,
@@ -118,7 +120,7 @@ class TestBindings:
     async def test_bidirectional_binding_lookup(self, storage):
         """Bindings should be queryable by both local_id and global_id."""
         binding = CanonicalBinding(
-            local_id="reg:galileo::claim1",
+            local_id="github:galileo::claim1",
             global_id="gcn_abc123",
             binding_type="variable",
             package_id="galileo",
@@ -128,13 +130,13 @@ class TestBindings:
         )
         await storage.content.write_bindings([binding])
 
-        found = await storage.find_canonical_binding("reg:galileo::claim1")
+        found = await storage.find_canonical_binding("github:galileo::claim1")
         assert found is not None
         assert found.global_id == "gcn_abc123"
 
         found_list = await storage.find_bindings_by_global_id("gcn_abc123")
         assert len(found_list) == 1
-        assert found_list[0].local_id == "reg:galileo::claim1"
+        assert found_list[0].local_id == "github:galileo::claim1"
 
 
 class TestWriteReadRoundtrip:
@@ -143,7 +145,7 @@ class TestWriteReadRoundtrip:
         params = [Parameter(name="x", type="int")]
         ch = compute_content_hash("claim", "test", [("x", "int")])
         node = LocalVariableNode(
-            id="reg:pkg::c1",
+            id="github:pkg::c1",
             type="claim",
             visibility="public",
             content="test",
@@ -156,7 +158,7 @@ class TestWriteReadRoundtrip:
         await storage.ingest_local_graph("pkg", "1.0.0", [node], [])
         await storage.commit_package("pkg", "1.0.0")
 
-        result = await storage.get_local_variable("reg:pkg::c1")
+        result = await storage.get_local_variable("github:pkg::c1")
         assert result is not None
         assert result.parameters[0].name == "x"
         assert result.metadata == {"key": "value"}
@@ -168,10 +170,10 @@ class TestWriteReadRoundtrip:
             id="lfac_test123",
             factor_type="strategy",
             subtype="infer",
-            premises=["reg:pkg::p1", "reg:pkg::p2"],
-            conclusion="reg:pkg::c1",
-            background=["reg:pkg::setting1"],
-            steps=[Step(reasoning="Because reasons", premises=["reg:pkg::p1"])],
+            premises=["github:pkg::p1", "github:pkg::p2"],
+            conclusion="github:pkg::c1",
+            background=["github:pkg::setting1"],
+            steps=[Step(reasoning="Because reasons", premises=["github:pkg::p1"])],
             source_package="pkg",
             version="1.0.0",
         )
@@ -180,6 +182,6 @@ class TestWriteReadRoundtrip:
 
         result = await storage.content.get_local_factor("lfac_test123")
         assert result is not None
-        assert result.premises == ["reg:pkg::p1", "reg:pkg::p2"]
+        assert result.premises == ["github:pkg::p1", "github:pkg::p2"]
         assert result.steps[0].reasoning == "Because reasons"
-        assert result.background == ["reg:pkg::setting1"]
+        assert result.background == ["github:pkg::setting1"]

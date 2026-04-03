@@ -3,7 +3,7 @@
   "version": "4.0.0",
   "local_variables": [
     {
-      "id": "reg:newton_principia::motivation__main_question",
+      "id": "github:newton_principia::motivation__main_question",
       "type": "question",
       "visibility": "public",
       "content": "能否从力学基本定律与天文观测出发，   推导出自由落体加速度与物体质量无关？",
@@ -14,7 +14,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::laws__second_law",
+      "id": "github:newton_principia::laws__second_law",
       "type": "claim",
       "visibility": "public",
       "content": "牛顿第二定律：物体所受合外力等于其惯性质量与加速度的乘积。   F = m_i a",
@@ -25,7 +25,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::laws__third_law",
+      "id": "github:newton_principia::laws__third_law",
       "type": "claim",
       "visibility": "public",
       "content": "牛顿第三定律：两个物体之间的作用力与反作用力大小相等、方向相反。   F_A B = −F_B A",
@@ -36,7 +36,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::observations__kepler_third_law",
+      "id": "github:newton_principia::observations__kepler_third_law",
       "type": "claim",
       "visibility": "public",
       "content": "开普勒第三定律（1619，基于第谷·布拉赫的行星观测数据）：   行星绕太阳运行的轨道周期   T   的平方与轨道半径   r   的立方成正比。   T^2 = k r^3   其中   k   是对同一中心天体的所有行星相同的常数。",
@@ -47,7 +47,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::observations__pendulum_experiment",
+      "id": "github:newton_principia::observations__pendulum_experiment",
       "type": "claim",
       "visibility": "public",
       "content": "牛顿用等长摆锤悬挂金、银、铅、玻璃、沙、盐、木、水、小麦等不同材料，   测得所有材料的摆动周期在   10^−3   精度内完全一致。",
@@ -58,7 +58,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::observations__near_earth_surface",
+      "id": "github:newton_principia::observations__near_earth_surface",
       "type": "setting",
       "visibility": "public",
       "content": "在地球表面附近，物体到地心的距离   r   近似等于地球半径   R ，   因此引力加速度可视为常数：   g = (G M)/R^2 ≈ 9.8 m ⋅ s^−2",
@@ -69,7 +69,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::derivation__inverse_square_force",
+      "id": "github:newton_principia::derivation__inverse_square_force",
       "type": "claim",
       "visibility": "public",
       "content": "对于绕中心天体做圆周运动的物体，   所受引力与到天体中心距离   r   的平方成反比。   F ∝ 1/r^2",
@@ -80,7 +80,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::derivation__law_of_gravity",
+      "id": "github:newton_principia::derivation__law_of_gravity",
       "type": "claim",
       "visibility": "public",
       "content": "万有引力定律：质量为   M   和   m_g   的两个物体之间的引力与两者质量之积成正比，   与距离的平方成反比。   F = (G M m_g)/r^2",
@@ -91,7 +91,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::derivation__mass_equivalence",
+      "id": "github:newton_principia::derivation__mass_equivalence",
       "type": "claim",
       "visibility": "public",
       "content": "物体的惯性质量   m_i （决定对力的加速响应）   与引力质量   m_g （决定所受引力大小）相等。   m_i = m_g",
@@ -102,7 +102,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::derivation__freefall_acceleration_equals_g",
+      "id": "github:newton_principia::derivation__freefall_acceleration_equals_g",
       "type": "claim",
       "visibility": "public",
       "content": "在地球表面附近，任何物体的自由落体加速度都等于   g ≈ 9.8   m/s²，与物体质量无关。",
@@ -113,7 +113,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::derivation__galileo_newton_convergence",
+      "id": "github:newton_principia::derivation__galileo_newton_convergence",
       "type": "claim",
       "visibility": "public",
       "content": "牛顿从力学定律出发的数学推导，与伽利略从思想实验出发的逻辑论证，   独立得出同一结论：自由落体加速度与物体质量无关。",
@@ -124,7 +124,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::derivation__apollo15_feather_drop",
+      "id": "github:newton_principia::derivation__apollo15_feather_drop",
       "type": "claim",
       "visibility": "public",
       "content": "1971 年 Apollo 15 任务中，宇航员 David Scott 在月球表面（真空环境）   同时释放一把锤子（ 1.32   kg）和一根羽毛（ 0.03   g），   质量比约   44000 : 1 ，两者同时落地。",
@@ -135,7 +135,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::derivation__apollo15_confirms_equal_fall",
+      "id": "github:newton_principia::derivation__apollo15_confirms_equal_fall",
       "type": "claim",
       "visibility": "public",
       "content": "在月球真空条件下，质量相差约四万倍的物体仍然同时落地，   直接验证自由落体加速度与质量无关。",
@@ -146,7 +146,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::derivation__apollo_galileo_convergence",
+      "id": "github:newton_principia::derivation__apollo_galileo_convergence",
       "type": "claim",
       "visibility": "public",
       "content": "伽利略 1638 年的思想实验预测与 Apollo 15 1971 年的月面实验结果一致：   在真空中一切物体以相同速率下落。",
@@ -157,7 +157,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::follow_up__follow_up_question",
+      "id": "github:newton_principia::follow_up__follow_up_question",
       "type": "question",
       "visibility": "public",
       "content": "上述推导依赖   m_i = m_g   这一经验事实。   惯性质量与引力质量的精确相等是否有更深层的理论解释？",
@@ -168,7 +168,7 @@
       "metadata": null
     },
     {
-      "id": "reg:newton_principia::vacuum_prediction",
+      "id": "github:newton_principia::vacuum_prediction",
       "type": "claim",
       "visibility": "public",
       "content": "在真空中，不同重量的物体应以相同速率下落。",
@@ -185,10 +185,10 @@
       "factor_type": "strategy",
       "subtype": "deduction",
       "premises": [
-        "reg:newton_principia::observations__kepler_third_law",
-        "reg:newton_principia::laws__second_law"
+        "github:newton_principia::observations__kepler_third_law",
+        "github:newton_principia::laws__second_law"
       ],
-      "conclusion": "reg:newton_principia::derivation__inverse_square_force",
+      "conclusion": "github:newton_principia::derivation__inverse_square_force",
       "background": null,
       "steps": null,
       "source_package": "newton_principia",
@@ -200,10 +200,10 @@
       "factor_type": "strategy",
       "subtype": "deduction",
       "premises": [
-        "reg:newton_principia::derivation__inverse_square_force",
-        "reg:newton_principia::laws__third_law"
+        "github:newton_principia::derivation__inverse_square_force",
+        "github:newton_principia::laws__third_law"
       ],
-      "conclusion": "reg:newton_principia::derivation__law_of_gravity",
+      "conclusion": "github:newton_principia::derivation__law_of_gravity",
       "background": null,
       "steps": null,
       "source_package": "newton_principia",
@@ -215,11 +215,11 @@
       "factor_type": "strategy",
       "subtype": "deduction",
       "premises": [
-        "reg:newton_principia::observations__pendulum_experiment",
-        "reg:newton_principia::laws__second_law",
-        "reg:newton_principia::derivation__law_of_gravity"
+        "github:newton_principia::observations__pendulum_experiment",
+        "github:newton_principia::laws__second_law",
+        "github:newton_principia::derivation__law_of_gravity"
       ],
-      "conclusion": "reg:newton_principia::derivation__mass_equivalence",
+      "conclusion": "github:newton_principia::derivation__mass_equivalence",
       "background": null,
       "steps": null,
       "source_package": "newton_principia",
@@ -231,13 +231,13 @@
       "factor_type": "strategy",
       "subtype": "deduction",
       "premises": [
-        "reg:newton_principia::laws__second_law",
-        "reg:newton_principia::derivation__law_of_gravity",
-        "reg:newton_principia::derivation__mass_equivalence"
+        "github:newton_principia::laws__second_law",
+        "github:newton_principia::derivation__law_of_gravity",
+        "github:newton_principia::derivation__mass_equivalence"
       ],
-      "conclusion": "reg:newton_principia::derivation__freefall_acceleration_equals_g",
+      "conclusion": "github:newton_principia::derivation__freefall_acceleration_equals_g",
       "background": [
-        "reg:newton_principia::observations__near_earth_surface"
+        "github:newton_principia::observations__near_earth_surface"
       ],
       "steps": null,
       "source_package": "newton_principia",
@@ -249,10 +249,10 @@
       "factor_type": "strategy",
       "subtype": "deduction",
       "premises": [
-        "reg:newton_principia::derivation__freefall_acceleration_equals_g",
-        "reg:newton_principia::vacuum_prediction"
+        "github:newton_principia::derivation__freefall_acceleration_equals_g",
+        "github:newton_principia::vacuum_prediction"
       ],
-      "conclusion": "reg:newton_principia::derivation__galileo_newton_convergence",
+      "conclusion": "github:newton_principia::derivation__galileo_newton_convergence",
       "background": null,
       "steps": null,
       "source_package": "newton_principia",
@@ -264,9 +264,9 @@
       "factor_type": "strategy",
       "subtype": "noisy_and",
       "premises": [
-        "reg:newton_principia::derivation__apollo15_feather_drop"
+        "github:newton_principia::derivation__apollo15_feather_drop"
       ],
-      "conclusion": "reg:newton_principia::derivation__apollo15_confirms_equal_fall",
+      "conclusion": "github:newton_principia::derivation__apollo15_confirms_equal_fall",
       "background": null,
       "steps": null,
       "source_package": "newton_principia",
@@ -278,10 +278,10 @@
       "factor_type": "strategy",
       "subtype": "noisy_and",
       "premises": [
-        "reg:newton_principia::derivation__apollo15_confirms_equal_fall",
-        "reg:newton_principia::vacuum_prediction"
+        "github:newton_principia::derivation__apollo15_confirms_equal_fall",
+        "github:newton_principia::vacuum_prediction"
       ],
-      "conclusion": "reg:newton_principia::derivation__apollo_galileo_convergence",
+      "conclusion": "github:newton_principia::derivation__apollo_galileo_convergence",
       "background": null,
       "steps": null,
       "source_package": "newton_principia",

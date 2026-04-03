@@ -251,7 +251,7 @@ __all__ = ["bg", "hypothesis"]
 
 **Manual labels.** Assign directly: `my_claim.label = "explicit_label"`.
 
-**QID generation.** At compile time, labels expand to `{namespace}:{package_name}::{label}`. A claim labeled `hypothesis` in package `galileo` under namespace `reg` becomes `reg:galileo::hypothesis`. Namespace and package name come from `pyproject.toml`.
+**QID generation.** At compile time, labels expand to `{namespace}:{package_name}::{label}`. A claim labeled `hypothesis` in package `galileo` under namespace `github` becomes `github:galileo::hypothesis`. Namespace and package name come from `pyproject.toml`.
 
 ---
 
@@ -265,7 +265,7 @@ name = "galileo-tied-balls-gaia"
 version = "1.0.0"
 
 [tool.gaia]
-namespace = "reg"
+namespace "github"
 type = "knowledge-package"
 ```
 
@@ -300,4 +300,4 @@ __all__ = [
 
 Compile: `gaia compile path/to/galileo-tied-balls-gaia/`
 
-This produces `.gaia/ir.json` containing the `LocalCanonicalGraph` with all nodes, operators, and strategies assigned QIDs under `reg:galileo_tied_balls::`.
+This produces `.gaia/ir.json` containing the `LocalCanonicalGraph` with all nodes, operators, and strategies assigned QIDs under `github:galileo_tied_balls::`.

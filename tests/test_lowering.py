@@ -9,7 +9,7 @@ from gaia.bp.factor_graph import FactorGraph
 from gaia.bp.exact import exact_inference
 from gaia.ir import Knowledge, Operator, Strategy, LocalCanonicalGraph
 
-NS, PKG = "reg", "lowertest"
+NS, PKG = "github", "lowertest"
 
 
 def _lg(**kwargs) -> LocalCanonicalGraph:
@@ -31,24 +31,24 @@ def test_lower_operator_helper():
 def test_equivalence_operator_round_trip():
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::a", type="claim", content="A"),
-            Knowledge(id="reg:lowertest::b", type="claim", content="B"),
-            Knowledge(id="reg:lowertest::h", type="claim", content="H"),
+            Knowledge(id="github:lowertest::a", type="claim", content="A"),
+            Knowledge(id="github:lowertest::b", type="claim", content="B"),
+            Knowledge(id="github:lowertest::h", type="claim", content="H"),
         ],
         operators=[
             Operator(
                 operator="equivalence",
-                variables=["reg:lowertest::a", "reg:lowertest::b"],
-                conclusion="reg:lowertest::h",
+                variables=["github:lowertest::a", "github:lowertest::b"],
+                conclusion="github:lowertest::h",
             ),
         ],
     )
     fg = lower_local_graph(
         g,
         node_priors={
-            "reg:lowertest::a": 0.7,
-            "reg:lowertest::b": 0.4,
-            "reg:lowertest::h": 0.95,
+            "github:lowertest::a": 0.7,
+            "github:lowertest::b": 0.4,
+            "github:lowertest::h": 0.95,
         },
     )
     assert not fg.validate()
@@ -62,58 +62,58 @@ def test_contradiction_default_prior_near_one():
 
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::x", type="claim", content="X"),
-            Knowledge(id="reg:lowertest::y", type="claim", content="Y"),
-            Knowledge(id="reg:lowertest::r", type="claim", content="R"),
+            Knowledge(id="github:lowertest::x", type="claim", content="X"),
+            Knowledge(id="github:lowertest::y", type="claim", content="Y"),
+            Knowledge(id="github:lowertest::r", type="claim", content="R"),
         ],
         operators=[
             Operator(
                 operator="contradiction",
-                variables=["reg:lowertest::x", "reg:lowertest::y"],
-                conclusion="reg:lowertest::r",
+                variables=["github:lowertest::x", "github:lowertest::y"],
+                conclusion="github:lowertest::r",
             ),
         ],
     )
     fg = lower_local_graph(g)
-    assert fg.variables["reg:lowertest::r"] == pytest.approx(1.0 - CROMWELL_EPS)
+    assert fg.variables["github:lowertest::r"] == pytest.approx(1.0 - CROMWELL_EPS)
 
 
 def test_contradiction_actually_constrains():
     """With prior ~1.0 on helper, CONTRADICTION suppresses joint X=Y=1."""
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::x", type="claim", content="X"),
-            Knowledge(id="reg:lowertest::y", type="claim", content="Y"),
-            Knowledge(id="reg:lowertest::r", type="claim", content="R"),
+            Knowledge(id="github:lowertest::x", type="claim", content="X"),
+            Knowledge(id="github:lowertest::y", type="claim", content="Y"),
+            Knowledge(id="github:lowertest::r", type="claim", content="R"),
         ],
         operators=[
             Operator(
                 operator="contradiction",
-                variables=["reg:lowertest::x", "reg:lowertest::y"],
-                conclusion="reg:lowertest::r",
+                variables=["github:lowertest::x", "github:lowertest::y"],
+                conclusion="github:lowertest::r",
             ),
         ],
     )
     fg = lower_local_graph(
         g,
-        node_priors={"reg:lowertest::x": 0.8, "reg:lowertest::y": 0.8},
+        node_priors={"github:lowertest::x": 0.8, "github:lowertest::y": 0.8},
     )
     beliefs, _ = exact_inference(fg)
-    assert beliefs["reg:lowertest::x"] < 0.8 or beliefs["reg:lowertest::y"] < 0.8
+    assert beliefs["github:lowertest::x"] < 0.8 or beliefs["github:lowertest::y"] < 0.8
 
 
 def test_noisy_and_strategy_lowering():
     s = Strategy(
         scope="local",
         type="noisy_and",
-        premises=["reg:lowertest::p1", "reg:lowertest::p2"],
-        conclusion="reg:lowertest::c",
+        premises=["github:lowertest::p1", "github:lowertest::p2"],
+        conclusion="github:lowertest::c",
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::p1", type="claim", content="P1"),
-            Knowledge(id="reg:lowertest::p2", type="claim", content="P2"),
-            Knowledge(id="reg:lowertest::c", type="claim", content="C"),
+            Knowledge(id="github:lowertest::p1", type="claim", content="P1"),
+            Knowledge(id="github:lowertest::p2", type="claim", content="P2"),
+            Knowledge(id="github:lowertest::c", type="claim", content="C"),
         ],
         strategies=[s],
     )
@@ -130,13 +130,13 @@ def test_infer_conditional_lowering():
     s = Strategy(
         scope="local",
         type="infer",
-        premises=["reg:lowertest::x"],
-        conclusion="reg:lowertest::y",
+        premises=["github:lowertest::x"],
+        conclusion="github:lowertest::y",
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::x", type="claim", content="X"),
-            Knowledge(id="reg:lowertest::y", type="claim", content="Y"),
+            Knowledge(id="github:lowertest::x", type="claim", content="X"),
+            Knowledge(id="github:lowertest::y", type="claim", content="Y"),
         ],
         strategies=[s],
     )
@@ -153,22 +153,22 @@ def test_formal_strategy_expand_implication():
     fs = FormalStrategy(
         scope="local",
         type="deduction",
-        premises=["reg:lowertest::p"],
-        conclusion="reg:lowertest::c",
+        premises=["github:lowertest::p"],
+        conclusion="github:lowertest::c",
         formal_expr=FormalExpr(
             operators=[
                 Operator(
                     operator="implication",
-                    variables=["reg:lowertest::p"],
-                    conclusion="reg:lowertest::c",
+                    variables=["github:lowertest::p"],
+                    conclusion="github:lowertest::c",
                 ),
             ],
         ),
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::p", type="claim", content="P"),
-            Knowledge(id="reg:lowertest::c", type="claim", content="C"),
+            Knowledge(id="github:lowertest::p", type="claim", content="P"),
+            Knowledge(id="github:lowertest::c", type="claim", content="C"),
         ],
         strategies=[fs],
     )
@@ -182,22 +182,22 @@ def test_formal_fold_not_implemented():
     fs = FormalStrategy(
         scope="local",
         type="deduction",
-        premises=["reg:lowertest::p"],
-        conclusion="reg:lowertest::c",
+        premises=["github:lowertest::p"],
+        conclusion="github:lowertest::c",
         formal_expr=FormalExpr(
             operators=[
                 Operator(
                     operator="implication",
-                    variables=["reg:lowertest::p"],
-                    conclusion="reg:lowertest::c",
+                    variables=["github:lowertest::p"],
+                    conclusion="github:lowertest::c",
                 ),
             ],
         ),
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::p", type="claim", content="P"),
-            Knowledge(id="reg:lowertest::c", type="claim", content="C"),
+            Knowledge(id="github:lowertest::p", type="claim", content="P"),
+            Knowledge(id="github:lowertest::c", type="claim", content="C"),
         ],
         strategies=[fs],
     )
@@ -215,14 +215,14 @@ def test_deduction_leaf_strategy_auto_formalizes():
     s = Strategy(
         scope="local",
         type="deduction",
-        premises=["reg:lowertest::a", "reg:lowertest::b"],
-        conclusion="reg:lowertest::c",
+        premises=["github:lowertest::a", "github:lowertest::b"],
+        conclusion="github:lowertest::c",
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::a", type="claim", content="A"),
-            Knowledge(id="reg:lowertest::b", type="claim", content="B"),
-            Knowledge(id="reg:lowertest::c", type="claim", content="C"),
+            Knowledge(id="github:lowertest::a", type="claim", content="A"),
+            Knowledge(id="github:lowertest::b", type="claim", content="B"),
+            Knowledge(id="github:lowertest::c", type="claim", content="C"),
         ],
         strategies=[s],
     )
@@ -238,14 +238,14 @@ def test_analogy_leaf_strategy_auto_formalizes():
     s = Strategy(
         scope="local",
         type="analogy",
-        premises=["reg:lowertest::src", "reg:lowertest::bridge"],
-        conclusion="reg:lowertest::tgt",
+        premises=["github:lowertest::src", "github:lowertest::bridge"],
+        conclusion="github:lowertest::tgt",
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::src", type="claim", content="SourceLaw"),
-            Knowledge(id="reg:lowertest::bridge", type="claim", content="BridgeClaim"),
-            Knowledge(id="reg:lowertest::tgt", type="claim", content="Target"),
+            Knowledge(id="github:lowertest::src", type="claim", content="SourceLaw"),
+            Knowledge(id="github:lowertest::bridge", type="claim", content="BridgeClaim"),
+            Knowledge(id="github:lowertest::tgt", type="claim", content="Target"),
         ],
         strategies=[s],
     )
@@ -261,14 +261,14 @@ def test_extrapolation_leaf_strategy_auto_formalizes():
     s = Strategy(
         scope="local",
         type="extrapolation",
-        premises=["reg:lowertest::law", "reg:lowertest::cont"],
-        conclusion="reg:lowertest::ext",
+        premises=["github:lowertest::law", "github:lowertest::cont"],
+        conclusion="github:lowertest::ext",
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::law", type="claim", content="KnownLaw"),
-            Knowledge(id="reg:lowertest::cont", type="claim", content="ContinuityClaim"),
-            Knowledge(id="reg:lowertest::ext", type="claim", content="Extended"),
+            Knowledge(id="github:lowertest::law", type="claim", content="KnownLaw"),
+            Knowledge(id="github:lowertest::cont", type="claim", content="ContinuityClaim"),
+            Knowledge(id="github:lowertest::ext", type="claim", content="Extended"),
         ],
         strategies=[s],
     )
@@ -284,13 +284,13 @@ def test_abduction_leaf_strategy_generates_interface_claim():
     s = Strategy(
         scope="local",
         type="abduction",
-        premises=["reg:lowertest::obs"],
-        conclusion="reg:lowertest::hyp",
+        premises=["github:lowertest::obs"],
+        conclusion="github:lowertest::hyp",
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::obs", type="claim", content="Obs"),
-            Knowledge(id="reg:lowertest::hyp", type="claim", content="Hypothesis"),
+            Knowledge(id="github:lowertest::obs", type="claim", content="Obs"),
+            Knowledge(id="github:lowertest::hyp", type="claim", content="Hypothesis"),
         ],
         strategies=[s],
     )
@@ -310,14 +310,14 @@ def test_mathematical_induction_leaf_strategy_auto_formalizes():
     s = Strategy(
         scope="local",
         type="mathematical_induction",
-        premises=["reg:lowertest::base", "reg:lowertest::step"],
-        conclusion="reg:lowertest::law",
+        premises=["github:lowertest::base", "github:lowertest::step"],
+        conclusion="github:lowertest::law",
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::base", type="claim", content="Base"),
-            Knowledge(id="reg:lowertest::step", type="claim", content="Step"),
-            Knowledge(id="reg:lowertest::law", type="claim", content="Law"),
+            Knowledge(id="github:lowertest::base", type="claim", content="Base"),
+            Knowledge(id="github:lowertest::step", type="claim", content="Step"),
+            Knowledge(id="github:lowertest::law", type="claim", content="Law"),
         ],
         strategies=[s],
     )
@@ -333,13 +333,13 @@ def test_deferred_leaf_strategy_raises():
     s = Strategy(
         scope="local",
         type="reductio",
-        premises=["reg:lowertest::p"],
-        conclusion="reg:lowertest::c",
+        premises=["github:lowertest::p"],
+        conclusion="github:lowertest::c",
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::p", type="claim", content="P"),
-            Knowledge(id="reg:lowertest::c", type="claim", content="C"),
+            Knowledge(id="github:lowertest::p", type="claim", content="P"),
+            Knowledge(id="github:lowertest::c", type="claim", content="C"),
         ],
         strategies=[s],
     )
@@ -352,13 +352,13 @@ def test_named_leaf_node_priors_respected():
     s = Strategy(
         scope="local",
         type="abduction",
-        premises=["reg:lowertest::obs2"],
-        conclusion="reg:lowertest::hyp2",
+        premises=["github:lowertest::obs2"],
+        conclusion="github:lowertest::hyp2",
     )
     g = _lg(
         knowledges=[
-            Knowledge(id="reg:lowertest::obs2", type="claim", content="Obs2"),
-            Knowledge(id="reg:lowertest::hyp2", type="claim", content="Hyp2"),
+            Knowledge(id="github:lowertest::obs2", type="claim", content="Obs2"),
+            Knowledge(id="github:lowertest::hyp2", type="claim", content="Hyp2"),
         ],
         strategies=[s],
     )

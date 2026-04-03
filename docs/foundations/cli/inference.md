@@ -278,7 +278,7 @@ The resolved parameterization input, produced by
   "objects": [
     {
       "kind": "claim",
-      "knowledge_id": "reg:my_pkg::my_claim",
+      "knowledge_id": "github:my_pkg::my_claim",
       "label": "my_claim",
       "judgment": "credible",
       "justification": "",
@@ -288,7 +288,7 @@ The resolved parameterization input, produced by
   ],
   "priors": [
     {
-      "knowledge_id": "reg:my_pkg::my_claim",
+      "knowledge_id": "github:my_pkg::my_claim",
       "value": 0.7,
       "source_id": "self_review"
     }
@@ -312,7 +312,7 @@ Posterior beliefs and BP diagnostics:
   "ir_hash": "sha256:...",
   "beliefs": [
     {
-      "knowledge_id": "reg:my_pkg::my_claim",
+      "knowledge_id": "github:my_pkg::my_claim",
       "label": "my_claim",
       "belief": 0.683
     }
@@ -323,10 +323,10 @@ Posterior beliefs and BP diagnostics:
     "max_change_at_stop": 3.2e-7,
     "treewidth": -1,
     "belief_history": {
-      "reg:my_pkg::my_claim": [0.7, 0.691, 0.685, "..."]
+      "github:my_pkg::my_claim": [0.7, 0.691, 0.685, "..."]
     },
     "direction_changes": {
-      "reg:my_pkg::my_claim": 0
+      "github:my_pkg::my_claim": 0
     }
   }
 }

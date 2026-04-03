@@ -31,7 +31,7 @@ def _setting(id: str) -> Knowledge:
 
 def _local_graph(**kwargs) -> LocalCanonicalGraph:
     defaults = {
-        "namespace": "reg",
+        "namespace": "github",
         "package_name": "test",
         "knowledges": [],
         "operators": [],
@@ -48,7 +48,7 @@ def _local_graph(**kwargs) -> LocalCanonicalGraph:
 
 class TestKnowledgeValidation:
     def test_valid_local(self):
-        g = _local_graph(knowledges=[_claim("reg:test::a")])
+        g = _local_graph(knowledges=[_claim("github:test::a")])
         r = validate_local_graph(g)
         assert r.valid
 
@@ -59,13 +59,13 @@ class TestKnowledgeValidation:
         assert any("QID format" in e for e in r.errors)
 
     def test_duplicate_id(self):
-        g = _local_graph(knowledges=[_claim("reg:test::a"), _claim("reg:test::a", "other")])
+        g = _local_graph(knowledges=[_claim("github:test::a"), _claim("github:test::a", "other")])
         r = validate_local_graph(g)
         assert not r.valid
         assert any("duplicate" in e for e in r.errors)
 
     def test_local_knowledge_must_have_content(self):
-        k = Knowledge(id="reg:test::a", type=KnowledgeType.CLAIM)
+        k = Knowledge(id="github:test::a", type=KnowledgeType.CLAIM)
         g = _local_graph(knowledges=[k])
         r = validate_local_graph(g)
         assert not r.valid
@@ -74,29 +74,22 @@ class TestKnowledgeValidation:
     def test_duplicate_label_rejected(self):
         g = _local_graph(
             knowledges=[
-                Knowledge(id="reg:test::x", type=KnowledgeType.CLAIM, content="first", label="x"),
-                Knowledge(id="reg:test2::x", type=KnowledgeType.CLAIM, content="second", label="x"),
+                Knowledge(
+                    id="github:test::x", type=KnowledgeType.CLAIM, content="first", label="x"
+                ),
+                Knowledge(
+                    id="github:test2::x", type=KnowledgeType.CLAIM, content="second", label="x"
+                ),
             ]
         )
         r = validate_local_graph(g)
         assert not r.valid
         assert any("duplicate" in e and "label" in e for e in r.errors)
 
-    def test_namespace_must_be_allowed(self):
-        """Namespace must be reg or paper."""
-        g = LocalCanonicalGraph(
-            namespace="invalid",
-            package_name="test",
-            knowledges=[Knowledge(id="invalid:test::a", type="claim", content="test", label="a")],
-        )
-        r = validate_local_graph(g)
-        assert not r.valid
-        assert any("namespace" in e for e in r.errors)
-
     def test_external_qid_with_different_namespace_is_allowed(self):
         """Local graphs may explicitly reference external package nodes."""
         g = LocalCanonicalGraph(
-            namespace="reg",
+            namespace="github",
             package_name="test",
             knowledges=[Knowledge(id="paper:other::a", type="claim", content="test", label="a")],
         )
@@ -106,16 +99,18 @@ class TestKnowledgeValidation:
     def test_external_qid_with_different_package_is_allowed(self):
         """Foreign package QIDs are valid as long as the QID itself is valid."""
         g = LocalCanonicalGraph(
-            namespace="reg",
+            namespace="github",
             package_name="test",
-            knowledges=[Knowledge(id="reg:other_pkg::a", type="claim", content="test", label="a")],
+            knowledges=[
+                Knowledge(id="github:other_pkg::a", type="claim", content="test", label="a")
+            ],
         )
         r = validate_local_graph(g)
         assert r.valid
 
     def test_valid_namespace_and_package(self):
         """Valid namespace and matching package pass."""
-        g = _local_graph(knowledges=[_claim("reg:test::a")])
+        g = _local_graph(knowledges=[_claim("github:test::a")])
         r = validate_local_graph(g)
         assert r.valid
 
@@ -129,14 +124,18 @@ class TestOperatorValidation:
     def test_valid_operator_equivalence(self):
         """Equivalence: 2 variables + conclusion (helper claim)."""
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b"), _claim("reg:test::h")],
+            knowledges=[
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::h"),
+            ],
             operators=[
                 Operator(
                     operator_id="lco_eq",
                     scope="local",
                     operator="equivalence",
-                    variables=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::h",
+                    variables=["github:test::a", "github:test::b"],
+                    conclusion="github:test::h",
                 )
             ],
         )
@@ -146,14 +145,14 @@ class TestOperatorValidation:
     def test_valid_operator_implication(self):
         """Implication: 1 variable + conclusion."""
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::b")],
             operators=[
                 Operator(
                     operator_id="lco_impl",
                     scope="local",
                     operator="implication",
-                    variables=["reg:test::a"],
-                    conclusion="reg:test::b",
+                    variables=["github:test::a"],
+                    conclusion="github:test::b",
                 )
             ],
         )
@@ -163,14 +162,18 @@ class TestOperatorValidation:
     def test_valid_operator_conjunction(self):
         """Conjunction: >=2 variables + conclusion."""
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b"), _claim("reg:test::m")],
+            knowledges=[
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::m"),
+            ],
             operators=[
                 Operator(
                     operator_id="lco_and",
                     scope="local",
                     operator="conjunction",
-                    variables=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::m",
+                    variables=["github:test::a", "github:test::b"],
+                    conclusion="github:test::m",
                 )
             ],
         )
@@ -179,14 +182,14 @@ class TestOperatorValidation:
 
     def test_dangling_variable_reference(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::h")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::h")],
             operators=[
                 Operator(
                     operator_id="lco_eq",
                     scope="local",
                     operator="equivalence",
-                    variables=["reg:test::a", "reg:test::missing"],
-                    conclusion="reg:test::h",
+                    variables=["github:test::a", "github:test::missing"],
+                    conclusion="github:test::h",
                 )
             ],
         )
@@ -196,14 +199,14 @@ class TestOperatorValidation:
 
     def test_dangling_conclusion_reference(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a")],
+            knowledges=[_claim("github:test::a")],
             operators=[
                 Operator(
                     operator_id="lco_impl",
                     scope="local",
                     operator="implication",
-                    variables=["reg:test::a"],
-                    conclusion="reg:test::missing",
+                    variables=["github:test::a"],
+                    conclusion="github:test::missing",
                 )
             ],
         )
@@ -213,14 +216,18 @@ class TestOperatorValidation:
 
     def test_operator_variable_on_non_claim(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _setting("reg:test::s"), _claim("reg:test::h")],
+            knowledges=[
+                _claim("github:test::a"),
+                _setting("github:test::s"),
+                _claim("github:test::h"),
+            ],
             operators=[
                 Operator(
                     operator_id="lco_eq",
                     scope="local",
                     operator="equivalence",
-                    variables=["reg:test::a", "reg:test::s"],
-                    conclusion="reg:test::h",
+                    variables=["github:test::a", "github:test::s"],
+                    conclusion="github:test::h",
                 )
             ],
         )
@@ -230,14 +237,14 @@ class TestOperatorValidation:
 
     def test_operator_conclusion_on_non_claim(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _setting("reg:test::s")],
+            knowledges=[_claim("github:test::a"), _setting("github:test::s")],
             operators=[
                 Operator(
                     operator_id="lco_impl",
                     scope="local",
                     operator="implication",
-                    variables=["reg:test::a"],
-                    conclusion="reg:test::s",
+                    variables=["github:test::a"],
+                    conclusion="github:test::s",
                 )
             ],
         )
@@ -254,20 +261,20 @@ class TestOperatorValidation:
                 operator_id="gco_bad",
                 scope="global",
                 operator="implication",
-                variables=["reg:test::a"],
-                conclusion="reg:test::b",
+                variables=["github:test::a"],
+                conclusion="github:test::b",
             )
 
     def test_operator_conclusion_scope_prefix_check(self):
         """Operator conclusion should have correct scope prefix."""
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::b")],
             operators=[
                 Operator(
                     operator_id="lco_impl",
                     scope="local",
                     operator="implication",
-                    variables=["reg:test::a"],
+                    variables=["github:test::a"],
                     conclusion="gcn_wrong",
                 )
             ],
@@ -278,10 +285,12 @@ class TestOperatorValidation:
 
     def test_top_level_operator_requires_scope_and_id(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::b")],
             operators=[
                 Operator(
-                    operator="implication", variables=["reg:test::a"], conclusion="reg:test::b"
+                    operator="implication",
+                    variables=["github:test::a"],
+                    conclusion="github:test::b",
                 )
             ],
         )
@@ -298,8 +307,8 @@ class TestOperatorValidation:
                 operator_id="bad_prefix",
                 scope="local",
                 operator="implication",
-                variables=["reg:test::a"],
-                conclusion="reg:test::b",
+                variables=["github:test::a"],
+                conclusion="github:test::b",
             )
 
 
@@ -311,13 +320,13 @@ class TestOperatorValidation:
 class TestStrategyValidation:
     def test_valid_strategy(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::b")],
             strategies=[
                 Strategy(
                     scope="local",
                     type="noisy_and",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::b",
+                    premises=["github:test::a"],
+                    conclusion="github:test::b",
                 )
             ],
         )
@@ -326,13 +335,13 @@ class TestStrategyValidation:
 
     def test_dangling_premise(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::b")],
+            knowledges=[_claim("github:test::b")],
             strategies=[
                 Strategy(
                     scope="local",
                     type="infer",
-                    premises=["reg:test::missing"],
-                    conclusion="reg:test::b",
+                    premises=["github:test::missing"],
+                    conclusion="github:test::b",
                 )
             ],
         )
@@ -342,13 +351,13 @@ class TestStrategyValidation:
 
     def test_dangling_conclusion(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a")],
+            knowledges=[_claim("github:test::a")],
             strategies=[
                 Strategy(
                     scope="local",
                     type="infer",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::missing",
+                    premises=["github:test::a"],
+                    conclusion="github:test::missing",
                 )
             ],
         )
@@ -358,10 +367,13 @@ class TestStrategyValidation:
 
     def test_premise_must_be_claim(self):
         g = _local_graph(
-            knowledges=[_setting("reg:test::s"), _claim("reg:test::b")],
+            knowledges=[_setting("github:test::s"), _claim("github:test::b")],
             strategies=[
                 Strategy(
-                    scope="local", type="infer", premises=["reg:test::s"], conclusion="reg:test::b"
+                    scope="local",
+                    type="infer",
+                    premises=["github:test::s"],
+                    conclusion="github:test::b",
                 )
             ],
         )
@@ -371,10 +383,13 @@ class TestStrategyValidation:
 
     def test_conclusion_must_be_claim(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _setting("reg:test::s")],
+            knowledges=[_claim("github:test::a"), _setting("github:test::s")],
             strategies=[
                 Strategy(
-                    scope="local", type="infer", premises=["reg:test::a"], conclusion="reg:test::s"
+                    scope="local",
+                    type="infer",
+                    premises=["github:test::a"],
+                    conclusion="github:test::s",
                 )
             ],
         )
@@ -384,10 +399,13 @@ class TestStrategyValidation:
 
     def test_self_loop_rejected(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a")],
+            knowledges=[_claim("github:test::a")],
             strategies=[
                 Strategy(
-                    scope="local", type="infer", premises=["reg:test::a"], conclusion="reg:test::a"
+                    scope="local",
+                    type="infer",
+                    premises=["github:test::a"],
+                    conclusion="github:test::a",
                 )
             ],
         )
@@ -397,14 +415,14 @@ class TestStrategyValidation:
 
     def test_background_warning_if_missing(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::b")],
             strategies=[
                 Strategy(
                     scope="local",
                     type="noisy_and",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::b",
-                    background=["reg:test::nonexistent"],
+                    premises=["github:test::a"],
+                    conclusion="github:test::b",
+                    background=["github:test::nonexistent"],
                 )
             ],
         )
@@ -433,8 +451,8 @@ class TestStrategyValidation:
                 strategy_id="gcs_wrong",
                 scope="local",
                 type="infer",
-                premises=["reg:test::a"],
-                conclusion="reg:test::b",
+                premises=["github:test::a"],
+                conclusion="github:test::b",
             )
 
 
@@ -442,17 +460,24 @@ class TestCompositeStrategyValidation:
     def test_valid_composite_with_string_refs(self):
         """CompositeStrategy with sub_strategies as string references."""
         sub = Strategy(
-            scope="local", type="noisy_and", premises=["reg:test::a"], conclusion="reg:test::b"
+            scope="local",
+            type="noisy_and",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
         )
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b"), _claim("reg:test::c")],
+            knowledges=[
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::c"),
+            ],
             strategies=[
                 sub,
                 CompositeStrategy(
                     scope="local",
                     type="abduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a"],
+                    conclusion="github:test::c",
                     sub_strategies=[sub.strategy_id],
                 ),
             ],
@@ -463,13 +488,13 @@ class TestCompositeStrategyValidation:
     def test_sub_strategy_ref_not_found(self):
         """CompositeStrategy referencing a non-existent sub_strategy ID."""
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::c")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::c")],
             strategies=[
                 CompositeStrategy(
                     scope="local",
                     type="abduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a"],
+                    conclusion="github:test::c",
                     sub_strategies=["lcs_nonexistent"],
                 ),
             ],
@@ -484,27 +509,30 @@ class TestCompositeStrategyValidation:
         # Build two composites that reference each other
         # First create a leaf strategy for valid sub_strategies
         leaf = Strategy(
-            scope="local", type="noisy_and", premises=["reg:test::a"], conclusion="reg:test::b"
+            scope="local",
+            type="noisy_and",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
         )
 
         comp_a = CompositeStrategy(
             strategy_id="lcs_comp_a",
             scope="local",
             type="abduction",
-            premises=["reg:test::a"],
-            conclusion="reg:test::b",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
             sub_strategies=["lcs_comp_b"],
         )
         comp_b = CompositeStrategy(
             strategy_id="lcs_comp_b",
             scope="local",
             type="abduction",
-            premises=["reg:test::a"],
-            conclusion="reg:test::b",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
             sub_strategies=["lcs_comp_a"],
         )
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::b")],
             strategies=[leaf, comp_a, comp_b],
         )
         r = validate_local_graph(g)
@@ -514,17 +542,20 @@ class TestCompositeStrategyValidation:
     def test_composite_no_cycle_valid(self):
         """CompositeStrategy DAG (no cycle) should pass."""
         leaf = Strategy(
-            scope="local", type="noisy_and", premises=["reg:test::a"], conclusion="reg:test::b"
+            scope="local",
+            type="noisy_and",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
         )
         comp = CompositeStrategy(
             scope="local",
             type="abduction",
-            premises=["reg:test::a"],
-            conclusion="reg:test::b",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
             sub_strategies=[leaf.strategy_id],
         )
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::b")],
             strategies=[leaf, comp],
         )
         r = validate_local_graph(g)
@@ -535,28 +566,28 @@ class TestFormalStrategyValidation:
     def test_valid_formal(self):
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::m"),
-                _claim("reg:test::c"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::m"),
+                _claim("github:test::c"),
             ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a", "github:test::b"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="conjunction",
-                                variables=["reg:test::a", "reg:test::b"],
-                                conclusion="reg:test::m",
+                                variables=["github:test::a", "github:test::b"],
+                                conclusion="github:test::m",
                             ),
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::m"],
-                                conclusion="reg:test::c",
+                                variables=["github:test::m"],
+                                conclusion="github:test::c",
                             ),
                         ]
                     ),
@@ -568,19 +599,19 @@ class TestFormalStrategyValidation:
 
     def test_formal_expr_dangling_ref(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::c")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::c")],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::missing"],
-                                conclusion="reg:test::c",
+                                variables=["github:test::missing"],
+                                conclusion="github:test::c",
                             ),
                         ]
                     ),
@@ -594,28 +625,28 @@ class TestFormalStrategyValidation:
         """All operator refs within premises/conclusion/other operator conclusions."""
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::m"),
-                _claim("reg:test::c"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::m"),
+                _claim("github:test::c"),
             ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a", "github:test::b"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="conjunction",
-                                variables=["reg:test::a", "reg:test::b"],
-                                conclusion="reg:test::m",
+                                variables=["github:test::a", "github:test::b"],
+                                conclusion="github:test::m",
                             ),
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::m"],
-                                conclusion="reg:test::c",
+                                variables=["github:test::m"],
+                                conclusion="github:test::c",
                             ),
                         ]
                     ),
@@ -629,22 +660,22 @@ class TestFormalStrategyValidation:
         """Operator variable not in premises/conclusion/operator conclusions."""
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::c"),
-                _claim("reg:test::outside"),
+                _claim("github:test::a"),
+                _claim("github:test::c"),
+                _claim("github:test::outside"),
             ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::outside"],
-                                conclusion="reg:test::c",
+                                variables=["github:test::outside"],
+                                conclusion="github:test::c",
                             ),
                         ]
                     ),
@@ -662,19 +693,19 @@ class TestFormalStrategyValidation:
         formal = FormalStrategy(
             scope="local",
             type="deduction",
-            premises=["reg:test::a"],
-            conclusion="reg:test::c",
+            premises=["github:test::a"],
+            conclusion="github:test::c",
             formal_expr=FormalExpr(
                 operators=[
                     Operator(
                         operator="implication",
-                        variables=["reg:test::a"],
-                        conclusion="reg:test::m",
+                        variables=["github:test::a"],
+                        conclusion="github:test::m",
                     ),
                     Operator(
                         operator="implication",
-                        variables=["reg:test::m"],
-                        conclusion="reg:test::c",
+                        variables=["github:test::m"],
+                        conclusion="github:test::c",
                     ),
                 ]
             ),
@@ -684,11 +715,15 @@ class TestFormalStrategyValidation:
         other = Strategy(
             scope="local",
             type="noisy_and",
-            premises=["reg:test::m"],
-            conclusion="reg:test::c",
+            premises=["github:test::m"],
+            conclusion="github:test::c",
         )
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::c"), _claim("reg:test::m")],
+            knowledges=[
+                _claim("github:test::a"),
+                _claim("github:test::c"),
+                _claim("github:test::m"),
+            ],
             strategies=[formal, other],
         )
         r = validate_local_graph(g)
@@ -702,14 +737,14 @@ class TestFormalStrategyValidation:
         formal = FormalStrategy(
             scope="local",
             type="deduction",
-            premises=["reg:test::a"],
-            conclusion="reg:test::c",
+            premises=["github:test::a"],
+            conclusion="github:test::c",
             formal_expr=FormalExpr(
                 operators=[
                     Operator(
                         operator="implication",
-                        variables=["reg:test::a"],
-                        conclusion="reg:test::c",
+                        variables=["github:test::a"],
+                        conclusion="github:test::c",
                     ),
                 ]
             ),
@@ -717,11 +752,15 @@ class TestFormalStrategyValidation:
         other = Strategy(
             scope="local",
             type="noisy_and",
-            premises=["reg:test::c"],
-            conclusion="reg:test::d",
+            premises=["github:test::c"],
+            conclusion="github:test::d",
         )
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::c"), _claim("reg:test::d")],
+            knowledges=[
+                _claim("github:test::a"),
+                _claim("github:test::c"),
+                _claim("github:test::d"),
+            ],
             strategies=[formal, other],
         )
         r = validate_local_graph(g)
@@ -730,24 +769,28 @@ class TestFormalStrategyValidation:
     def test_formal_expr_cycle_detected(self):
         """FormalExpr operators that form a cycle: A->B and B->A."""
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b"), _claim("reg:test::c")],
+            knowledges=[
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::c"),
+            ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::b"],
-                                conclusion="reg:test::c",
+                                variables=["github:test::b"],
+                                conclusion="github:test::c",
                             ),
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::c"],
-                                conclusion="reg:test::b",
+                                variables=["github:test::c"],
+                                conclusion="github:test::b",
                             ),
                         ]
                     ),
@@ -761,24 +804,28 @@ class TestFormalStrategyValidation:
     def test_formal_expr_no_cycle_valid(self):
         """Linear chain A->M->C has no cycle."""
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::m"), _claim("reg:test::c")],
+            knowledges=[
+                _claim("github:test::a"),
+                _claim("github:test::m"),
+                _claim("github:test::c"),
+            ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::a"],
-                                conclusion="reg:test::m",
+                                variables=["github:test::a"],
+                                conclusion="github:test::m",
                             ),
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::m"],
-                                conclusion="reg:test::c",
+                                variables=["github:test::m"],
+                                conclusion="github:test::c",
                             ),
                         ]
                     ),
@@ -793,19 +840,19 @@ class TestFormalStrategyValidation:
         formal = FormalStrategy(
             scope="local",
             type="deduction",
-            premises=["reg:test::a", "reg:test::b"],
-            conclusion="reg:test::c",
+            premises=["github:test::a", "github:test::b"],
+            conclusion="github:test::c",
             formal_expr=FormalExpr(
                 operators=[
                     Operator(
                         operator="conjunction",
-                        variables=["reg:test::a", "reg:test::b"],
-                        conclusion="reg:test::m",
+                        variables=["github:test::a", "github:test::b"],
+                        conclusion="github:test::m",
                     ),
                     Operator(
                         operator="implication",
-                        variables=["reg:test::m"],
-                        conclusion="reg:test::c",
+                        variables=["github:test::m"],
+                        conclusion="github:test::c",
                     ),
                 ]
             ),
@@ -815,15 +862,15 @@ class TestFormalStrategyValidation:
             operator_id="lco_bad",
             scope="local",
             operator="implication",
-            variables=["reg:test::m"],
-            conclusion="reg:test::c",
+            variables=["github:test::m"],
+            conclusion="github:test::c",
         )
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::c"),
-                _claim("reg:test::m"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::c"),
+                _claim("github:test::m"),
             ],
             operators=[top_op],
             strategies=[formal],
@@ -837,19 +884,19 @@ class TestFormalStrategyValidation:
         formal = FormalStrategy(
             scope="local",
             type="deduction",
-            premises=["reg:test::a", "reg:test::b"],
-            conclusion="reg:test::c",
+            premises=["github:test::a", "github:test::b"],
+            conclusion="github:test::c",
             formal_expr=FormalExpr(
                 operators=[
                     Operator(
                         operator="conjunction",
-                        variables=["reg:test::a", "reg:test::b"],
-                        conclusion="reg:test::m",
+                        variables=["github:test::a", "github:test::b"],
+                        conclusion="github:test::m",
                     ),
                     Operator(
                         operator="implication",
-                        variables=["reg:test::m"],
-                        conclusion="reg:test::c",
+                        variables=["github:test::m"],
+                        conclusion="github:test::c",
                     ),
                 ]
             ),
@@ -859,15 +906,15 @@ class TestFormalStrategyValidation:
             operator_id="lco_bad",
             scope="local",
             operator="implication",
-            variables=["reg:test::a"],
-            conclusion="reg:test::m",
+            variables=["github:test::a"],
+            conclusion="github:test::m",
         )
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::c"),
-                _claim("reg:test::m"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::c"),
+                _claim("github:test::m"),
             ],
             operators=[top_op],
             strategies=[formal],
@@ -885,10 +932,10 @@ class TestFormalStrategyValidation:
 class TestGraphLevelValidation:
     def test_scope_consistency_local(self):
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::b")],
             strategies=[
                 Strategy(
-                    scope="local", type="infer", premises=["gcn_wrong"], conclusion="reg:test::b"
+                    scope="local", type="infer", premises=["gcn_wrong"], conclusion="github:test::b"
                 )
             ],
         )
@@ -899,13 +946,13 @@ class TestGraphLevelValidation:
     def test_operator_conclusion_scope_prefix(self):
         """Operator conclusion with wrong prefix is caught in scope consistency."""
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::b")],
             operators=[
                 Operator(
                     operator_id="lco_impl",
                     scope="local",
                     operator="implication",
-                    variables=["reg:test::a"],
+                    variables=["github:test::a"],
                     conclusion="gcn_wrong",
                 )
             ],
@@ -920,24 +967,28 @@ class TestGraphLevelValidation:
         # reg:test::a and reg:test::c exist in local graph, but FormalExpr internally
         # references gcn_wrong which has a global prefix in a local graph.
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::c"), _claim("reg:test::m")],
+            knowledges=[
+                _claim("github:test::a"),
+                _claim("github:test::c"),
+                _claim("github:test::m"),
+            ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::a"],
-                                conclusion="reg:test::m",
+                                variables=["github:test::a"],
+                                conclusion="github:test::m",
                             ),
                             Operator(
                                 operator="implication",
                                 variables=["gcn_wrong"],
-                                conclusion="reg:test::c",
+                                conclusion="github:test::c",
                             ),
                         ]
                     ),
@@ -949,12 +1000,12 @@ class TestGraphLevelValidation:
         assert any("wrong format" in e and "FormalStrategy" in e for e in r.errors)
 
     def test_hash_consistency(self):
-        g = _local_graph(knowledges=[_claim("reg:test::a")])
+        g = _local_graph(knowledges=[_claim("github:test::a")])
         r = validate_local_graph(g)
         assert r.valid  # auto-computed hash should match
 
     def test_hash_mismatch(self):
-        g = _local_graph(knowledges=[_claim("reg:test::a")])
+        g = _local_graph(knowledges=[_claim("github:test::a")])
         g.ir_hash = "sha256:0000000000000000000000000000000000000000000000000000000000000000"
         r = validate_local_graph(g)
         assert not r.valid
@@ -974,16 +1025,16 @@ class TestParameterizationValidation:
     def _graph(self):
         return _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _setting("reg:test::s"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _setting("github:test::s"),
             ],
             strategies=[
                 Strategy(
                     scope="local",
                     type="noisy_and",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::b",
+                    premises=["github:test::a"],
+                    conclusion="github:test::b",
                 ),
             ],
         )
@@ -996,8 +1047,8 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.7, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.7, source_id="s"),
             ],
             strategy_params=[
                 StrategyParamRecord(
@@ -1014,7 +1065,7 @@ class TestParameterizationValidation:
         sid = g.strategies[0].strategy_id
         r = validate_parameterization(
             g,
-            priors=[PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s")],
+            priors=[PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s")],
             strategy_params=[
                 StrategyParamRecord(
                     strategy_id=sid, conditional_probabilities=[0.85], source_id="s"
@@ -1022,7 +1073,7 @@ class TestParameterizationValidation:
             ],
         )
         assert not r.valid
-        assert any("reg:test::b" in e and "missing PriorRecord" in e for e in r.errors)
+        assert any("github:test::b" in e and "missing PriorRecord" in e for e in r.errors)
 
     def test_missing_strategy_param_for_parameterized(self):
         from gaia.ir import PriorRecord
@@ -1031,8 +1082,8 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.7, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.7, source_id="s"),
             ],
             strategy_params=[],
         )
@@ -1045,22 +1096,22 @@ class TestParameterizationValidation:
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::m"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::m"),
             ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::b",
+                    premises=["github:test::a"],
+                    conclusion="github:test::b",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::a"],
-                                conclusion="reg:test::b",
+                                variables=["github:test::a"],
+                                conclusion="github:test::b",
                             ),
                         ]
                     ),
@@ -1071,9 +1122,9 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::m", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::m", value=0.5, source_id="s"),
             ],
             strategy_params=[],  # no params needed for deduction
         )
@@ -1085,28 +1136,28 @@ class TestParameterizationValidation:
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::m"),  # private helper: conjunction result
-                _claim("reg:test::c"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::m"),  # private helper: conjunction result
+                _claim("github:test::c"),
             ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a", "github:test::b"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="conjunction",
-                                variables=["reg:test::a", "reg:test::b"],
-                                conclusion="reg:test::m",
+                                variables=["github:test::a", "github:test::b"],
+                                conclusion="github:test::m",
                             ),
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::m"],
-                                conclusion="reg:test::c",
+                                variables=["github:test::m"],
+                                conclusion="github:test::c",
                             ),
                         ]
                     ),
@@ -1118,9 +1169,9 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::c", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::c", value=0.5, source_id="s"),
                 # no prior for reg:test::m
             ],
             strategy_params=[],
@@ -1133,28 +1184,28 @@ class TestParameterizationValidation:
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::m"),
-                _claim("reg:test::c"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::m"),
+                _claim("github:test::c"),
             ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a", "github:test::b"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="conjunction",
-                                variables=["reg:test::a", "reg:test::b"],
-                                conclusion="reg:test::m",
+                                variables=["github:test::a", "github:test::b"],
+                                conclusion="github:test::m",
                             ),
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::m"],
-                                conclusion="reg:test::c",
+                                variables=["github:test::m"],
+                                conclusion="github:test::c",
                             ),
                         ]
                     ),
@@ -1164,10 +1215,10 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::c", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::m", value=0.5, source_id="s"),  # prohibited!
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::c", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::m", value=0.5, source_id="s"),  # prohibited!
             ],
             strategy_params=[],
         )
@@ -1183,28 +1234,28 @@ class TestParameterizationValidation:
         # not a "structural helper" operator type, reg:test::mid is still private.
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::mid"),
-                _claim("reg:test::final"),
-                _claim("reg:test::c"),
+                _claim("github:test::a"),
+                _claim("github:test::mid"),
+                _claim("github:test::final"),
+                _claim("github:test::c"),
             ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::a"],
-                                conclusion="reg:test::mid",
+                                variables=["github:test::a"],
+                                conclusion="github:test::mid",
                             ),
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::mid"],
-                                conclusion="reg:test::c",
+                                variables=["github:test::mid"],
+                                conclusion="github:test::c",
                             ),
                         ]
                     ),
@@ -1214,15 +1265,19 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::c", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::final", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::mid", value=0.5, source_id="s"),  # prohibited!
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::c", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::final", value=0.5, source_id="s"),
+                PriorRecord(
+                    knowledge_id="github:test::mid", value=0.5, source_id="s"
+                ),  # prohibited!
             ],
             strategy_params=[],
         )
         assert not r.valid
-        assert any("reg:test::mid" in e and "private or structural helper" in e for e in r.errors)
+        assert any(
+            "github:test::mid" in e and "private or structural helper" in e for e in r.errors
+        )
 
     def test_implication_private_node_no_prior_needed(self):
         """FormalExpr private implication nodes don't need PriorRecord."""
@@ -1230,27 +1285,27 @@ class TestParameterizationValidation:
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::mid"),
-                _claim("reg:test::c"),
+                _claim("github:test::a"),
+                _claim("github:test::mid"),
+                _claim("github:test::c"),
             ],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a"],
+                    conclusion="github:test::c",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::a"],
-                                conclusion="reg:test::mid",
+                                variables=["github:test::a"],
+                                conclusion="github:test::mid",
                             ),
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::mid"],
-                                conclusion="reg:test::c",
+                                variables=["github:test::mid"],
+                                conclusion="github:test::c",
                             ),
                         ]
                     ),
@@ -1260,8 +1315,8 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::c", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::c", value=0.5, source_id="s"),
                 # reg:test::mid is private -- no prior needed
             ],
             strategy_params=[],
@@ -1275,9 +1330,9 @@ class TestParameterizationValidation:
         formalized = Strategy(
             scope="local",
             type="abduction",
-            premises=["reg:test::obs"],
-            conclusion="reg:test::h",
-        ).formalize(namespace="reg", package_name="test")
+            premises=["github:test::obs"],
+            conclusion="github:test::h",
+        ).formalize(namespace="github", package_name="test")
         alternative_explanation = next(
             knowledge
             for knowledge in formalized.knowledges
@@ -1286,8 +1341,8 @@ class TestParameterizationValidation:
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::obs"),
-                _claim("reg:test::h"),
+                _claim("github:test::obs"),
+                _claim("github:test::h"),
                 *formalized.knowledges,
             ],
             strategies=[formalized.strategy],
@@ -1295,8 +1350,8 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::obs", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::h", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::obs", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::h", value=0.5, source_id="s"),
             ],
             strategy_params=[],
         )
@@ -1310,9 +1365,9 @@ class TestParameterizationValidation:
         formalized = Strategy(
             scope="local",
             type="abduction",
-            premises=["reg:test::obs"],
-            conclusion="reg:test::h",
-        ).formalize(namespace="reg", package_name="test")
+            premises=["github:test::obs"],
+            conclusion="github:test::h",
+        ).formalize(namespace="github", package_name="test")
         alternative_explanation = next(
             knowledge
             for knowledge in formalized.knowledges
@@ -1321,8 +1376,8 @@ class TestParameterizationValidation:
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::obs"),
-                _claim("reg:test::h"),
+                _claim("github:test::obs"),
+                _claim("github:test::h"),
                 *formalized.knowledges,
             ],
             strategies=[formalized.strategy],
@@ -1330,8 +1385,8 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::obs", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::h", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::obs", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::h", value=0.5, source_id="s"),
                 PriorRecord(knowledge_id=alternative_explanation.id, value=0.5, source_id="s"),
             ],
             strategy_params=[],
@@ -1346,23 +1401,23 @@ class TestParameterizationValidation:
             scope="local",
             type="elimination",
             premises=[
-                "reg:test::exhaustive",
-                "reg:test::h1",
-                "reg:test::e1",
-                "reg:test::h2",
-                "reg:test::e2",
+                "github:test::exhaustive",
+                "github:test::h1",
+                "github:test::e1",
+                "github:test::h2",
+                "github:test::e2",
             ],
-            conclusion="reg:test::h3",
-        ).formalize(namespace="reg", package_name="test")
+            conclusion="github:test::h3",
+        ).formalize(namespace="github", package_name="test")
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::exhaustive"),
-                _claim("reg:test::h1"),
-                _claim("reg:test::e1"),
-                _claim("reg:test::h2"),
-                _claim("reg:test::e2"),
-                _claim("reg:test::h3"),
+                _claim("github:test::exhaustive"),
+                _claim("github:test::h1"),
+                _claim("github:test::e1"),
+                _claim("github:test::h2"),
+                _claim("github:test::e2"),
+                _claim("github:test::h3"),
                 *formalized.knowledges,
             ],
             strategies=[formalized.strategy],
@@ -1370,12 +1425,12 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::exhaustive", value=0.9, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::h1", value=0.2, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::e1", value=0.9, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::h2", value=0.2, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::e2", value=0.9, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::h3", value=0.2, source_id="s"),
+                PriorRecord(knowledge_id="github:test::exhaustive", value=0.9, source_id="s"),
+                PriorRecord(knowledge_id="github:test::h1", value=0.2, source_id="s"),
+                PriorRecord(knowledge_id="github:test::e1", value=0.9, source_id="s"),
+                PriorRecord(knowledge_id="github:test::h2", value=0.2, source_id="s"),
+                PriorRecord(knowledge_id="github:test::e2", value=0.9, source_id="s"),
+                PriorRecord(knowledge_id="github:test::h3", value=0.2, source_id="s"),
             ],
             strategy_params=[],
         )
@@ -1387,25 +1442,25 @@ class TestParameterizationValidation:
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::eq"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::eq"),
             ],
             operators=[
                 Operator(
                     operator_id="lco_eq",
                     scope="local",
                     operator="equivalence",
-                    variables=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::eq",
+                    variables=["github:test::a", "github:test::b"],
+                    conclusion="github:test::eq",
                 ),
             ],
         )
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.5, source_id="s"),
             ],
             strategy_params=[],
         )
@@ -1417,32 +1472,32 @@ class TestParameterizationValidation:
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::eq"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::eq"),
             ],
             operators=[
                 Operator(
                     operator_id="lco_eq",
                     scope="local",
                     operator="equivalence",
-                    variables=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::eq",
+                    variables=["github:test::a", "github:test::b"],
+                    conclusion="github:test::eq",
                 ),
             ],
         )
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::eq", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::eq", value=0.5, source_id="s"),
             ],
             strategy_params=[],
         )
         assert not r.valid
         assert any(
-            "reg:test::eq" in e and "private or structural helper claim" in e for e in r.errors
+            "github:test::eq" in e and "private or structural helper claim" in e for e in r.errors
         )
 
     def test_param_for_non_parameterized_type_warns(self):
@@ -1450,19 +1505,19 @@ class TestParameterizationValidation:
         from gaia.ir import PriorRecord, StrategyParamRecord
 
         g = _local_graph(
-            knowledges=[_claim("reg:test::a"), _claim("reg:test::b")],
+            knowledges=[_claim("github:test::a"), _claim("github:test::b")],
             strategies=[
                 FormalStrategy(
                     scope="local",
                     type="deduction",
-                    premises=["reg:test::a"],
-                    conclusion="reg:test::b",
+                    premises=["github:test::a"],
+                    conclusion="github:test::b",
                     formal_expr=FormalExpr(
                         operators=[
                             Operator(
                                 operator="implication",
-                                variables=["reg:test::a"],
-                                conclusion="reg:test::b",
+                                variables=["github:test::a"],
+                                conclusion="github:test::b",
                             ),
                         ]
                     ),
@@ -1473,8 +1528,8 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.5, source_id="s"),
             ],
             strategy_params=[
                 StrategyParamRecord(
@@ -1494,8 +1549,8 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.7, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.7, source_id="s"),
             ],
             strategy_params=[
                 StrategyParamRecord(
@@ -1510,12 +1565,12 @@ class TestParameterizationValidation:
         from gaia.ir import PriorRecord
 
         g = _local_graph(
-            knowledges=[_claim("reg:test::a")],
+            knowledges=[_claim("github:test::a")],
             strategies=[],
         )
         r = validate_parameterization(
             g,
-            priors=[PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s")],
+            priors=[PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s")],
             strategy_params=[],
         )
         assert r.valid
@@ -1523,12 +1578,12 @@ class TestParameterizationValidation:
     def test_dangling_prior_warning(self):
         from gaia.ir import PriorRecord
 
-        g = _local_graph(knowledges=[_claim("reg:test::a")])
+        g = _local_graph(knowledges=[_claim("github:test::a")])
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::nonexistent", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::nonexistent", value=0.5, source_id="s"),
             ],
             strategy_params=[],
         )
@@ -1538,10 +1593,10 @@ class TestParameterizationValidation:
     def test_dangling_strategy_param_warning(self):
         from gaia.ir import PriorRecord, StrategyParamRecord
 
-        g = _local_graph(knowledges=[_claim("reg:test::a")])
+        g = _local_graph(knowledges=[_claim("github:test::a")])
         r = validate_parameterization(
             g,
-            priors=[PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s")],
+            priors=[PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s")],
             strategy_params=[
                 StrategyParamRecord(
                     strategy_id="lcs_ghost", conditional_probabilities=[0.5], source_id="s"
@@ -1563,8 +1618,8 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.7, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.7, source_id="s"),
             ],
             strategy_params=[
                 StrategyParamRecord(
@@ -1582,16 +1637,16 @@ class TestParameterizationValidation:
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::c"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::c"),
             ],
             strategies=[
                 Strategy(
                     scope="local",
                     type="infer",
-                    premises=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a", "github:test::b"],
+                    conclusion="github:test::c",
                 ),
             ],
         )
@@ -1599,9 +1654,9 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::c", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::c", value=0.5, source_id="s"),
             ],
             strategy_params=[
                 StrategyParamRecord(
@@ -1619,16 +1674,16 @@ class TestParameterizationValidation:
 
         g = _local_graph(
             knowledges=[
-                _claim("reg:test::a"),
-                _claim("reg:test::b"),
-                _claim("reg:test::c"),
+                _claim("github:test::a"),
+                _claim("github:test::b"),
+                _claim("github:test::c"),
             ],
             strategies=[
                 Strategy(
                     scope="local",
                     type="infer",
-                    premises=["reg:test::a", "reg:test::b"],
-                    conclusion="reg:test::c",
+                    premises=["github:test::a", "github:test::b"],
+                    conclusion="github:test::c",
                 ),
             ],
         )
@@ -1636,9 +1691,9 @@ class TestParameterizationValidation:
         r = validate_parameterization(
             g,
             priors=[
-                PriorRecord(knowledge_id="reg:test::a", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::b", value=0.5, source_id="s"),
-                PriorRecord(knowledge_id="reg:test::c", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::a", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::b", value=0.5, source_id="s"),
+                PriorRecord(knowledge_id="github:test::c", value=0.5, source_id="s"),
             ],
             strategy_params=[
                 StrategyParamRecord(
