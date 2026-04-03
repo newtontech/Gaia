@@ -21,11 +21,10 @@ def test_compile_creates_ir_json(tmp_path):
     )
     pkg_src = pkg_dir / "test_pkg"
     pkg_src.mkdir()
-    # Note: need __init__.py for Python to treat as package
     (pkg_src / "__init__.py").write_text(
-        "from gaia.lang import Package, claim\n\n"
-        'with Package("test_pkg", namespace="test") as pkg:\n'
-        '    my_claim = claim("A test claim.")\n'
+        'from gaia.lang import claim\n\n'
+        'my_claim = claim("A test claim.")\n'
+        '__all__ = ["my_claim"]\n'
     )
 
     result = runner.invoke(app, ["compile", str(pkg_dir)])
@@ -79,10 +78,10 @@ def test_compile_labels_assigned(tmp_path):
     pkg_src = pkg_dir / "label_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        "from gaia.lang import Package, claim, setting\n\n"
-        'with Package("label_pkg", namespace="reg") as pkg:\n'
-        '    bg = setting("Background context.")\n'
-        '    hypothesis = claim("Main hypothesis.")\n'
+        'from gaia.lang import claim, setting\n\n'
+        'bg = setting("Background context.")\n'
+        'hypothesis = claim("Main hypothesis.")\n'
+        '__all__ = ["bg", "hypothesis"]\n'
     )
 
     result = runner.invoke(app, ["compile", str(pkg_dir)])
@@ -107,9 +106,9 @@ def test_compile_supports_src_layout(tmp_path):
     pkg_src = src_root / "ver_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
-        "from gaia.lang import Package, claim\n\n"
-        'with Package("ver_pkg", namespace="reg", version="0.0.0") as pkg:\n'
-        '    c = claim("A claim.")\n'
+        'from gaia.lang import claim\n\n'
+        'c = claim("A claim.")\n'
+        '__all__ = ["c"]\n'
     )
 
     result = runner.invoke(app, ["compile", str(pkg_dir)])

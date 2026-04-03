@@ -15,12 +15,11 @@ from gaia.lang.dsl import (
     question,
     setting,
 )
-from gaia.lang.runtime import Knowledge, Operator, Package, Strategy
+from gaia.lang.runtime import Knowledge, Operator, Strategy
 
 __all__ = [
     "Knowledge",
     "Operator",
-    "Package",
     "Strategy",
     "abduction",
     "analogy",

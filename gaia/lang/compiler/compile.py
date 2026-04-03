@@ -1,4 +1,4 @@
-"""Gaia Lang v5 — compile Package to Gaia IR v2 JSON."""
+"""Gaia Lang v5 — compile collected module declarations to Gaia IR v2 JSON."""
 
 from __future__ import annotations
 
@@ -18,7 +18,8 @@ from gaia.ir import (
     Strategy as IrStrategy,
     make_qid,
 )
-from gaia.lang.runtime import Knowledge, Operator, Package
+from gaia.lang.runtime import Knowledge, Operator
+from gaia.lang.runtime.package import CollectedPackage
 
 
 def _content_hash(k: Knowledge) -> str:
@@ -48,14 +49,14 @@ def _make_qid(namespace: str, package_name: str, label: str) -> str:
     return make_qid(namespace, package_name, label)
 
 
-def _is_local(k: Knowledge, pkg: Package) -> bool:
+def _is_local(k: Knowledge, pkg: CollectedPackage) -> bool:
     """Check if a Knowledge node belongs to this package (vs imported from another)."""
     return k in pkg.knowledge
 
 
 def _knowledge_id(
     k: Knowledge,
-    pkg: Package,
+    pkg: CollectedPackage,
     *,
     local_anon_counter: int,
 ) -> tuple[str, int]:
@@ -114,8 +115,8 @@ def _operator_id(o: Operator, knowledge_map: dict[int, str]) -> str:
     return f"lco_{hashlib.sha256(raw.encode()).hexdigest()[:16]}"
 
 
-def compile_package(pkg: Package) -> dict[str, Any]:
-    """Compile a Package into Gaia IR-compatible LocalCanonicalGraph JSON."""
+def compile_package(pkg: CollectedPackage) -> dict[str, Any]:
+    """Compile collected declarations into Gaia IR-compatible LocalCanonicalGraph JSON."""
     # Build knowledge closure: local declarations + referenced foreign nodes.
     knowledge_nodes: list[Knowledge] = []
     seen_knowledge: set[int] = set()

@@ -126,8 +126,8 @@ Three visibility levels:
 ```python
 from aristotle_mechanics import heavy_body_doctrine
 
-with Package("my_analysis") as pkg:
-    my_claim = claim("...", given=[heavy_body_doctrine])
+my_claim = claim("...", given=[heavy_body_doctrine])
+__all__ = ["my_claim"]
 ```
 
 Dependency management:
@@ -166,25 +166,23 @@ The DSL API strictly aligns with Gaia IR v2's three entity types: Knowledge, Ope
 Three knowledge types, corresponding to Gaia IR v2 §1.2:
 
 ```python
-from gaia.lang import Package, claim, setting, question
+from gaia.lang import claim, setting, question
 
-with Package("galileo_falling_bodies") as pkg:
+# setting: background assumption. No probability, no BP participation.
+aristotle_doctrine = setting("""
+    Aristotle's doctrine of motion: heavier objects fall faster.
+""")
 
-    # setting: background assumption. No probability, no BP participation.
-    aristotle_doctrine = setting("""
-        Aristotle's doctrine of motion: heavier objects fall faster.
-    """)
+# question: research direction. No probability, no BP participation.
+what_in_vacuum = question("""
+    Do objects of different mass fall at different rates without air resistance?
+""")
 
-    # question: research direction. No probability, no BP participation.
-    what_in_vacuum = question("""
-        Do objects of different mass fall at different rates without air resistance?
-    """)
-
-    # claim: scientific assertion. The ONLY type that participates in BP.
-    heavy_falls_faster = claim(r"""
-        Observations show heavier stones fall faster than feathers.
-        Fall time $t = \sqrt{\frac{2h}{g}}$ is mass-independent (in vacuum).
-    """)
+# claim: scientific assertion. The ONLY type that participates in BP.
+heavy_falls_faster = claim(r"""
+    Observations show heavier stones fall faster than feathers.
+    Fall time $t = \sqrt{\frac{2h}{g}}$ is mass-independent (in vacuum).
+""")
 ```
 
 **API signatures:**
@@ -651,7 +649,7 @@ Parameterization resolution remains a future extension point. When local or serv
 
 Three steps:
 
-**Step 1: Collection.** Python import executes `with Package(...) as pkg:` blocks. All DSL calls (`claim()`, `contradiction()`, `noisy_and()`, etc.) register into the `pkg` context. No inference runs — only declarations are collected.
+**Step 1: Collection.** Python import executes module top-level declarations. All DSL calls (`claim()`, `contradiction()`, `noisy_and()`, etc.) register into the package inferred from `pyproject.toml`. No inference runs — only declarations are collected.
 
 **Step 2: Build IR.** Convert collected declarations to Gaia IR v2 structures:
 
@@ -686,7 +684,7 @@ vacuum_prediction = claim("...")
 #              id="galileo:galileo_falling_bodies::vacuum_prediction")
 ```
 
-Implementation: `Package.__exit__` inspects the caller's `locals()` or uses descriptor protocol to capture variable names.
+Implementation: after import, the compiler inspects the loaded module and uses `__all__` when present, otherwise public module globals, to assign labels.
 
 **Edge cases:**
 - Inline claims (e.g., `analogy(bridge=claim("..."))`) without variable binding get auto-generated labels (e.g., `_anon_claim_001`), marked as private.
@@ -760,23 +758,16 @@ Standard pytest for structural assertions:
 
 ```python
 # tests/test_structure.py
-from galileo_falling_bodies import pkg, vacuum_prediction, heavy_falls_faster
+from galileo_falling_bodies import vacuum_prediction, heavy_falls_faster
 
 def test_vacuum_prediction_has_premises():
     strategy = vacuum_prediction.strategy
     assert strategy.type == "noisy_and"
     assert heavy_falls_faster in strategy.premises
 
-def test_exported_claims():
-    assert "vacuum_prediction" in pkg.exported
-
-def test_no_cycles():
-    assert pkg.compile().is_acyclic()
-
-def test_input_claims_identified():
-    inputs = pkg.compile().input_claims()
-    assert heavy_falls_faster in inputs
-    assert vacuum_prediction not in inputs  # derived, not input
+def test_compiled_graph_has_no_cycles(tmp_path):
+    # compile with the CLI and inspect .gaia/ir.json in an integration test
+    ...
 ```
 
 ---
@@ -787,10 +778,9 @@ def test_input_claims_identified():
 
 ```python
 # galileo_falling_bodies/__init__.py
-from gaia.lang import Package, claim, setting, question, contradiction
+from gaia.lang import claim, setting, question, contradiction
 from .reasoning import vacuum_prediction, air_resistance
 
-pkg = Package("galileo_falling_bodies")
 __all__ = ["vacuum_prediction", "air_resistance"]
 ```
 
