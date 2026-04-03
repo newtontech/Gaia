@@ -2,6 +2,7 @@
 
 import typer
 
+from gaia.cli.commands.add import add_command
 from gaia.cli.commands.check import check_command
 from gaia.cli.commands.compile import compile_command
 from gaia.cli.commands.infer import infer_command
@@ -20,6 +21,7 @@ def _callback() -> None:
     """Gaia — knowledge package authoring toolkit."""
 
 
+app.command(name="add")(add_command)
 app.command(name="compile")(compile_command)
 app.command(name="check")(check_command)
 app.command(name="infer")(infer_command)
