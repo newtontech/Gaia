@@ -579,10 +579,24 @@ wheels = [
 ]
 
 [[package]]
-name = "gaia"
+name = "gaia-lang"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
+    { name = "httpx" },
+    { name = "numpy" },
+    { name = "pydantic" },
+    { name = "typer" },
+]
+
+[package.optional-dependencies]
+dev = [
+    { name = "pytest" },
+    { name = "pytest-asyncio" },
+    { name = "pytest-cov" },
+    { name = "ruff" },
+]
+server = [
     { name = "clickhouse-connect" },
     { name = "fastapi" },
     { name = "httpx" },
@@ -591,58 +605,44 @@ dependencies = [
     { name = "litellm" },
     { name = "lxml" },
     { name = "neo4j" },
-    { name = "numpy" },
     { name = "pandas" },
     { name = "pyarrow" },
-    { name = "pydantic" },
     { name = "pydantic-settings" },
     { name = "pyyaml" },
     { name = "scikit-learn" },
     { name = "tos" },
-    { name = "typer" },
     { name = "typst" },
     { name = "uvicorn" },
 ]
 
-[package.optional-dependencies]
-dev = [
-    { name = "httpx" },
-    { name = "pytest" },
-    { name = "pytest-asyncio" },
-    { name = "pytest-cov" },
-    { name = "python-dotenv" },
-    { name = "ruff" },
-]
-
 [package.metadata]
 requires-dist = [
-    { name = "clickhouse-connect", specifier = ">=0.7" },
-    { name = "fastapi", specifier = ">=0.110" },
+    { name = "clickhouse-connect", marker = "extra == 'server'", specifier = ">=0.7" },
+    { name = "fastapi", marker = "extra == 'server'", specifier = ">=0.110" },
     { name = "httpx", specifier = ">=0.27" },
-    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27" },
-    { name = "kuzu", specifier = ">=0.4" },
-    { name = "lancedb", specifier = ">=0.6" },
-    { name = "litellm", specifier = ">=1.40" },
-    { name = "lxml", specifier = ">=5.0" },
-    { name = "neo4j", specifier = ">=5.0" },
+    { name = "httpx", marker = "extra == 'server'", specifier = ">=0.27" },
+    { name = "kuzu", marker = "extra == 'server'", specifier = ">=0.4" },
+    { name = "lancedb", marker = "extra == 'server'", specifier = ">=0.6" },
+    { name = "litellm", marker = "extra == 'server'", specifier = ">=1.40" },
+    { name = "lxml", marker = "extra == 'server'", specifier = ">=5.0" },
+    { name = "neo4j", marker = "extra == 'server'", specifier = ">=5.0" },
     { name = "numpy", specifier = ">=1.26" },
-    { name = "pandas", specifier = ">=2.0" },
-    { name = "pyarrow", specifier = ">=15.0" },
+    { name = "pandas", marker = "extra == 'server'", specifier = ">=2.0" },
+    { name = "pyarrow", marker = "extra == 'server'", specifier = ">=15.0" },
     { name = "pydantic", specifier = ">=2.0" },
-    { name = "pydantic-settings", specifier = ">=2.0" },
+    { name = "pydantic-settings", marker = "extra == 'server'", specifier = ">=2.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8.0" },
     { name = "pytest-asyncio", marker = "extra == 'dev'", specifier = ">=0.23" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5.0" },
-    { name = "python-dotenv", marker = "extra == 'dev'", specifier = ">=1.0" },
-    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "pyyaml", marker = "extra == 'server'", specifier = ">=6.0" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.3" },
-    { name = "scikit-learn", specifier = ">=1.8.0" },
-    { name = "tos", specifier = ">=2.7" },
+    { name = "scikit-learn", marker = "extra == 'server'", specifier = ">=1.8.0" },
+    { name = "tos", marker = "extra == 'server'", specifier = ">=2.7" },
     { name = "typer", extras = ["all"], specifier = ">=0.12" },
-    { name = "typst", specifier = ">=0.12" },
-    { name = "uvicorn", specifier = ">=0.29" },
+    { name = "typst", marker = "extra == 'server'", specifier = ">=0.12" },
+    { name = "uvicorn", marker = "extra == 'server'", specifier = ">=0.29" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["dev", "server"]
 
 [[package]]
 name = "h11"

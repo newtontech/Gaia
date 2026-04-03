@@ -1,0 +1,103 @@
+"""gaia init -- scaffold a new Gaia knowledge package."""
+
+from __future__ import annotations
+
+import subprocess
+import uuid
+from pathlib import Path
+
+import typer
+
+from gaia.cli._packages import GaiaCliError
+
+_DSL_TEMPLATE = """\
+from gaia.lang import claim, setting
+
+context = setting("Background context for this package.")
+hypothesis = claim("A scientific hypothesis.")
+evidence = claim("Supporting evidence.", given=[hypothesis])
+
+__all__ = ["context", "hypothesis", "evidence"]
+"""
+
+
+def _run_uv(
+    args: list[str],
+    *,
+    cwd: Path,
+    check: bool = True,
+) -> subprocess.CompletedProcess[str]:
+    result = subprocess.run(args, cwd=cwd, text=True, capture_output=True)
+    if check and result.returncode != 0:
+        stderr = result.stderr.strip() or result.stdout.strip() or "command failed"
+        raise GaiaCliError(f"Error running {' '.join(args)}: {stderr}")
+    return result
+
+
+def init_command(
+    name: str = typer.Argument(help="Package name (must end with '-gaia')."),
+) -> None:
+    """Create a new Gaia knowledge package."""
+    # --- validate name suffix ---------------------------------------------------
+    if not name.endswith("-gaia"):
+        suggested = f"{name}-gaia"
+        typer.echo(
+            f"Error: package name must end with '-gaia'. Did you mean '{suggested}'?",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    cwd = Path.cwd()
+    pkg_dir = cwd / name
+
+    # --- scaffold with uv init --lib -------------------------------------------
+    try:
+        _run_uv(["uv", "init", "--lib", name], cwd=cwd)
+    except GaiaCliError as exc:
+        typer.echo(str(exc), err=True)
+        raise typer.Exit(1)
+
+    # --- patch pyproject.toml with [tool.gaia] section -------------------------
+    pyproject_path = pkg_dir / "pyproject.toml"
+    gaia_uuid = str(uuid.uuid4())
+    gaia_section = f'\n[tool.gaia]\ntype = "knowledge-package"\nuuid = "{gaia_uuid}"\n'
+    with open(pyproject_path, "a") as f:
+        f.write(gaia_section)
+
+    # --- rename src/<uv_default_name>/ → src/<import_name>/ --------------------
+    import_name = name.removesuffix("-gaia").replace("-", "_")
+    uv_default_name = name.replace("-", "_")
+    src_dir = pkg_dir / "src"
+    uv_pkg_dir = src_dir / uv_default_name
+    target_pkg_dir = src_dir / import_name
+
+    if uv_pkg_dir.exists() and uv_pkg_dir != target_pkg_dir:
+        uv_pkg_dir.rename(target_pkg_dir)
+    elif not uv_pkg_dir.exists() and not target_pkg_dir.exists():
+        # Fallback: create the target directory if uv didn't create expected layout
+        target_pkg_dir.mkdir(parents=True, exist_ok=True)
+
+    # --- write DSL template into __init__.py -----------------------------------
+    init_py = target_pkg_dir / "__init__.py"
+    init_py.write_text(_DSL_TEMPLATE)
+
+    # --- append .gaia/ to .gitignore -------------------------------------------
+    gitignore_path = pkg_dir / ".gitignore"
+    if gitignore_path.exists():
+        existing = gitignore_path.read_text()
+        if ".gaia/" not in existing:
+            with open(gitignore_path, "a") as f:
+                f.write("\n.gaia/\n")
+    else:
+        gitignore_path.write_text(".gaia/\n")
+
+    # --- add gaia-lang dependency (warn on failure) ----------------------------
+    try:
+        _run_uv(["uv", "add", "gaia-lang"], cwd=pkg_dir)
+    except GaiaCliError:
+        typer.echo(
+            "Warning: could not add gaia-lang dependency. Run 'uv add gaia-lang' manually.",
+            err=True,
+        )
+
+    typer.echo(f"Created Gaia knowledge package: {name}")
