@@ -281,42 +281,33 @@ def _render_introduction(
     beliefs: dict[str, float],
     priors: dict[str, float],
 ) -> list[str]:
-    """Render the Introduction section.
+    """Render an Introduction section from exported conclusions.
 
-    If a 'motivation' module exists, show its content.
-    Otherwise, show exported conclusions.
+    Only used when there is NO motivation module (since the motivation module
+    itself serves as the introduction). When no motivation module exists,
+    show exported conclusions as a summary.
     """
+    # If a motivation module exists, it IS the introduction — skip this section
+    module_order = ir.get("module_order") or []
+    if "motivation" in module_order:
+        return []
+
     knowledge_by_id = {k["id"]: k for k in ir["knowledges"]}
     strategy_for: dict[str, dict] = {}
     for s in ir.get("strategies", []):
         if s.get("conclusion"):
             strategy_for[s["conclusion"]] = s
 
-    lines = ["## Introduction", ""]
-
-    # Check for motivation module
-    motivation_nodes = [
-        k
-        for k in ir["knowledges"]
-        if k.get("module") == "motivation" and not _is_helper(k.get("label", ""))
-    ]
-    if motivation_nodes:
-        motivation_nodes.sort(key=lambda k: k.get("declaration_index", 0))
-        for k in motivation_nodes:
-            lines.extend(_render_node(k, strategy_for, knowledge_by_id, beliefs, priors))
-        return lines
-
-    # Fallback: show exported conclusions
     exported = [
         k for k in ir["knowledges"] if k.get("exported") and not _is_helper(k.get("label", ""))
     ]
-    if exported:
-        for k in exported:
-            lines.extend(_render_node(k, strategy_for, knowledge_by_id, beliefs, priors))
-        return lines
+    if not exported:
+        return []
 
-    # No motivation module and no exports: skip intro
-    return []
+    lines = ["## Introduction", ""]
+    for k in exported:
+        lines.extend(_render_node(k, strategy_for, knowledge_by_id, beliefs, priors))
+    return lines
 
 
 def render_knowledge_nodes(

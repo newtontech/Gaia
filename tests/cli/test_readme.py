@@ -380,3 +380,39 @@ def test_introduction_with_exported():
     # Internal claim should NOT be in introduction
     intro = md.split("## Introduction")[1].split("##")[0]
     assert "An internal claim." not in intro
+
+
+def test_motivation_module_suppresses_introduction():
+    """When motivation module exists, no separate Introduction section."""
+    from gaia.cli.commands._readme import generate_readme
+
+    ir = {
+        "namespace": "github",
+        "package_name": "test_pkg",
+        "module_order": ["motivation", "results"],
+        "knowledges": [
+            {
+                "id": "ns:p::bg",
+                "label": "bg",
+                "type": "setting",
+                "content": "Background.",
+                "module": "motivation",
+                "declaration_index": 0,
+            },
+            {
+                "id": "ns:p::result",
+                "label": "result",
+                "type": "claim",
+                "content": "Result.",
+                "module": "results",
+                "declaration_index": 0,
+                "exported": True,
+            },
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    md = generate_readme(ir, {"name": "test-gaia", "description": "Test."})
+    assert "## Introduction" not in md
+    assert "## motivation" in md
+    assert "## results" in md
