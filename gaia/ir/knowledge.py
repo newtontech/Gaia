@@ -70,6 +70,7 @@ class Knowledge(BaseModel):
 
     id: str | None = None
     label: str | None = None
+    title: str | None = None
     type: KnowledgeType
     content: str | None = None
     content_hash: str | None = None
@@ -78,6 +79,11 @@ class Knowledge(BaseModel):
 
     # provenance
     provenance: list[PackageRef] | None = None
+
+    # narrative (presentational, excluded from content hash)
+    module: str | None = None
+    declaration_index: int | None = None
+    exported: bool = False
 
     @model_validator(mode="after")
     def _compute_derived_fields(self) -> Knowledge:

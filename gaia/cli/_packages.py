@@ -55,17 +55,11 @@ def _import_fresh(import_name: str) -> ModuleType:
 def _assign_labels(module: ModuleType, pkg: CollectedPackage) -> None:
     local_knowledge_ids = {id(k) for k in pkg.knowledge}
     local_strategy_ids = {id(s) for s in pkg.strategies}
-    export_names = getattr(module, "__all__", None)
-    if isinstance(export_names, list) and all(isinstance(name, str) for name in export_names):
-        names = export_names
-    else:
-        names = [name for name in dir(module) if not name.startswith("_")]
-    for attr in names:
+    all_names = [name for name in dir(module) if not name.startswith("_")]
+    for attr in all_names:
         obj = getattr(module, attr, None)
         if isinstance(obj, Knowledge) and id(obj) in local_knowledge_ids and obj.label is None:
             obj.label = attr
-    for attr in [name for name in dir(module) if not name.startswith("_")]:
-        obj = getattr(module, attr, None)
         if isinstance(obj, Strategy) and id(obj) in local_strategy_ids and obj.label is None:
             obj.label = attr
 
@@ -119,6 +113,24 @@ def load_gaia_package(path: str | Path = ".") -> LoadedGaiaPackage:
         )
 
     _assign_labels(module, pkg)
+
+    # Record exported labels from __all__ for the compiler
+    export_names = getattr(module, "__all__", None)
+    if isinstance(export_names, list) and all(isinstance(n, str) for n in export_names):
+        pkg._exported_labels = set(export_names)
+
+    # Extract module docstrings as titles
+    module_titles: dict[str, str] = {}
+    for mod_name in pkg._module_order:
+        full_name = f"{import_name}.{mod_name}"
+        sub = sys.modules.get(full_name)
+        if sub is not None:
+            doc = getattr(sub, "__doc__", None)
+            if isinstance(doc, str) and doc.strip():
+                # Use first line of docstring as title
+                module_titles[mod_name] = doc.strip().split("\n")[0].strip()
+    if module_titles:
+        pkg._module_titles = module_titles
 
     pkg.name = import_name
     pkg.version = version

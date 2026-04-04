@@ -152,7 +152,13 @@ def test_render_knowledge_nodes_narrative_order():
 def test_render_knowledge_nodes_hyperlinks():
     ir = {
         "knowledges": [
-            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A."},
+            {
+                "id": "ns:p::a",
+                "label": "a",
+                "title": "Alpha Title",
+                "type": "claim",
+                "content": "A.",
+            },
             {"id": "ns:p::b", "label": "b", "type": "claim", "content": "B."},
         ],
         "strategies": [
@@ -166,7 +172,8 @@ def test_render_knowledge_nodes_hyperlinks():
         "operators": [],
     }
     md = render_knowledge_nodes(ir)
-    assert "[a](#a)" in md
+    assert '<a id="a"></a>' in md
+    assert "[Alpha Title](#a)" in md
 
 
 def test_render_knowledge_nodes_with_beliefs():
@@ -260,3 +267,298 @@ def test_compile_readme_flag_generates_readme(tmp_path):
     assert readme.index("#### a") < readme.index("#### c")
     assert readme.index("#### b") < readme.index("#### c")
     assert "[a](#a)" in readme or "[b](#b)" in readme
+
+
+# ── module narrative ──
+
+
+def test_module_sections_with_per_module_mermaid():
+    """Multi-module: each module gets its own section with Mermaid diagram."""
+    ir = {
+        "module_order": ["sec_a", "sec_b"],
+        "knowledges": [
+            {
+                "id": "ns:p::x",
+                "label": "x",
+                "type": "claim",
+                "content": "X.",
+                "module": "sec_a",
+                "declaration_index": 0,
+                "exported": False,
+            },
+            {
+                "id": "ns:p::y",
+                "label": "y",
+                "type": "claim",
+                "content": "Y.",
+                "module": "sec_a",
+                "declaration_index": 1,
+                "exported": False,
+            },
+            {
+                "id": "ns:p::z",
+                "label": "z",
+                "type": "claim",
+                "content": "Z.",
+                "module": "sec_b",
+                "declaration_index": 0,
+                "exported": True,
+            },
+        ],
+        "strategies": [
+            {"premises": ["ns:p::x"], "conclusion": "ns:p::z", "type": "noisy_and"},
+        ],
+        "operators": [],
+    }
+    md = render_knowledge_nodes(ir)
+    # Module section headings
+    assert "## sec_a" in md
+    assert "## sec_b" in md
+    # Order: sec_a nodes before sec_b
+    assert md.index("#### x") < md.index("#### z")
+    assert md.index("#### y") < md.index("#### z")
+    # Per-module Mermaid diagrams
+    assert md.count("```mermaid") == 2
+    # sec_b's diagram should show x as external premise
+    sec_b_section = md.split("## sec_b")[1]
+    assert "x" in sec_b_section.split("```")[1]  # x appears in sec_b's mermaid
+
+
+def test_module_sections_preserve_root_segments():
+    ir = {
+        "module_order": ["sec_a"],
+        "knowledges": [
+            {
+                "id": "ns:p::intro",
+                "label": "intro",
+                "type": "setting",
+                "content": "Intro.",
+                "module": None,
+                "declaration_index": 0,
+            },
+            {
+                "id": "ns:p::x",
+                "label": "x",
+                "type": "claim",
+                "content": "X.",
+                "module": "sec_a",
+                "declaration_index": 0,
+            },
+            {
+                "id": "ns:p::outro",
+                "label": "outro",
+                "type": "claim",
+                "content": "Outro.",
+                "module": None,
+                "declaration_index": 1,
+            },
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    md = render_knowledge_nodes(ir)
+    assert md.index("## Root") < md.index("## sec_a") < md.index("## Root (continued)")
+    assert md.index("#### intro") < md.index("#### x") < md.index("#### outro")
+
+
+def test_exported_marker():
+    ir = {
+        "module_order": ["mod"],
+        "knowledges": [
+            {
+                "id": "ns:p::a",
+                "label": "a",
+                "type": "claim",
+                "content": "A.",
+                "module": "mod",
+                "declaration_index": 0,
+                "exported": True,
+            },
+            {
+                "id": "ns:p::b",
+                "label": "b",
+                "type": "claim",
+                "content": "B.",
+                "module": "mod",
+                "declaration_index": 1,
+                "exported": False,
+            },
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    md = render_knowledge_nodes(ir)
+    assert "\u2605" in md.split("#### a")[1].split("#### b")[0]
+    assert "\u2605" not in md.split("#### b")[1]
+
+
+def test_introduction_with_exported_knowledge():
+    """Introduction shows exported knowledge when no motivation module."""
+    from gaia.cli.commands._readme import generate_readme
+
+    ir = {
+        "namespace": "github",
+        "package_name": "test_pkg",
+        "knowledges": [
+            {
+                "id": "ns:p::main_result",
+                "label": "main_result",
+                "type": "claim",
+                "content": "The main conclusion.",
+                "exported": True,
+            },
+            {
+                "id": "ns:p::context",
+                "label": "context",
+                "type": "setting",
+                "content": "Shared context.",
+                "exported": True,
+            },
+            {
+                "id": "ns:p::internal",
+                "label": "internal",
+                "type": "claim",
+                "content": "An internal claim.",
+                "exported": False,
+            },
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    md = generate_readme(ir, {"name": "test-gaia", "description": "Test."})
+    assert "## Introduction" in md
+    assert "The main conclusion." in md
+    assert "Shared context." in md
+    # Internal claim should NOT be in introduction
+    intro = md.split("## Introduction")[1].split("##")[0]
+    assert "An internal claim." not in intro
+
+
+def test_motivation_module_suppresses_introduction():
+    """When motivation module exists, no separate Introduction section."""
+    from gaia.cli.commands._readme import generate_readme
+
+    ir = {
+        "namespace": "github",
+        "package_name": "test_pkg",
+        "module_order": ["motivation", "results"],
+        "knowledges": [
+            {
+                "id": "ns:p::bg",
+                "label": "bg",
+                "type": "setting",
+                "content": "Background.",
+                "module": "motivation",
+                "declaration_index": 0,
+            },
+            {
+                "id": "ns:p::result",
+                "label": "result",
+                "type": "claim",
+                "content": "Result.",
+                "module": "results",
+                "declaration_index": 0,
+                "exported": True,
+            },
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    md = generate_readme(ir, {"name": "test-gaia", "description": "Test."})
+    assert "## Introduction" not in md
+    assert "## motivation" in md
+    assert "## results" in md
+
+
+# ── coverage: operator edges, inference results, single-file fallback ──
+
+
+def test_mermaid_operator_edges():
+    ir = {
+        "knowledges": [
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A."},
+            {"id": "ns:p::b", "label": "b", "type": "claim", "content": "B."},
+            {"id": "ns:p::c", "label": "c", "type": "claim", "content": "C."},
+        ],
+        "strategies": [],
+        "operators": [
+            {
+                "operator": "contradiction",
+                "variables": ["ns:p::a", "ns:p::b"],
+                "conclusion": "ns:p::c",
+            },
+        ],
+    }
+    md = render_mermaid(ir)
+    assert "a -.-|contradiction| c" in md
+
+
+def test_generate_readme_with_inference_results():
+    from gaia.cli.commands._readme import generate_readme
+
+    ir = {
+        "namespace": "github",
+        "package_name": "test_pkg",
+        "knowledges": [
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A."},
+            {"id": "ns:p::b", "label": "b", "type": "claim", "content": "B."},
+        ],
+        "strategies": [
+            {"premises": ["ns:p::a"], "conclusion": "ns:p::b", "type": "noisy_and"},
+        ],
+        "operators": [],
+    }
+    beliefs_data = {
+        "beliefs": [
+            {"knowledge_id": "ns:p::a", "label": "a", "belief": 0.90},
+            {"knowledge_id": "ns:p::b", "label": "b", "belief": 0.70},
+        ],
+        "diagnostics": {"converged": True, "iterations_run": 5},
+    }
+    param_data = {
+        "priors": [{"knowledge_id": "ns:p::a", "value": 0.95}],
+    }
+    md = generate_readme(
+        ir, {"name": "test-gaia"}, beliefs_data=beliefs_data, param_data=param_data
+    )
+    assert "## Inference Results" in md
+    assert "| a |" in md or "| [a]" in md
+    assert "0.90" in md
+    assert "independent" in md
+    assert "derived" in md
+
+
+def test_single_file_fallback_has_global_graph():
+    """Single-file package (no module_order) renders one global Mermaid graph."""
+    ir = {
+        "knowledges": [
+            {"id": "ns:p::s", "label": "s", "type": "setting", "content": "S."},
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A."},
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    md = render_knowledge_nodes(ir)
+    assert "## Knowledge Graph" in md
+    assert "```mermaid" in md
+    assert "### Settings" in md
+    assert "### Claims" in md
+
+
+def test_mermaid_with_node_ids_filter():
+    """render_mermaid with node_ids only shows specified nodes + external premises."""
+    ir = {
+        "knowledges": [
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A."},
+            {"id": "ns:p::b", "label": "b", "type": "claim", "content": "B."},
+            {"id": "ns:p::c", "label": "c", "type": "claim", "content": "C."},
+        ],
+        "strategies": [
+            {"premises": ["ns:p::a"], "conclusion": "ns:p::b", "type": "noisy_and"},
+        ],
+        "operators": [],
+    }
+    md = render_mermaid(ir, node_ids={"ns:p::b"})
+    assert "b[" in md
+    assert "a[" in md  # external premise pulled in
+    assert "c[" not in md  # not in node_ids, not connected

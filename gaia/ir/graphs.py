@@ -25,6 +25,11 @@ def _canonicalize_knowledge_dump(data: dict[str, Any]) -> dict[str, Any]:
     canonical["parameters"] = sorted(canonical.get("parameters", []), key=_json_sort_key)
     if canonical.get("provenance") is not None:
         canonical["provenance"] = sorted(canonical["provenance"], key=_json_sort_key)
+    # Exclude narrative/presentational fields from content hash
+    canonical.pop("title", None)
+    canonical.pop("module", None)
+    canonical.pop("declaration_index", None)
+    canonical.pop("exported", None)
     return canonical
 
 
@@ -94,6 +99,8 @@ class LocalCanonicalGraph(BaseModel):
     knowledges: list[Knowledge]
     operators: list[Operator] = []
     strategies: list[CompositeStrategy | FormalStrategy | Strategy] = []
+    module_order: list[str] | None = None
+    module_titles: dict[str, str] | None = None
 
     @model_validator(mode="after")
     def _compute_hash(self) -> LocalCanonicalGraph:
