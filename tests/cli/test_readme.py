@@ -468,3 +468,97 @@ def test_motivation_module_suppresses_introduction():
     assert "## Introduction" not in md
     assert "## motivation" in md
     assert "## results" in md
+
+
+# ── coverage: operator edges, inference results, single-file fallback ──
+
+
+def test_mermaid_operator_edges():
+    ir = {
+        "knowledges": [
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A."},
+            {"id": "ns:p::b", "label": "b", "type": "claim", "content": "B."},
+            {"id": "ns:p::c", "label": "c", "type": "claim", "content": "C."},
+        ],
+        "strategies": [],
+        "operators": [
+            {
+                "operator": "contradiction",
+                "variables": ["ns:p::a", "ns:p::b"],
+                "conclusion": "ns:p::c",
+            },
+        ],
+    }
+    md = render_mermaid(ir)
+    assert "a -.-|contradiction| c" in md
+
+
+def test_generate_readme_with_inference_results():
+    from gaia.cli.commands._readme import generate_readme
+
+    ir = {
+        "namespace": "github",
+        "package_name": "test_pkg",
+        "knowledges": [
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A."},
+            {"id": "ns:p::b", "label": "b", "type": "claim", "content": "B."},
+        ],
+        "strategies": [
+            {"premises": ["ns:p::a"], "conclusion": "ns:p::b", "type": "noisy_and"},
+        ],
+        "operators": [],
+    }
+    beliefs_data = {
+        "beliefs": [
+            {"knowledge_id": "ns:p::a", "label": "a", "belief": 0.90},
+            {"knowledge_id": "ns:p::b", "label": "b", "belief": 0.70},
+        ],
+        "diagnostics": {"converged": True, "iterations_run": 5},
+    }
+    param_data = {
+        "priors": [{"knowledge_id": "ns:p::a", "value": 0.95}],
+    }
+    md = generate_readme(
+        ir, {"name": "test-gaia"}, beliefs_data=beliefs_data, param_data=param_data
+    )
+    assert "## Inference Results" in md
+    assert "| a |" in md or "| [a]" in md
+    assert "0.90" in md
+    assert "independent" in md
+    assert "derived" in md
+
+
+def test_single_file_fallback_has_global_graph():
+    """Single-file package (no module_order) renders one global Mermaid graph."""
+    ir = {
+        "knowledges": [
+            {"id": "ns:p::s", "label": "s", "type": "setting", "content": "S."},
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A."},
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    md = render_knowledge_nodes(ir)
+    assert "## Knowledge Graph" in md
+    assert "```mermaid" in md
+    assert "### Settings" in md
+    assert "### Claims" in md
+
+
+def test_mermaid_with_node_ids_filter():
+    """render_mermaid with node_ids only shows specified nodes + external premises."""
+    ir = {
+        "knowledges": [
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A."},
+            {"id": "ns:p::b", "label": "b", "type": "claim", "content": "B."},
+            {"id": "ns:p::c", "label": "c", "type": "claim", "content": "C."},
+        ],
+        "strategies": [
+            {"premises": ["ns:p::a"], "conclusion": "ns:p::b", "type": "noisy_and"},
+        ],
+        "operators": [],
+    }
+    md = render_mermaid(ir, node_ids={"ns:p::b"})
+    assert "b[" in md
+    assert "a[" in md  # external premise pulled in
+    assert "c[" not in md  # not in node_ids, not connected
