@@ -265,19 +265,11 @@ def test_compile_readme_flag_generates_readme(tmp_path):
 # ── module narrative ──
 
 
-def test_narrative_order_uses_module_order():
+def test_module_sections_with_per_module_mermaid():
+    """Multi-module: each module gets its own section with Mermaid diagram."""
     ir = {
         "module_order": ["sec_a", "sec_b"],
         "knowledges": [
-            {
-                "id": "ns:p::z",
-                "label": "z",
-                "type": "claim",
-                "content": "Z.",
-                "module": "sec_b",
-                "declaration_index": 0,
-                "exported": True,
-            },
             {
                 "id": "ns:p::x",
                 "label": "x",
@@ -296,20 +288,36 @@ def test_narrative_order_uses_module_order():
                 "declaration_index": 1,
                 "exported": False,
             },
+            {
+                "id": "ns:p::z",
+                "label": "z",
+                "type": "claim",
+                "content": "Z.",
+                "module": "sec_b",
+                "declaration_index": 0,
+                "exported": True,
+            },
         ],
-        "strategies": [],
+        "strategies": [
+            {"premises": ["ns:p::x"], "conclusion": "ns:p::z", "type": "noisy_and"},
+        ],
         "operators": [],
     }
     md = render_knowledge_nodes(ir)
-    pos_x = md.index("#### x")
-    pos_y = md.index("#### y")
-    pos_z = md.index("#### z")
-    assert pos_x < pos_y < pos_z
-    assert "### sec_a" in md
-    assert "### sec_b" in md
+    # Module section headings
+    assert "## sec_a" in md
+    assert "## sec_b" in md
+    # Order: sec_a nodes before sec_b
+    assert md.index("#### x") < md.index("#### z")
+    assert md.index("#### y") < md.index("#### z")
+    # Per-module Mermaid diagrams
+    assert md.count("```mermaid") == 2
+    # sec_b's diagram should show x as external premise
+    sec_b_section = md.split("## sec_b")[1]
+    assert "x" in sec_b_section.split("```")[1]  # x appears in sec_b's mermaid
 
 
-def test_exported_marker_in_readme():
+def test_exported_marker():
     ir = {
         "module_order": ["mod"],
         "knowledges": [
@@ -338,3 +346,37 @@ def test_exported_marker_in_readme():
     md = render_knowledge_nodes(ir)
     assert "\u2605" in md.split("#### a")[1].split("#### b")[0]
     assert "\u2605" not in md.split("#### b")[1]
+
+
+def test_introduction_with_exported():
+    """Introduction shows exported conclusions when no motivation module."""
+    from gaia.cli.commands._readme import generate_readme
+
+    ir = {
+        "namespace": "github",
+        "package_name": "test_pkg",
+        "knowledges": [
+            {
+                "id": "ns:p::main_result",
+                "label": "main_result",
+                "type": "claim",
+                "content": "The main conclusion.",
+                "exported": True,
+            },
+            {
+                "id": "ns:p::internal",
+                "label": "internal",
+                "type": "claim",
+                "content": "An internal claim.",
+                "exported": False,
+            },
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    md = generate_readme(ir, {"name": "test-gaia", "description": "Test."})
+    assert "## Introduction" in md
+    assert "The main conclusion." in md
+    # Internal claim should NOT be in introduction
+    intro = md.split("## Introduction")[1].split("##")[0]
+    assert "An internal claim." not in intro
