@@ -76,21 +76,18 @@ from gaia.lang import claim, setting, question, contradiction
 
 # Settings — background, no probability
 env = setting("Experimental conditions described here.")
-env.label = "env"
 
 # Claims — propositions with truth values
 obs_a = claim("Observation A holds under conditions described.")
-obs_a.label = "obs_a"
 
 # Claims derived from premises (auto-creates noisy_and strategy)
 conclusion = claim("Derived conclusion.", given=[obs_a])
-conclusion.label = "conclusion"
 ```
 
 **Rules:**
-- Every Knowledge object MUST have `.label` set (assign after creation).
-- Labels must be valid Python identifiers (`[a-z_][a-z0-9_]*`).
-- Labels must be unique within the package.
+- Labels are **automatically assigned from Python variable names** by `gaia compile`. Do NOT set `.label` manually.
+- Variable names must be valid Python identifiers (`[a-z_][a-z0-9_]*`).
+- Variable names must be unique within the package.
 - Only `claim` carries probability; `setting` and `question` do not participate in BP.
 - `claim(given=[...])` is sugar for `noisy_and(premises, conclusion)`.
 
@@ -239,7 +236,7 @@ Do NOT do any of the following. These are not style preferences — they produce
 </HARD-GATE>
 
 - **Using `Package(...)` context manager** — Removed in v5. The runtime infers package membership from `pyproject.toml`. Using it causes `load_gaia_package` to fail.
-- **Forgetting `.label = "name"` on Knowledge objects** — Unlabeled nodes get anonymous IDs. Labels are required for readable QIDs and cross-package references.
+- **Manually setting `.label = "name"`** — Labels are auto-assigned from Python variable names by `gaia compile`. Manual assignment is redundant and risks inconsistency with the variable name.
 - **Using `setting` or `question` as strategy premises** — Validator rejects non-claim premises. Use `background=` parameter instead.
 - **Single-premise `deduction()`** — Requires at least 2 premises. For single-premise derivation, use `claim(given=[premise])` (noisy_and).
 - **Building `FormalExpr` by hand** — The compiler calls `formalize_named_strategy` from `gaia.ir.formalize`. Do not replicate its logic.
