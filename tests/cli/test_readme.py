@@ -260,3 +260,81 @@ def test_compile_readme_flag_generates_readme(tmp_path):
     assert readme.index("#### a") < readme.index("#### c")
     assert readme.index("#### b") < readme.index("#### c")
     assert "[a](#a)" in readme or "[b](#b)" in readme
+
+
+# ── module narrative ──
+
+
+def test_narrative_order_uses_module_order():
+    ir = {
+        "module_order": ["sec_a", "sec_b"],
+        "knowledges": [
+            {
+                "id": "ns:p::z",
+                "label": "z",
+                "type": "claim",
+                "content": "Z.",
+                "module": "sec_b",
+                "declaration_index": 0,
+                "exported": True,
+            },
+            {
+                "id": "ns:p::x",
+                "label": "x",
+                "type": "claim",
+                "content": "X.",
+                "module": "sec_a",
+                "declaration_index": 0,
+                "exported": False,
+            },
+            {
+                "id": "ns:p::y",
+                "label": "y",
+                "type": "claim",
+                "content": "Y.",
+                "module": "sec_a",
+                "declaration_index": 1,
+                "exported": False,
+            },
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    md = render_knowledge_nodes(ir)
+    pos_x = md.index("#### x")
+    pos_y = md.index("#### y")
+    pos_z = md.index("#### z")
+    assert pos_x < pos_y < pos_z
+    assert "### sec_a" in md
+    assert "### sec_b" in md
+
+
+def test_exported_marker_in_readme():
+    ir = {
+        "module_order": ["mod"],
+        "knowledges": [
+            {
+                "id": "ns:p::a",
+                "label": "a",
+                "type": "claim",
+                "content": "A.",
+                "module": "mod",
+                "declaration_index": 0,
+                "exported": True,
+            },
+            {
+                "id": "ns:p::b",
+                "label": "b",
+                "type": "claim",
+                "content": "B.",
+                "module": "mod",
+                "declaration_index": 1,
+                "exported": False,
+            },
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    md = render_knowledge_nodes(ir)
+    assert "\u2605" in md.split("#### a")[1].split("#### b")[0]
+    assert "\u2605" not in md.split("#### b")[1]

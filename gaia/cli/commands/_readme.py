@@ -113,8 +113,22 @@ def render_mermaid(ir: dict, beliefs: dict[str, float] | None = None) -> str:
 
 def _narrative_order(ir: dict) -> list[dict]:
     """Return knowledge nodes in narrative reading order."""
-    layers = topo_layers(ir)
     nodes = [k for k in ir["knowledges"] if not _is_helper(k.get("label", ""))]
+    module_order = ir.get("module_order")
+
+    if module_order and any(k.get("module") for k in nodes):
+        module_rank = {m: i for i, m in enumerate(module_order)}
+
+        def sort_key(k):
+            mod = k.get("module")
+            idx = k.get("declaration_index", 0)
+            mod_rank = module_rank.get(mod, 999) if mod else -1
+            return (mod_rank, idx)
+
+        return sorted(nodes, key=sort_key)
+
+    # Fallback: topo sort (single-file or legacy packages)
+    layers = topo_layers(ir)
 
     def sort_key(k):
         kid = k["id"]
@@ -144,21 +158,33 @@ def render_knowledge_nodes(
             strategy_for[s["conclusion"]] = s
 
     ordered = _narrative_order(ir)
+    module_order = ir.get("module_order")
+    has_modules = module_order and any(k.get("module") for k in ordered)
     sections: list[str] = ["## Knowledge Nodes", ""]
-    current_type = None
+    current_group = None
 
     for k in ordered:
         ktype = k["type"]
         label = k.get("label", "")
         kid = k["id"]
         content = k.get("content", "")
+        exported = k.get("exported", False)
 
-        if ktype != current_type:
-            current_type = ktype
-            sections.append(f"### {ktype.title()}s")
-            sections.append("")
+        if has_modules:
+            group = k.get("module") or "Root"
+            if group != current_group:
+                current_group = group
+                sections.append(f"### {group}")
+                sections.append("")
+        else:
+            group = ktype
+            if group != current_group:
+                current_group = group
+                sections.append(f"### {ktype.title()}s")
+                sections.append("")
 
-        sections.append(f"#### {label}")
+        marker = " \u2605" if exported else ""
+        sections.append(f"#### {label}{marker}")
         sections.append("")
         sections.append(content)
         sections.append("")
