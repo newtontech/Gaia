@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from collections import defaultdict
 
+from gaia.cli.commands._classify import classify_ir, node_role
+
 
 def topo_layers(ir: dict) -> dict[str, int]:
     """Assign each knowledge ID a topological layer (0 = no incoming edges)."""
@@ -61,9 +63,6 @@ def _module_segments(nodes: list[dict]) -> list[tuple[str, list[dict]]]:
 
 
 # ── Mermaid rendering ──
-
-
-from gaia.cli.commands._classify import classify_ir, node_role
 
 _MERMAID_STYLES = """\
     classDef setting fill:#f0f0f0,stroke:#999
@@ -158,7 +157,11 @@ def render_mermaid(
         css_override = "external" if kid in external_ids else None
         lines.append(
             _mermaid_node_line(
-                label, kid, k["type"], c, beliefs,
+                label,
+                kid,
+                k["type"],
+                c,
+                beliefs,
                 title=k.get("title"),
                 css_class_override=css_override,
             )
