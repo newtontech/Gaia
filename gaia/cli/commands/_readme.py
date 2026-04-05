@@ -68,20 +68,30 @@ _MERMAID_STYLES = """\
     classDef premise fill:#ddeeff,stroke:#4488bb
     classDef derived fill:#ddffdd,stroke:#44bb44
     classDef question fill:#fff3dd,stroke:#cc9944
+    classDef background fill:#f5f5f5,stroke:#bbb,stroke-dasharray: 5 5
     classDef orphan fill:#fff,stroke:#ccc,stroke-dasharray: 5 5
     classDef external fill:#fff,stroke:#aaa,stroke-dasharray: 3 3"""
 
 
-def _classify_nodes(ir: dict) -> tuple[set[str], set[str]]:
-    """Return (strategy_conclusions, strategy_premises) ID sets."""
+def _classify_nodes(ir: dict) -> tuple[set[str], set[str], set[str], set[str]]:
+    """Return (conclusions, premises, background, operator_vars) ID sets."""
     conclusions: set[str] = set()
     premises: set[str] = set()
+    background: set[str] = set()
     for s in ir.get("strategies", []):
         if s.get("conclusion"):
             conclusions.add(s["conclusion"])
         for p in s.get("premises", []):
             premises.add(p)
-    return conclusions, premises
+        for b in s.get("background", []):
+            background.add(b)
+    operator_vars: set[str] = set()
+    for o in ir.get("operators", []):
+        for v in o.get("variables", []):
+            operator_vars.add(v)
+        if o.get("conclusion"):
+            conclusions.add(o["conclusion"])
+    return conclusions, premises, background, operator_vars
 
 
 def _mermaid_node_line(
@@ -92,12 +102,16 @@ def _mermaid_node_line(
     strategy_premises: set[str],
     beliefs: dict[str, float] | None,
     *,
+    strategy_background: set[str] | None = None,
+    operator_vars: set[str] | None = None,
     title: str | None = None,
     css_class_override: str | None = None,
 ) -> str:
     display_name = title or label
     display = f"{display_name} ({beliefs[kid]:.2f})" if beliefs and kid in beliefs else display_name
     display = display.replace('"', "#quot;")
+    _bg = strategy_background or set()
+    _ov = operator_vars or set()
     if css_class_override:
         css = css_class_override
     elif ktype == "setting":
@@ -106,8 +120,10 @@ def _mermaid_node_line(
         css = "question"
     elif kid in strategy_conclusions:
         css = "derived"
-    elif kid in strategy_premises:
+    elif kid in strategy_premises or kid in _ov:
         css = "premise"
+    elif kid in _bg:
+        css = "background"
     else:
         css = "orphan"
     return f'    {label}["{display}"]:::{css}'
@@ -126,7 +142,7 @@ def render_mermaid(
     """
     lines = ["```mermaid", "graph TD"]
     knowledge_by_id = {k["id"]: k for k in ir["knowledges"]}
-    strategy_conclusions, strategy_premises = _classify_nodes(ir)
+    strategy_conclusions, strategy_premises, strategy_bg, op_vars = _classify_nodes(ir)
 
     # Determine which nodes to render
     if node_ids is not None:
@@ -170,6 +186,8 @@ def render_mermaid(
                 strategy_conclusions,
                 strategy_premises,
                 beliefs,
+                strategy_background=strategy_bg,
+                operator_vars=op_vars,
                 title=k.get("title"),
                 css_class_override=css_override,
             )
@@ -456,7 +474,7 @@ def render_inference_results(
         priors = {p["knowledge_id"]: p["value"] for p in param_data.get("priors", [])}
 
     knowledge_by_id = {k["id"]: k for k in ir["knowledges"]}
-    strategy_conclusions, strategy_premises = _classify_nodes(ir)
+    strategy_conclusions, strategy_premises, strategy_bg, op_vars = _classify_nodes(ir)
 
     lines.append("| Label | Type | Prior | Belief | Role |")
     lines.append("|-------|------|-------|--------|------|")
@@ -472,8 +490,10 @@ def render_inference_results(
         ktype = k.get("type", "")
         if kid in strategy_conclusions:
             role = "derived"
-        elif kid in strategy_premises:
+        elif kid in strategy_premises or kid in op_vars:
             role = "independent"
+        elif kid in strategy_bg:
+            role = "background"
         else:
             role = "orphaned"
         lines.append(f"| [{label}](#{_anchor_id(label)}) | {ktype} | {prior} | {belief} | {role} |")
