@@ -63,6 +63,8 @@ def _module_segments(nodes: list[dict]) -> list[tuple[str, list[dict]]]:
 # ── Mermaid rendering ──
 
 
+from gaia.cli.commands._classify import classify_ir, node_role
+
 _MERMAID_STYLES = """\
     classDef setting fill:#f0f0f0,stroke:#999
     classDef premise fill:#ddeeff,stroke:#4488bb
@@ -72,60 +74,36 @@ _MERMAID_STYLES = """\
     classDef orphan fill:#fff,stroke:#ccc,stroke-dasharray: 5 5
     classDef external fill:#fff,stroke:#aaa,stroke-dasharray: 3 3"""
 
-
-def _classify_nodes(ir: dict) -> tuple[set[str], set[str], set[str], set[str]]:
-    """Return (conclusions, premises, background, operator_vars) ID sets."""
-    conclusions: set[str] = set()
-    premises: set[str] = set()
-    background: set[str] = set()
-    for s in ir.get("strategies", []):
-        if s.get("conclusion"):
-            conclusions.add(s["conclusion"])
-        for p in s.get("premises", []):
-            premises.add(p)
-        for b in s.get("background", []):
-            background.add(b)
-    operator_vars: set[str] = set()
-    for o in ir.get("operators", []):
-        for v in o.get("variables", []):
-            operator_vars.add(v)
-        if o.get("conclusion"):
-            conclusions.add(o["conclusion"])
-    return conclusions, premises, background, operator_vars
+# Map node_role() output to Mermaid CSS class names
+_ROLE_TO_CSS = {
+    "setting": "setting",
+    "question": "question",
+    "derived": "derived",
+    "structural": "derived",  # operator conclusions display like derived
+    "independent": "premise",
+    "background": "background",
+    "orphaned": "orphan",
+}
 
 
 def _mermaid_node_line(
     label: str,
     kid: str,
     ktype: str,
-    strategy_conclusions: set[str],
-    strategy_premises: set[str],
+    classification,
     beliefs: dict[str, float] | None,
     *,
-    strategy_background: set[str] | None = None,
-    operator_vars: set[str] | None = None,
     title: str | None = None,
     css_class_override: str | None = None,
 ) -> str:
     display_name = title or label
     display = f"{display_name} ({beliefs[kid]:.2f})" if beliefs and kid in beliefs else display_name
     display = display.replace('"', "#quot;")
-    _bg = strategy_background or set()
-    _ov = operator_vars or set()
     if css_class_override:
         css = css_class_override
-    elif ktype == "setting":
-        css = "setting"
-    elif ktype == "question":
-        css = "question"
-    elif kid in strategy_conclusions:
-        css = "derived"
-    elif kid in strategy_premises or kid in _ov:
-        css = "premise"
-    elif kid in _bg:
-        css = "background"
     else:
-        css = "orphan"
+        role = node_role(kid, ktype, classification)
+        css = _ROLE_TO_CSS.get(role, "orphan")
     return f'    {label}["{display}"]:::{css}'
 
 
@@ -142,7 +120,7 @@ def render_mermaid(
     """
     lines = ["```mermaid", "graph TD"]
     knowledge_by_id = {k["id"]: k for k in ir["knowledges"]}
-    strategy_conclusions, strategy_premises, strategy_bg, op_vars = _classify_nodes(ir)
+    c = classify_ir(ir)
 
     # Determine which nodes to render
     if node_ids is not None:
@@ -180,14 +158,7 @@ def render_mermaid(
         css_override = "external" if kid in external_ids else None
         lines.append(
             _mermaid_node_line(
-                label,
-                kid,
-                k["type"],
-                strategy_conclusions,
-                strategy_premises,
-                beliefs,
-                strategy_background=strategy_bg,
-                operator_vars=op_vars,
+                label, kid, k["type"], c, beliefs,
                 title=k.get("title"),
                 css_class_override=css_override,
             )
@@ -474,7 +445,7 @@ def render_inference_results(
         priors = {p["knowledge_id"]: p["value"] for p in param_data.get("priors", [])}
 
     knowledge_by_id = {k["id"]: k for k in ir["knowledges"]}
-    strategy_conclusions, strategy_premises, strategy_bg, op_vars = _classify_nodes(ir)
+    c = classify_ir(ir)
 
     lines.append("| Label | Type | Prior | Belief | Role |")
     lines.append("|-------|------|-------|--------|------|")
@@ -488,14 +459,7 @@ def render_inference_results(
         prior = f"{priors[kid]:.2f}" if kid in priors else "\u2014"
         k = knowledge_by_id.get(kid, {})
         ktype = k.get("type", "")
-        if kid in strategy_conclusions:
-            role = "derived"
-        elif kid in strategy_premises or kid in op_vars:
-            role = "independent"
-        elif kid in strategy_bg:
-            role = "background"
-        else:
-            role = "orphaned"
+        role = node_role(kid, ktype, c)
         lines.append(f"| [{label}](#{_anchor_id(label)}) | {ktype} | {prior} | {belief} | {role} |")
 
     lines.append("")
