@@ -72,7 +72,7 @@ n 元 DISJUNCTION $f'(A_1, \ldots, A_n)$：全 0 时 $\varepsilon$，否则 $1-\
 |------|---------|------|
 | **Top-level operator**（conclusion 是知识图中的 claim） | 三元因子 | conclusion 可能被其他 strategy 引用，不是 dead end |
 | **FormalExpr 内部，conclusion 连接其他 operator** | 三元因子 | 中间变量，信息正常流通 |
-| **FormalExpr 内部，conclusion 是 dead end** | **二元��子** | 消除 dead-end 变量 |
+| **FormalExpr 内部，conclusion 是 dead end** | **二元因子** | 消除 dead-end 变量 |
 
 实现判断标准：在 FormalExpr 的 operator 列表中，若某个 operator 的 conclusion **不被任何其他 operator 的 variables 引用**，则该 conclusion 是 dead end，使用二元因子。FormalExpr 内部 helper claim 的封装性由 IR 层保证（见 [../gaia-ir/04-helper-claims.md](../gaia-ir/04-helper-claims.md)），外部 strategy 不能引用它们。
 
@@ -92,6 +92,8 @@ FormalExpr 内部的中间变量（连接多个 factor 的 helper claim）不应
 
 **语义**：假说 $H$ 或替代解释 $\text{Alt}$ 解释观测 $\text{Obs}$。
 
+**FormalStrategy 接口**：`premises=[Obs, Alt]`，`conclusion=H`。当只有一个前提（Obs）时，`formalize.py` 自动生成 Alt 作为 interface claim 并追加到 premises。
+
 **当前（有 bug）**：
 ```
 disjunction([H, Alt]) → D          # D 是中间变量
@@ -102,33 +104,54 @@ equivalence([D, Obs]) → Eq         # Eq 是 dead end ✗
 
 注意这里的修法与 elimination/case_analysis 不同：abduction 中 equivalence 的一端（Obs）是真实变量，所以可以直接让 disjunction 以 Obs 为 conclusion，省去 D 和 Eq 两个中间变量。Elimination/case_analysis 中 equivalence 连接的是中间变量 D 和输入变量 Exh，无法简化为单因子，只能将 equivalence 改为二元因子。
 
-**单前提情况**：当 abduction 只有一个前提（observation）时，`formalize.py` 会自动生成一个 interface claim 作为 alternative explanation（`Alt`）。修复后的单因子 `disjunction([H, Alt], conclusion=Obs)` 同样适用——`Alt` 是自动生成的 interface claim，具有独立先验（默认 0.5），语义不变。
-
-**验证**：设 $\pi(H) = h$，$\pi(\text{Alt}) = a$，$\pi(\text{Obs}) = o$。
+#### 3.1.1 完整 CPT：$P(H\!=\!1 \mid \text{Obs}, \text{Alt})$
 
 单因子 $f(H, \text{Alt}, \text{Obs})$ 编码 $\text{Obs} = H \vee \text{Alt}$（Cromwell 软化）。
 
-直接计算条件概率 $P(H \mid \text{Obs}=1)$。联合分布中 $\text{Obs}=1$ 的部分：
-
 $$
-P(H\!=\!1, \text{Obs}\!=\!1) \propto h \sum_{\text{Alt}} \pi(\text{Alt}) \cdot f(1, \text{Alt}, 1)
+P(H\!=\!1 \mid \text{Obs}, \text{Alt}) = \frac{\pi(H\!=\!1) \cdot f(1, \text{Alt}, \text{Obs})}{\sum_{h} \pi(H\!=\!h) \cdot f(h, \text{Alt}, \text{Obs})}
 $$
 
-当 $H=1$ 时，$H \vee \text{Alt} = 1$，所以 $f(1, \text{Alt}, 1) = 1-\varepsilon$ 对所有 Alt。
+逐行推导（$\varepsilon \to 0$）：
+
+| Obs | Alt | $H\!=\!0$: $H \vee \text{Alt}$ vs Obs | $H\!=\!1$: $H \vee \text{Alt}$ vs Obs | $P(H\!=\!1)$ | 解释 |
+|-----|-----|------|------|------|------|
+| 0 | 0 | $0 = 0$ ✓ | $1 \neq 0$ ✗ | $\to 0$ | 无观测无替代 → H 必假 |
+| 0 | 1 | $1 \neq 0$ ✗ | $1 \neq 0$ ✗ | $= h$ | 不一致（Cromwell），H 不更新 |
+| 1 | 0 | $0 \neq 1$ ✗ | $1 = 1$ ✓ | $\to 1$ | 观测真但无替代 → H 必真 |
+| 1 | 1 | $1 = 1$ ✓ | $1 = 1$ ✓ | $= h$ | 两者都能解释，H 不更新 |
+
+关键行 (Obs=1, Alt=0) 详细推导：
 
 $$
-P(H\!=\!1, \text{Obs}\!=\!1) \propto h \cdot (1-\varepsilon) \xrightarrow{\varepsilon \to 0} h
+P(H\!=\!1 \mid 1, 0) = \frac{h(1-\varepsilon)}{(1-h)\varepsilon + h(1-\varepsilon)} \xrightarrow{\varepsilon \to 0} 1
 $$
+
+关键行 (Obs=0, Alt=0) 详细推导：
+
+$$
+P(H\!=\!1 \mid 0, 0) = \frac{h \cdot \varepsilon}{(1-h)(1-\varepsilon) + h \cdot \varepsilon} \xrightarrow{\varepsilon \to 0} 0
+$$
+
+#### 3.1.2 宏观统计量：$P(H\!=\!1 \mid \text{Obs}\!=\!1)$
+
+在 BP expand 模式下，Alt 作为变量参与推理，其先验 $\pi(\text{Alt}) = a$ 被自动边缘化：
+
+$$
+P(H\!=\!1, \text{Obs}\!=\!1) \propto h \sum_{\text{Alt}} \pi(\text{Alt}) \cdot f(1, \text{Alt}, 1) = h(1-\varepsilon) \xrightarrow{\varepsilon \to 0} h
+$$
+
+（$H=1$ 时 $H \vee \text{Alt} = 1 = \text{Obs}$，对所有 Alt 一致）
 
 $$
 P(H\!=\!0, \text{Obs}\!=\!1) \propto (1-h) \sum_{\text{Alt}} \pi(\text{Alt}) \cdot f(0, \text{Alt}, 1)
 $$
 
-- $\text{Alt}=1$：$H \vee \text{Alt} = 1 = \text{Obs}$，$f = 1-\varepsilon$。贡献 $a(1-\varepsilon)$
-- $\text{Alt}=0$：$H \vee \text{Alt} = 0 \neq 1 = \text{Obs}$，$f = \varepsilon$。贡献 $(1-a)\varepsilon$
+- $\text{Alt}=1$：$0 \vee 1 = 1 = \text{Obs}$ ✓，$f = 1-\varepsilon$。贡献 $a(1-\varepsilon)$
+- $\text{Alt}=0$：$0 \vee 0 = 0 \neq 1 = \text{Obs}$ ✗，$f = \varepsilon$。贡献 $(1-a)\varepsilon$
 
 $$
-P(H\!=\!0, \text{Obs}\!=\!1) \propto (1-h) \cdot [a(1-\varepsilon) + (1-a)\varepsilon] \xrightarrow{\varepsilon \to 0} (1-h) \cdot a
+P(H\!=\!0, \text{Obs}\!=\!1) \propto (1-h)[a(1-\varepsilon) + (1-a)\varepsilon] \xrightarrow{\varepsilon \to 0} (1-h) \cdot a
 $$
 
 $$
@@ -140,6 +163,8 @@ $$
 ### 3.2 Elimination
 
 **语义**：穷尽性 $\text{Exh}$ 声称候选 $C_1, C_2, \ldots, C_n$ 和幸存者 $S$ 穷尽所有可能；每个 $C_i$ 被证据 $E_i$ 反驳；推出 $S$。
+
+**FormalStrategy 接口**：`premises=[Exh, C₁, E₁, C₂, E₂, ...]`，`conclusion=S`。
 
 以 2 个 candidate 为例（n 个 candidate 的泛化是直接的：disjunction 变为 (n+1) 元，contradiction_binary 和 conjunction 输入各增加对应项）。
 
@@ -163,21 +188,29 @@ conjunction([Exh, E₁, E₂]) → G           # Contra 变量消失，从输入
 implication([G]) → S
 ```
 
-注意 conjunction 输入中移除了 Contra 变量。这是正确的：contradiction_binary 已经作为独立的二元因子直接约束 $(C_i, E_i)$ 对，不需要在 conjunction 中重复检查。Conjunction 简化为"穷尽性成立 ∧ 所有证据为真"，与 contradiction 约束共同作用推出结论。
+注意 conjunction 输入中移除了 Contra 变量。这是正确的：contradiction_binary 已经作为独立的二元因子直接约束 $(C_i, E_i)$ 对，不需要在 conjunction 中重复检查。
 
-**验证** $P(S\!=\!1 \mid \text{Exh}\!=\!1, E_1\!=\!1, E_2\!=\!1)$：
+#### 3.2.1 CPT 关键行：$P(S\!=\!1 \mid \text{Exh}, C_1, E_1, C_2, E_2)$
 
-硬约束下（$\varepsilon \to 0$）：
-- $\text{contradiction\_binary}(C_i, E_i)$：$E_i = 1 \Rightarrow C_i = 0$
-- $\text{disjunction}$：$D = C_1 \vee C_2 \vee S = 0 \vee 0 \vee S = S$
-- $\text{equivalence\_binary}(D, \text{Exh})$：$D = \text{Exh} = 1 \Rightarrow S = 1$
-- $\text{conjunction}$：$G = \text{Exh} \wedge E_1 \wedge E_2 = 1$
-- $\text{implication}$：$G = 1 \Rightarrow S = 1$
+完整 CPT 有 $2^5 = 32$ 行。以下推导关键行（$\varepsilon \to 0$）：
 
-两条独立路径（disjunction+equivalence 和 conjunction+implication）都推出 $S = 1$。✓
+| Exh | $E_1$ | $E_2$ | 约束效果 | $P(S\!=\!1)$ |
+|-----|-------|-------|---------|-------------|
+| 1 | 1 | 1 | $C_1\!=\!0, C_2\!=\!0$（均被反驳），$D=S$，$D=1$ | $\to 1$ |
+| 1 | 1 | 0 | $C_1\!=\!0$，$C_2$ 自由，$C_2 \vee S = 1$ | $S$ 与 $C_2$ 竞争 |
+| 1 | 0 | 0 | $C_1, C_2$ 均自由，$C_1 \vee C_2 \vee S = 1$ | 三方竞争 |
+| 0 | 1 | 1 | $C_1\!=\!0, C_2\!=\!0$，穷尽性弱，$G=0$ | implication 路径不激活，S 依赖 disjunction 路径但 Exh=0 弱化 |
 
-**验证** $P(S\!=\!1 \mid \text{Exh}\!=\!1, E_1\!=\!1, E_2\!=\!0)$（部分反驳）：
+详细推导第一行（Exh=1, E₁=1, E₂=1）：
+- contradiction_binary：$E_i = 1 \Rightarrow C_i = 0$
+- disjunction：$D = 0 \vee 0 \vee S = S$
+- equivalence_binary：$D = \text{Exh} = 1 \Rightarrow S = 1$
+- conjunction：$G = 1 \wedge 1 \wedge 1 = 1$
+- implication：$G = 1 \Rightarrow S = 1$
 
+两条独立路径都推出 $S = 1$。✓
+
+详细推导第二行（Exh=1, E₁=1, E₂=0，部分反驳）：
 - $C_1 = 0$（被反驳），$C_2$ 自由（$E_2 = 0$ 时 contradiction_binary 不约束 $C_2$）
 - $D = C_2 \vee S$，$D = \text{Exh} = 1$，所以 $C_2 \vee S = 1$
 - $G = 1 \wedge 1 \wedge 0 = 0$，implication vacuously true
@@ -189,11 +222,13 @@ implication([G]) → S
 
 **语义**：穷尽性 $\text{Exh}$ 声称 $\text{Case}_1, \text{Case}_2, \ldots$ 覆盖所有情况；每种情况 $\text{Case}_i$ 加上支持证据 $\text{Sup}_i$ 都蕴含结论 $\text{Concl}$。
 
+**FormalStrategy 接口**：`premises=[Exh, Case₁, Sup₁, Case₂, Sup₂, ...]`，`conclusion=Concl`。
+
 以 2 个 case 为例（n 个 case 的泛化是直接的：disjunction 增加变量，conjunction+implication 对增加对应项）。
 
 **当前（有 bug）**：
 ```
-disjunction([Case₁, Case��]) → D
+disjunction([Case₁, Case₂]) → D
 equivalence([D, Exh]) → Eq              # dead end ✗
 conjunction([Case₁, Sup₁]) → G₁
 implication([G₁]) → Concl
@@ -213,20 +248,25 @@ implication([G₂]) → Concl
 
 注意 conjunction + implication 的 helper ($G_1$, $G_2$) 不需要修改——它们是中间变量（连接 conjunction 和 implication 两个 factor），信息正常流通。
 
-**验证** $P(\text{Concl}\!=\!1 \mid \text{Exh}\!=\!1, \text{Sup}_1\!=\!1, \text{Sup}_2\!=\!1)$：
+#### 3.3.1 CPT 关键行：$P(\text{Concl}\!=\!1 \mid \text{Exh}, \text{Case}_i, \text{Sup}_i)$
 
-- $\text{equivalence\_binary}(D, \text{Exh})$：$D = 1$，即 $\text{Case}_1 \vee \text{Case}_2 = 1$
-- 无论哪个 Case 为真：
-  - $\text{Case}_i = 1, \text{Sup}_i = 1 \Rightarrow G_i = 1 \Rightarrow \text{Concl} = 1$
+完整 CPT 有 $2^5 = 32$ 行。关键行（$\varepsilon \to 0$）：
 
-两条 implication 路径独立支持 Concl。✓
+| Exh | Case₁ | Sup₁ | Case₂ | Sup₂ | $P(\text{Concl}\!=\!1)$ |
+|-----|-------|------|-------|------|------------------------|
+| 1 | 1 | 1 | 0 | 0 | $\to 1$（Case 1 路径） |
+| 1 | 0 | 0 | 1 | 1 | $\to 1$（Case 2 路径） |
+| 1 | 1 | 1 | 1 | 1 | $\to 1$（两条路径） |
+| 1 | 1 | 0 | 0 | 0 | 弱（Sup₁=0，Case₁ 路径不完整） |
+| 0 | 1 | 1 | 0 | 0 | 弱（Exh=0，穷尽性不成立） |
 
-**验证** $P(\text{Concl}\!=\!1 \mid \text{Exh}\!=\!1, \text{Case}_1\!=\!1, \text{Sup}_1\!=\!1, \text{Case}_2\!=\!0, \text{Sup}_2\!=\!0)$：
+详细推导第一行（Exh=1, Case₁=1, Sup₁=1, Case₂=0, Sup₂=0）：
+- equivalence_binary(D, Exh)：$D = 1$，即 $\text{Case}_1 \vee \text{Case}_2 = 1$（已满足）
+- $G_1 = \text{Case}_1 \wedge \text{Sup}_1 = 1$
+- implication：$G_1 = 1 \Rightarrow \text{Concl} = 1$ ✓
+- $G_2 = 0$，implication vacuously true
 
-- $G_1 = 1 \Rightarrow \text{Concl} = 1$（Case 1 路径）
-- $G_2 = 0$，implication vacuously true（Case 2 不参与）
-
-由单条路径推出结论。✓
+单条路径推出结论。✓
 
 ## 4. 不受影响的策略
 
@@ -248,12 +288,12 @@ implication([G₂]) → Concl
 ### 5.1 `formalize.py` 修改
 
 1. **Abduction**：改为 `Operator(operator="disjunction", variables=[H, Alt], conclusion=Obs)`。不生成 D 和 Eq helper claim。单前提时自动生成的 Alt interface claim 不受影响。
-2. **Elimination**：equivalence 和 contradiction 标记为 `binary=True`（不生成 conclusion helper）；conjunction 的 variables 中移除 Contra 变量。
-3. **Case analysis**：equivalence 标记为 `binary=True`。
+2. **Elimination**：equivalence 和 contradiction 标记为无 conclusion（二元因子）；conjunction 的 variables 中移除 Contra 变量。
+3. **Case analysis**：equivalence 标记为无 conclusion（二元因子）。
 
 ### 5.2 `lowering.py` 修改
 
-1. **二元因子支持**：当前 `FactorGraph.add_factor(fid, ft, variables, conclusion)` 要求每个 factor 都有 conclusion。二元因子需要新的 API：`add_binary_factor(fid, ft, var_a, var_b)` 不创建 conclusion 变量，直接在 (var_a, var_b) 上定义势函数。或者在 `_lower_strategy` 的 FormalExpr 路径中检测 dead-end conclusion 并在 lowering 时自动省略。
+1. **二元因子支持**：在 `_lower_strategy` 的 FormalExpr 路径中，检测 Operator 的 `conclusion` 是否为 `None`（二元因子标记）。若为 `None`，调用新的 `add_binary_factor(fid, ft, variables)` 而非 `add_factor(fid, ft, variables, conclusion)`。二元因子的势函数使用 §2.1 的真值表。
 2. **中间变量先验**：`_ensure_claim_var` 对 FormalExpr 内部 helper claim 统一使用 $\pi = 0.5$（当前行为已正确），不使用 $1-\varepsilon$。
 3. **Top-level operator**：conclusion 保持现有逻辑（它们可能被其他 strategy 引用，不是 dead end）。
 
@@ -263,4 +303,4 @@ implication([G₂]) → Concl
 
 ### 5.4 `inference.md` 更新
 
-当前 `inference.md` §55-57 的 gate_var 机制将被本方案取代。Relation operator 不再需要 gate_var 来控制约束强度；dead-end 变量直接消除，中间变量使用 uniform prior。
+当前 `inference.md` 的 gate_var 机制将被本方案取代。Relation operator 不再需要 gate_var 来控制约束强度；dead-end 变量直接消除，中间变量使用 uniform prior。
