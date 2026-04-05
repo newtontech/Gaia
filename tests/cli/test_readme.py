@@ -3,6 +3,7 @@
 from typer.testing import CliRunner
 
 from gaia.cli.commands._readme import (
+    _render_overview_graph,
     generate_readme,
     render_knowledge_nodes,
     render_mermaid,
@@ -273,11 +274,90 @@ def test_compile_readme_flag_generates_readme(tmp_path):
     assert "[a](#a)" in readme or "[b](#b)" in readme
 
 
+# ── overview graph ──
+
+
+def test_overview_graph_shows_transitive_deps():
+    """Overview graph connects exported conclusions through non-exported intermediates."""
+    ir = {
+        "knowledges": [
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A.", "exported": True},
+            {"id": "ns:p::mid", "label": "mid", "type": "claim", "content": "Mid."},
+            {"id": "ns:p::b", "label": "b", "type": "claim", "content": "B.", "exported": True},
+            {"id": "ns:p::c", "label": "c", "type": "claim", "content": "C.", "exported": True},
+        ],
+        "strategies": [
+            {"premises": ["ns:p::a"], "conclusion": "ns:p::mid", "type": "noisy_and"},
+            {"premises": ["ns:p::mid"], "conclusion": "ns:p::b", "type": "noisy_and"},
+        ],
+        "operators": [],
+    }
+    lines = _render_overview_graph(ir)
+    md = "\n".join(lines)
+    assert "## Overview" in md
+    assert "graph LR" in md
+    # a → mid → b, so overview shows a --> b (transitive through mid)
+    assert "a --> b" in md
+    # mid is not exported, so it should NOT appear
+    assert "mid" not in md
+    # c is exported but independent — no edges to/from c, so not in the graph
+    # (overview only shows nodes that have edges)
+
+
+def test_overview_graph_stops_at_nearest_exported():
+    """Overview graph stops at nearest exported dependency — no redundant transitive edges."""
+    ir = {
+        "knowledges": [
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A.", "exported": True},
+            {"id": "ns:p::b", "label": "b", "type": "claim", "content": "B.", "exported": True},
+            {"id": "ns:p::c", "label": "c", "type": "claim", "content": "C.", "exported": True},
+        ],
+        "strategies": [
+            {"premises": ["ns:p::a"], "conclusion": "ns:p::b", "type": "noisy_and"},
+            {"premises": ["ns:p::b"], "conclusion": "ns:p::c", "type": "noisy_and"},
+        ],
+        "operators": [],
+    }
+    lines = _render_overview_graph(ir)
+    md = "\n".join(lines)
+    assert "a --> b" in md
+    assert "b --> c" in md
+    # a --> c should NOT appear (redundant — a→b→c already shown)
+    assert "a --> c" not in md
+
+
+def test_overview_graph_empty_when_no_deps():
+    """Overview graph returns empty when exported nodes are all independent."""
+    ir = {
+        "knowledges": [
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A.", "exported": True},
+            {"id": "ns:p::b", "label": "b", "type": "claim", "content": "B.", "exported": True},
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    lines = _render_overview_graph(ir)
+    assert lines == []
+
+
+def test_overview_graph_empty_when_single_export():
+    """Overview graph returns empty with fewer than 2 exported nodes."""
+    ir = {
+        "knowledges": [
+            {"id": "ns:p::a", "label": "a", "type": "claim", "content": "A.", "exported": True},
+        ],
+        "strategies": [],
+        "operators": [],
+    }
+    lines = _render_overview_graph(ir)
+    assert lines == []
+
+
 # ── module narrative ──
 
 
 def test_module_sections_with_per_module_mermaid():
-    """Multi-module: each module gets its own section with Mermaid diagram."""
+    """Multi-module: first module skips Mermaid, subsequent modules get diagrams."""
     ir = {
         "module_order": ["sec_a", "sec_b"],
         "knowledges": [
@@ -321,8 +401,8 @@ def test_module_sections_with_per_module_mermaid():
     # Order: sec_a nodes before sec_b
     assert md.index("#### x") < md.index("#### z")
     assert md.index("#### y") < md.index("#### z")
-    # Per-module Mermaid diagrams
-    assert md.count("```mermaid") == 2
+    # First module (sec_a) skips Mermaid; sec_b gets one
+    assert md.count("```mermaid") == 1
     # sec_b's diagram should show x as external premise
     sec_b_section = md.split("## sec_b")[1]
     assert "x" in sec_b_section.split("```")[1]  # x appears in sec_b's mermaid
