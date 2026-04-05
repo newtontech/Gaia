@@ -388,6 +388,86 @@ def _render_node(
     return lines
 
 
+def _render_overview_graph(
+    ir: dict,
+    beliefs: dict[str, float] | None = None,
+) -> list[str]:
+    """Render a summary Mermaid graph showing dependencies between exported conclusions."""
+    knowledge_by_id = {k["id"]: k for k in ir["knowledges"]}
+    exported = [
+        k for k in ir["knowledges"] if k.get("exported") and not _is_helper(k.get("label", ""))
+    ]
+    exported_ids = {k["id"] for k in exported}
+
+    if len(exported) < 2:
+        return []
+
+    # Build dependency graph: conclusion → set of premise IDs
+    deps: dict[str, set[str]] = defaultdict(set)
+    for s in ir.get("strategies", []):
+        conc = s.get("conclusion")
+        if conc:
+            for p in s.get("premises", []):
+                deps[conc].add(p)
+    for o in ir.get("operators", []):
+        conc = o.get("conclusion")
+        if conc:
+            for v in o.get("variables", []):
+                deps[conc].add(v)
+
+    # For each exported node, find nearest exported dependencies via BFS
+    # (stop at exported nodes — no redundant transitive edges)
+    def find_exported_deps(start: str) -> set[str]:
+        visited: set[str] = set()
+        stack = list(deps.get(start, set()))
+        result: set[str] = set()
+        while stack:
+            node = stack.pop()
+            if node in visited:
+                continue
+            visited.add(node)
+            if node in exported_ids:
+                result.add(node)
+            else:
+                stack.extend(deps.get(node, set()))
+        return result
+
+    edges: set[tuple[str, str]] = set()
+    for eid in exported_ids:
+        for dep_id in find_exported_deps(eid):
+            edges.add((dep_id, eid))
+
+    if not edges:
+        return []
+
+    c = classify_ir(ir)
+    lines = ["## Overview", "", "```mermaid", "graph LR"]
+
+    for k in exported:
+        label = k.get("label", "")
+        kid = k["id"]
+        title = k.get("title") or label
+        display = (
+            f"{title} ({beliefs[kid]:.2f})" if beliefs and kid in beliefs else title
+        )
+        display = display.replace('"', "#quot;")
+        role = node_role(kid, k["type"], c)
+        css = _ROLE_TO_CSS.get(role, "orphan")
+        lines.append(f'    {label}["{display}"]:::{css}')
+
+    for dep_id, eid in sorted(edges):
+        dep_label = knowledge_by_id[dep_id].get("label", "")
+        eid_label = knowledge_by_id[eid].get("label", "")
+        lines.append(f"    {dep_label} --> {eid_label}")
+
+    lines.append("")
+    lines.append(_MERMAID_STYLES)
+    lines.append("```")
+    lines.append("")
+
+    return lines
+
+
 def _render_introduction(
     ir: dict,
     beliefs: dict[str, float],
@@ -455,6 +535,7 @@ def render_knowledge_nodes(
         segments = _module_segments(ordered_nodes)
         module_titles = ir.get("module_titles") or {}
         segment_counts: dict[str, int] = defaultdict(int)
+        first_module = module_order[0] if module_order else None
 
         for mod, nodes in segments:
             count = segment_counts[mod]
@@ -469,7 +550,9 @@ def render_knowledge_nodes(
             sections.append(f"## {heading}")
             sections.append("")
 
-            if mod != "Root":
+            # Skip per-module Mermaid for the first module (introduction/motivation)
+            # — the overview graph covers the high-level view
+            if mod != "Root" and mod != first_module:
                 mod_ids = {k["id"] for k in nodes}
                 mermaid = render_mermaid(ir, beliefs=beliefs, node_ids=mod_ids)
                 sections.append(mermaid)
@@ -568,6 +651,11 @@ def generate_readme(
     if desc:
         parts.append(desc)
         parts.append("")
+
+    # Overview graph: exported conclusions and their transitive dependencies
+    overview = _render_overview_graph(ir, beliefs)
+    if overview:
+        parts.extend(overview)
 
     # Introduction: motivation module or exported knowledge
     intro = _render_introduction(ir, beliefs or {}, priors or {})
