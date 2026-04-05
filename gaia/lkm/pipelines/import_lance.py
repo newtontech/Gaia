@@ -129,6 +129,27 @@ def _request_shutdown(signum: int, frame: object) -> None:
     logger.info("Shutdown requested (signal %d). Will exit after current chunk.", signum)
 
 
+# ── Checkpoint seeding ──
+
+
+async def _seed_checkpoint_from_import_status(
+    storage: StorageManager,
+    checkpoint: Checkpoint,
+) -> int:
+    """Seed an empty checkpoint from the import_status table in LanceDB.
+
+    Returns the number of papers seeded.
+    """
+    ingested_ids = await storage.list_ingested_package_ids()
+    for pkg_id in ingested_ids:
+        # import_status stores "paper:123", checkpoint stores "123"
+        paper_id = pkg_id.removeprefix("paper:")
+        checkpoint.update(paper_id, "ingested")
+    if ingested_ids:
+        checkpoint.flush()
+    return len(ingested_ids)
+
+
 # ── Chunk processor ──
 
 
@@ -268,9 +289,17 @@ async def run_batch_import(
         print(f"\nTotal: {len(papers)} papers (dry run, no import)")
         return stats
 
-    # 2. Filter via checkpoint
+    # 2. Filter via checkpoint (seed from import_status if empty)
     output_dir.mkdir(parents=True, exist_ok=True)
     checkpoint = Checkpoint(output_dir / "checkpoint.json")
+    if checkpoint.ingested_count == 0:
+        config = StorageConfig(lancedb_uri=lkm_db_uri)
+        storage_for_seed = StorageManager(config)
+        await storage_for_seed.initialize()
+        seeded = await _seed_checkpoint_from_import_status(storage_for_seed, checkpoint)
+        await storage_for_seed.close()
+        if seeded:
+            logger.info("Seeded checkpoint from import_status: %d papers already ingested", seeded)
     pending = checkpoint.pending(paper_ids)
     stats.skipped = len(paper_ids) - len(pending)
     if stats.skipped:
