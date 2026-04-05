@@ -20,28 +20,36 @@ def _knowledge_diagnostics(ir: dict) -> list[str]:
     settings = {k["id"]: k for k in ir["knowledges"] if k["type"] == "setting"}
     questions = {k["id"]: k for k in ir["knowledges"] if k["type"] == "question"}
 
-    # Identify strategy conclusions and premises
+    # Identify strategy conclusions, premises, and background references
     strategy_conclusions: set[str] = set()
     strategy_premises: set[str] = set()
+    strategy_background: set[str] = set()
     for s in ir.get("strategies", []):
         if s.get("conclusion"):
             strategy_conclusions.add(s["conclusion"])
         for p in s.get("premises", []):
             strategy_premises.add(p)
+        for b in s.get("background", []):
+            strategy_background.add(b)
 
-    # Operator conclusions (structural helpers)
+    # Operator conclusions and variables
     operator_conclusions: set[str] = set()
+    operator_variables: set[str] = set()
     for o in ir.get("operators", []):
         if o.get("conclusion"):
             operator_conclusions.add(o["conclusion"])
         for v in o.get("variables", []):
-            strategy_premises.add(v)
+            operator_variables.add(v)
+
+    # All referenced IDs (premise, background, or operator variable)
+    all_referenced = strategy_premises | strategy_background | operator_variables
 
     # Classify claims
     independent = []  # leaf nodes — need reviewer prior
     derived = []  # strategy conclusions — BP propagates belief
     structural = []  # operator conclusions — deterministic
-    orphaned = []  # not referenced by any strategy or operator
+    background_only = []  # referenced only in background, not in premise/conclusion
+    orphaned = []  # not referenced anywhere
 
     for cid, k in claims.items():
         label = k.get("label", cid.split("::")[-1])
@@ -49,8 +57,10 @@ def _knowledge_diagnostics(ir: dict) -> list[str]:
             structural.append(label)
         elif cid in strategy_conclusions:
             derived.append(label)
-        elif cid in strategy_premises:
+        elif cid in strategy_premises or cid in operator_variables:
             independent.append(label)
+        elif cid in strategy_background:
+            background_only.append(label)
         else:
             orphaned.append(label)
 
@@ -62,6 +72,8 @@ def _knowledge_diagnostics(ir: dict) -> list[str]:
     lines.append(f"    Independent (need prior):  {len(independent)}")
     lines.append(f"    Derived (BP propagates):   {len(derived)}")
     lines.append(f"    Structural (deterministic): {len(structural)}")
+    if background_only:
+        lines.append(f"    Background-only:           {len(background_only)}")
     if orphaned:
         lines.append(f"    Orphaned (no connections): {len(orphaned)}")
 
@@ -79,10 +91,17 @@ def _knowledge_diagnostics(ir: dict) -> list[str]:
         for label in sorted(derived):
             lines.append(f"    - {label}")
 
-    # Warn about orphaned claims
+    # List background-only claims
+    if background_only:
+        lines.append("")
+        lines.append("  Background-only claims (referenced in strategy background, not in BP graph):")
+        for label in sorted(background_only):
+            lines.append(f"    - {label}")
+
+    # Warn about truly orphaned claims
     if orphaned:
         lines.append("")
-        lines.append("  Orphaned claims (not connected to any reasoning):")
+        lines.append("  Orphaned claims (not referenced anywhere):")
         for label in sorted(orphaned):
             lines.append(f"    - {label}")
 
