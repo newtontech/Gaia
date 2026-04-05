@@ -91,7 +91,9 @@ def _knowledge_diagnostics(ir: dict) -> list[str]:
     # List background-only claims
     if background_only:
         lines.append("")
-        lines.append("  Background-only claims (referenced in strategy background, not in BP graph):")
+        lines.append(
+            "  Background-only claims (referenced in strategy background, not in BP graph):"
+        )
         for label in sorted(background_only):
             lines.append(f"    - {label}")
 

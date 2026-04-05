@@ -356,8 +356,9 @@ def test_at_label_in_background_ok():
         a.label = "a"
         b = claim("B.")
         b.label = "b"
-        infer(premises=[a], conclusion=b, background=[ctx],
-              reason="Given @a under conditions @ctx.")
+        infer(
+            premises=[a], conclusion=b, background=[ctx], reason="Given @a under conditions @ctx."
+        )
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("always")
         compile_package_artifact(pkg)
