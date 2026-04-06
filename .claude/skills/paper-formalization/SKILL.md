@@ -30,10 +30,12 @@ digraph formalization {
     review [label="Write review sidecar"];
     compile [label="gaia infer"];
     interpret [label="Interpret BP results"];
+    readme [label="gaia compile . --readme"];
 
     p1 -> r1 -> p2 -> r2 -> p3 -> p4 -> r4 -> review -> compile -> interpret;
     interpret -> p1 [label="structural issues" style=dashed];
     interpret -> review [label="prior/cond_prob issues" style=dashed];
+    interpret -> readme;
 }
 ```
 
@@ -431,9 +433,26 @@ Operators 编码确定性逻辑约束，与 strategy 正交：
 | 遗漏推理中的隐含前提 | knowledge graph 不完整 | Pass 3 用 `gaia check` + 手动审查 |
 | 数值不核实 | 数据错误 | 每个数值对照论文原文 |
 
+## Generate README
+
+BP 结果稳定后，生成 README：
+
+```bash
+gaia infer .              # 确保 beliefs 是最新的
+gaia compile . --readme   # 生成/覆盖 README.md
+```
+
+README 包含：
+- **Overview graph**：exported conclusions 的 Mermaid 图（含 belief 数值）
+- **Knowledge Graph**：完整 Mermaid 图（所有 node、strategy、operator）
+- **Knowledge Nodes**：每个 claim 的 content、prior、belief、derivation 和 reasoning
+- **Inference Results**：belief 汇总表
+
+**注意**：必须先 `gaia infer .` 再 `gaia compile . --readme`，否则 README 不包含 belief 数值。
+
 ## Spec Pointers
 
-- **gaia-ir-authoring** — 编译、验证、注册的操作指南
+- **gaia-ir-authoring** — 编译、验证、注册的操作指南（含 README 生成步骤）
 - `docs/foundations/gaia-lang/dsl.md` — DSL 完整参考
 - `docs/foundations/gaia-lang/knowledge-and-reasoning.md` — 知识类型与推理语义
 - `docs/foundations/cli/inference.md` — 推理管线（review sidecar、BP）

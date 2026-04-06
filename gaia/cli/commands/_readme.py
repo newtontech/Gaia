@@ -38,8 +38,10 @@ def topo_layers(ir: dict) -> dict[str, int]:
     return layers
 
 
-def _is_helper(label: str) -> bool:
-    return label.startswith("__")
+def _is_helper(label: str | None) -> bool:
+    if not label:
+        return True
+    return label.startswith("__") or label.startswith("_anon")
 
 
 def _anchor_id(label: str) -> str:

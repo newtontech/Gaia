@@ -233,7 +233,24 @@ result = engine.run(fg)  # Auto-selects JT (exact) or loopy BP
 beliefs = result.beliefs
 ```
 
-### Step 8: Register with official registry (optional)
+### Step 8: Generate README (optional)
+
+After inference, regenerate the README with belief results and a Mermaid knowledge graph:
+
+```bash
+gaia infer .              # Run inference first (beliefs appear in README)
+gaia compile . --readme   # Generates/overwrites README.md at package root
+```
+
+The generated README includes:
+- **Overview graph**: exported conclusions with belief values
+- **Knowledge Graph**: full Mermaid diagram with all nodes, strategies, and operators
+- **Knowledge Nodes**: each claim with content, prior, belief, derivation, and reasoning
+- **Inference Results**: summary table of all beliefs
+
+Always run `gaia infer .` before `gaia compile . --readme` so the README includes up-to-date belief values.
+
+### Step 9: Register with official registry (optional)
 
 Requires a GitHub repository with the package source + `.gaia/` artifacts, tagged with a version.
 
