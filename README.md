@@ -13,58 +13,56 @@ Galileo's thought experiment: tie a heavy stone 🪨 to a light stone 🪶. Does
 ```python
 from gaia.lang import claim, contradiction, deduction, abduction
 
-# 🏛️ Aristotle's doctrine — a claim, not a fact, because it CAN be wrong
-aristotle = claim("🏛️ Aristotle's doctrine: the heavier an object is, the faster it falls.")
-heavy_faster = claim("🪨 A heavy stone falls faster than 🪶 a light one in air.")
+# 📋 The observation everyone agrees on
+obs_daily = claim("Heavy objects fall faster than light ones in air.")
 
-# 🤔 Two predictions follow from Aristotle — but they contradict each other!
+# 🏛️ Two competing explanations
+aristotle = claim("🏛️ Speed is proportional to weight — heavier = faster.")
+air_resistance = claim("🌬️ The speed difference is caused by air resistance, not weight.")
+
+# 🔍 Abduction: which explanation better accounts for the observation?
+abduction(observation=obs_daily, hypothesis=air_resistance, alternative=aristotle,
+    reason="Both explain why heavy objects fall faster in air.")
+
+# 🤔 Meanwhile, Aristotle's doctrine implies contradictory predictions
 composite_slower = claim("🪨🪶 The composite falls SLOWER than the heavy stone alone.")
 composite_faster = claim("🪨🪶 The composite falls FASTER than either stone alone.")
-
-# Aristotle's doctrine implies both predictions
 deduction(premises=[aristotle], conclusion=composite_slower,
-    reason="If heavier = faster, then the light stone must slow down the heavy one.")
+    reason="If heavier = faster, the light stone drags the heavy one back.")
 deduction(premises=[aristotle], conclusion=composite_faster,
-    reason="If heavier = faster, then the heavier composite must fall faster.")
+    reason="If heavier = faster, the heavier composite must fall faster.")
 
 # ⚔️ Same premise, opposite conclusions — that's a contradiction!
 paradox = contradiction(composite_slower, composite_faster,
     reason="Aristotle's own logic predicts both faster AND slower")
 
-# 🤔 Why DO heavy things fall faster in air? Two competing explanations:
-air_resistance = claim("The speed difference in air is caused by air resistance, not by weight.")
-abduction(observation=heavy_faster, hypothesis=air_resistance, alternative=aristotle,
-    reason="Both explain why heavy falls faster in air, "
-    "but Aristotle's doctrine leads to a paradox — air resistance doesn't.")
-
 # 💡 Remove the air, remove the difference
 vacuum_law = claim("💡 In vacuum, all bodies fall at the same rate.")
 deduction(premises=[air_resistance], conclusion=vacuum_law,
-    reason="If weight doesn't matter and air resistance is removed, "
-    "nothing distinguishes the objects.")
+    reason="If air resistance is the sole cause, removing it means all fall equally.")
 ```
 
 `gaia compile . && gaia infer .` compiles this into a factor graph and runs belief propagation:
 
 ```mermaid
 graph TD
+    obs_daily["📋 Daily observation (0.90 → 1.00 📈)"]:::premise
     aristotle["🏛️ Aristotle: heavier = faster (0.90 → 0.07 📉)"]:::premise
-    heavy_faster["🪨 Heavy falls faster (0.80 → 1.00 📈)"]:::premise
+    air_resistance["🌬️ Air resistance (0.50 → 0.94 📈)"]:::derived
     composite_slower["🪨🪶 < 🪨 Composite slower (0.60 → 0.40 📉)"]:::derived
     composite_faster["🪨🪶 > 🪨 Composite faster (0.60 → 0.40 📉)"]:::derived
     paradox["⚔️ paradox (0.98)"]:::derived
-    air_resistance["🌬️ Air resistance (0.50 → 0.94 📈)"]:::derived
     vacuum_law["💡 Vacuum law (0.30 → 0.96 📈)"]:::derived
-    strat_0(["🧠 deduction"])
+    strat_0(["🔍 abduction"])
+    obs_daily --> strat_0
     aristotle --> strat_0
-    strat_0 --> composite_slower
+    strat_0 --> air_resistance
     strat_1(["🧠 deduction"])
     aristotle --> strat_1
-    strat_1 --> composite_faster
-    strat_2(["🔍 abduction"])
-    heavy_faster --> strat_2
+    strat_1 --> composite_slower
+    strat_2(["🧠 deduction"])
     aristotle --> strat_2
-    strat_2 --> air_resistance
+    strat_2 --> composite_faster
     strat_3(["🧠 deduction"])
     air_resistance --> strat_3
     strat_3 --> vacuum_law
@@ -81,11 +79,11 @@ graph TD
 
 | Claim | Prior | → | Belief | |
 |-------|------:|---|-------:|---|
-| 🏛️ Aristotle's doctrine | 0.90 | → | **0.07** | 📉 contradiction propagates back — Aristotle refuted |
+| 📋 Daily observation | 0.90 | → | **1.00** | 📈 confirmed by both explanations |
+| 🏛️ Aristotle's law | 0.90 | → | **0.07** | 📉 contradiction propagates back — refuted |
+| 🌬️ Air resistance | 0.50 | → | **0.94** | 📈 abduction: the better explanation wins |
 | 🪨🪶 Composite slower | 0.60 | → | **0.40** | 📉 contradiction forces mutual exclusion |
 | 🪨🪶 Composite faster | 0.60 | → | **0.40** | 📉 symmetric with composite slower |
-| 🌬️ Air resistance | 0.50 | → | **0.94** | 📈 abduction: the better explanation wins |
-| 🪨 Heavy falls faster | 0.80 | → | **1.00** | 📈 supported by both explanations |
 | 💡 Vacuum law | 0.30 | → | **0.96** | 📈 Galileo wins — remove air, all fall equally |
 
 ## Install
