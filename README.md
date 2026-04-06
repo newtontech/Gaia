@@ -86,6 +86,8 @@ graph TD
 | 🪨🪶 Composite faster | 0.60 | → | **0.40** | 📉 symmetric with composite slower |
 | 💡 Vacuum law | 0.30 | → | **0.96** | 📈 Galileo wins — remove air, all fall equally |
 
+Note how the contradiction and abduction are independent subgraphs, yet BP automatically combines both lines of evidence: the contradiction refutes Aristotle (0.90 → 0.07) while the abduction elevates air resistance (0.50 → 0.94), and together they lift the vacuum law from a speculative 0.30 to a near-certain **0.96** — no new experimental data needed, just the structure of the reasoning itself.
+
 ## Install
 
 ```bash
