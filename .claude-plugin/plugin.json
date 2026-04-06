@@ -7,6 +7,5 @@
   },
   "repository": "https://github.com/SiliconEinstein/Gaia",
   "license": "MIT",
-  "keywords": ["gaia", "knowledge", "formalization", "science", "reasoning"],
-  "skills": "./plugins/gaia/skills/"
+  "keywords": ["gaia", "knowledge", "formalization", "science", "reasoning"]
 }
