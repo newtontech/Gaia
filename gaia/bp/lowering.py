@@ -233,8 +233,17 @@ def _lower_strategy(
             fid = _next_fid(f"fs_{s.strategy_id}_{i}", ctr)
             ft = _OPERATOR_MAP[op.operator]
             fg.add_factor(fid, ft, op.variables, op.conclusion)
-            for vid in (*op.variables, op.conclusion):
+            for vid in op.variables:
                 _ensure_claim_var(fg, vid, priors, claim_ids)
+            concl = op.conclusion
+            if concl not in fg.variables:
+                default = 1.0 - CROMWELL_EPS if op.operator in _RELATION_OPS else 0.5
+                fg.add_variable(concl, priors.get(concl, default))
+            elif op.operator in _RELATION_OPS and concl not in priors:
+                # Variable was pre-registered with wrong default (0.5) by
+                # _ensure_claim_var during auto-formalization.  Override to
+                # assertion prior for relation operator conclusions.
+                fg.variables[concl] = 1.0 - CROMWELL_EPS
         return
 
     # Leaf Strategy
