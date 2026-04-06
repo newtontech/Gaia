@@ -6,11 +6,7 @@
   "plugins": [
     {
       "name": "gaia",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/SiliconEinstein/Gaia.git",
-        "path": "plugins/gaia"
-      },
+      "source": "./",
       "description": "Gaia knowledge formalization skills",
       "version": "0.1.0"
     }
