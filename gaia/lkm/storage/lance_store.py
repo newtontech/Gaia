@@ -427,6 +427,51 @@ class LanceContentStore:
         )
         return row_to_local_variable(results[0]) if results else None
 
+    async def get_local_variables_by_ids(
+        self, local_ids: list[str], concurrency: int = 4
+    ) -> dict[str, LocalVariableNode]:
+        """Batch-fetch local variables by ID list.
+
+        Splits into batches of 500 IDs and runs up to `concurrency` batches
+        in parallel via the thread-pool executor.
+        """
+        if not local_ids:
+            return {}
+        table = self._db.open_table("local_variable_nodes")
+        result_map: dict[str, LocalVariableNode] = {}
+        sem = asyncio.Semaphore(concurrency)
+
+        async def _fetch_batch(batch: list[str]) -> list[LocalVariableNode]:
+            in_clause = ", ".join(f"'{_q(lid)}'" for lid in batch)
+            async with sem:
+                results = await self._run(
+                    lambda ic=in_clause: (
+                        table.search()
+                        .where(f"id IN ({ic}) AND ingest_status = 'merged'")
+                        .limit(len(batch) + 100)
+                        .to_list()
+                    )
+                )
+            return [row_to_local_variable(r) for r in results]
+
+        # Build batches
+        batches = [local_ids[i : i + 500] for i in range(0, len(local_ids), 500)]
+
+        # Run concurrently
+        batch_results = await asyncio.gather(*[_fetch_batch(b) for b in batches])
+        for lvs in batch_results:
+            for lv in lvs:
+                result_map[lv.id] = lv
+
+        logger.info(
+            "Batch local variable lookup: %d queried, %d found (%d batches, concurrency=%d)",
+            len(local_ids),
+            len(result_map),
+            len(batches),
+            concurrency,
+        )
+        return result_map
+
     async def get_local_variables_by_package(
         self, source_package: str, merged_only: bool = True
     ) -> list[LocalVariableNode]:
@@ -474,6 +519,28 @@ class LanceContentStore:
             where += f" AND type = '{_q(type_filter)}'"
         results = await self._run(lambda: table.search().where(where).limit(limit).to_list())
         return [row_to_global_variable(r) for r in results]
+
+    async def list_all_public_global_ids(self) -> list[dict]:
+        """List all public global variable IDs with type and representative_lcn.
+
+        Returns list of dicts: {id, type, representative_lcn (JSON string)}.
+        Scans the full table — uses count_rows() to set the limit.
+        """
+        table = self._db.open_table("global_variable_nodes")
+        total = await self._run(table.count_rows)
+        results = await self._run(
+            lambda: (
+                table.search()
+                .where("visibility = 'public'")
+                .select(["id", "type", "representative_lcn"])
+                .limit(max(total, _MAX_SCAN))
+                .to_list()
+            )
+        )
+        return [
+            {"id": r["id"], "type": r["type"], "representative_lcn": r["representative_lcn"]}
+            for r in results
+        ]
 
     async def find_global_by_content_hash(
         self, content_hash: str, visibility: str = "public"
