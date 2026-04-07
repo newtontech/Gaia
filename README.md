@@ -103,7 +103,7 @@ cd Gaia && uv sync
 
 ### Claude Code Plugin
 
-Gaia provides a [Claude Code](https://claude.ai/code) plugin with a **formalization** skill that guides you through converting any knowledge source (scientific papers, textbooks, technical reports) into a Gaia knowledge package.
+Gaia provides a [Claude Code](https://claude.ai/code) plugin with skills that guide the full knowledge formalization workflow — from reading a paper to publishing a Gaia package on GitHub.
 
 ```bash
 # 1. Add the Gaia marketplace (one-time setup)
@@ -111,18 +111,34 @@ Gaia provides a [Claude Code](https://claude.ai/code) plugin with a **formalizat
 
 # 2. Install the gaia plugin
 /plugin install gaia
-
-# 3. Start formalizing a source
-/gaia:formalization
 ```
 
-The skill walks you through a four-pass process: extract knowledge nodes, connect reasoning strategies, check completeness, and refine strategy types.
+**Available skills:**
+
+| Skill | Purpose |
+|-------|---------|
+| `/gaia` | Entry point — routes to the right skill based on your request |
+| `/gaia:formalization` | Four-pass paper formalization: extract nodes → connect strategies → check completeness → refine types |
+| `/gaia:gaia-cli` | CLI reference — `gaia init`, `compile`, `infer`, `check`, `register`, `add` |
+| `/gaia:gaia-lang` | DSL reference — knowledge types, operators, strategies, metadata, package structure |
+| `/gaia:review` | Write review sidecars — assign priors, judge strategies, parameterize inference |
+| `/gaia:publish` | Generate GitHub presentation (`--github` skeleton → narrative README → push) |
+
+### Formalize a Paper End-to-End
+
+With the plugin installed, formalizing a scientific paper into a Gaia knowledge package is a three-step process:
+
+1. **`/gaia:formalization`** — Point Claude at your paper (PDF or text in `artifacts/`). The skill guides a four-pass process: extract knowledge nodes, connect reasoning strategies, check completeness, and refine strategy types. Output: a compilable Gaia package with review sidecar.
+
+2. **`/gaia:publish`** — After `gaia compile . --github` generates the skeleton, this skill fills in the narrative README, writes section summaries, and pushes to GitHub. Your repo gets a human-readable presentation of the formalized knowledge with interactive graphs.
+
+3. **`gaia register`** — Submit the package to the [Gaia Official Registry](https://github.com/SiliconEinstein/gaia-registry) so others can `gaia add` it as a dependency.
 
 ## CLI Workflow
 
 ```
-gaia init → gaia add → write package → gaia compile → write review → gaia infer → gaia compile --readme → gaia register
-(scaffold)  (add deps)   (DSL code)     (DSL → IR)   (self-review)  (BP preview)  (gen README)           (registry PR)
+gaia init → gaia add → write package → gaia compile → write review → gaia infer → gaia compile --github → /gaia:publish → gaia register
+(scaffold)  (add deps)   (DSL code)     (DSL → IR)   (self-review)  (BP preview)  (GitHub skeleton)      (fill narrative) (registry PR)
 ```
 
 | Command | Purpose |
@@ -130,7 +146,8 @@ gaia init → gaia add → write package → gaia compile → write review → g
 | `gaia init <name>` | Scaffold a new Gaia knowledge package |
 | `gaia add <package>` | Install a registered Gaia package from the [official registry](https://github.com/SiliconEinstein/gaia-registry) |
 | `gaia compile [path]` | Compile Python DSL to Gaia IR (`.gaia/ir.json`) |
-| `gaia compile --readme [path]` | Compile and generate `README.md` with Mermaid graph + belief results |
+| `gaia compile --github [path]` | Generate GitHub presentation skeleton (`.github-output/`): wiki, README, React Pages, graph.json |
+| `gaia compile --module-graphs [path]` | Generate per-module detailed reasoning graphs to `docs/detailed-reasoning.md` |
 | `gaia check [path]` | Validate package structure and IR consistency (used by registry CI) |
 | `gaia infer [path]` | Run belief propagation with a review sidecar |
 | `gaia register [path]` | Submit package to the [Gaia Official Registry](https://github.com/SiliconEinstein/gaia-registry) |
@@ -258,19 +275,19 @@ Output: .gaia/reviews/self_review/beliefs.json
 
 If multiple reviews exist, specify which one: `gaia infer --review self_review .`
 
-**6. Generate README**
+**6. Generate GitHub presentation**
 
 ```bash
-gaia compile . --readme
+gaia compile . --github
 ```
 
-Generates a `README.md` at the package root with:
-- Overview Mermaid graph of exported conclusions (with belief values)
-- Full knowledge graph diagram (all nodes, strategies, operators)
-- Each knowledge node with content, prior, belief, derivation, and reasoning
-- Inference results summary table
+Generates a `.github-output/` directory with:
+- **README.md** skeleton with coarse Mermaid overview graph and conclusion table
+- **Wiki pages** — structured claim reference with QID, prior, belief, reasoning
+- **graph.json** — knowledge graph data for interactive visualization
+- **narrative-outline.md** — topologically ordered outline for the `/gaia:publish` skill
 
-Run `gaia infer .` first so the README includes up-to-date belief values.
+Run `gaia infer .` first so the output includes up-to-date belief values. Then use `/gaia:publish` to fill in the narrative and push to GitHub.
 
 **7. Publish**
 

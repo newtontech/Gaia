@@ -36,7 +36,7 @@ digraph formalization {
     infer [label="gaia infer"];
     interpret [label="Interpret BP results"];
     analysis [label="Write ANALYSIS.md"];
-    readme [label="gaia compile . --readme"];
+    readme [label="gaia compile . --github\n+ /gaia:publish"];
 
     p1 -> r1 -> p2 -> r2 -> p3 -> r3 -> p4 -> r4 -> p5 -> r5 -> p6 -> r6;
     r6 -> review -> infer -> interpret;
@@ -704,9 +704,13 @@ For how to write review sidecars, assign priors, and evaluate strategy parameter
 
 **Abduction review deserves special attention.** The most common and consequential mistake in review is setting π(Alt) based on whether the alternative's calculation is correct, rather than whether it explains the observation. Before finalizing the review sidecar, go through every abduction and ask: "Does this alternative's prediction actually match the observation?" If not, π(Alt) should be low regardless of the alternative's theoretical validity.
 
-## Generate README
+## Generate GitHub Presentation
 
-Run `gaia infer .` then `gaia compile . --readme` to generate a README with Mermaid graph and belief values. See the **gaia-cli** skill for details.
+Run `gaia infer .` then:
+- `gaia compile . --github` + `/gaia:publish` to generate the README with narrative and reasoning graph
+- `gaia compile . --module-graphs` to generate per-module detailed reasoning graphs in `docs/detailed-reasoning.md`
+
+See the **gaia-cli** and **publish** skills for details.
 
 ## Interpret BP Results
 
