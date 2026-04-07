@@ -11,40 +11,6 @@ Gaia is a formal language for scientific reasoning. It helps you uncover and org
 
 Galileo's thought experiment: tie a heavy stone to a light stone. Does the composite fall faster or slower?
 
-```python
-from gaia.lang import claim, contradiction, deduction, abduction
-
-# The observation everyone agrees on
-obs_daily = claim("Heavy objects fall faster than light ones in air.")
-
-# Two competing explanations
-aristotle = claim("Speed is proportional to weight — heavier = faster.")
-air_resistance = claim("The speed difference is caused by air resistance, not weight.")
-
-# Abduction: which explanation better accounts for the observation?
-abduction(observation=obs_daily, hypothesis=air_resistance, alternative=aristotle,
-    reason="Both explain why heavy objects fall faster in air.")
-
-# Meanwhile, Aristotle's doctrine implies contradictory predictions
-composite_slower = claim("The composite falls SLOWER than the heavy stone alone.")
-composite_faster = claim("The composite falls FASTER than either stone alone.")
-deduction(premises=[aristotle], conclusion=composite_slower,
-    reason="If heavier = faster, the light stone drags the heavy one back.")
-deduction(premises=[aristotle], conclusion=composite_faster,
-    reason="If heavier = faster, the heavier composite must fall faster.")
-
-# Same premise, opposite conclusions — that's a contradiction!
-paradox = contradiction(composite_slower, composite_faster,
-    reason="Aristotle's own logic predicts both faster AND slower")
-
-# Remove the air, remove the difference
-vacuum_law = claim("In vacuum, all bodies fall at the same rate.")
-deduction(premises=[air_resistance], conclusion=vacuum_law,
-    reason="If air resistance is the sole cause, removing it means all fall equally.")
-```
-
-`gaia compile . && gaia infer .` compiles this into a factor graph and runs belief propagation:
-
 ```mermaid
 graph TD
     obs_daily["Daily observation (0.90 → 1.00)"]:::premise
@@ -78,16 +44,41 @@ graph TD
     classDef contra fill:#ffebee,stroke:#c62828,color:#333
 ```
 
-| Claim | Prior | → | Belief | |
-|-------|------:|---|-------:|---|
-| Daily observation | 0.90 | → | **1.00** | confirmed by both explanations |
-| Aristotle's law | 0.90 | → | **0.07** | contradiction propagates back — refuted |
-| Air resistance | 0.50 | → | **0.94** | abduction: the better explanation wins |
-| Composite slower | 0.60 | → | **0.40** | contradiction forces mutual exclusion |
-| Composite faster | 0.60 | → | **0.40** | symmetric with composite slower |
-| Vacuum law | 0.30 | → | **0.96** | Galileo wins — remove air, all fall equally |
-
 The contradiction and abduction are independent subgraphs, yet belief propagation automatically combines both lines of evidence: the contradiction refutes Aristotle (0.90 → 0.07) while the abduction elevates air resistance (0.50 → 0.94), and together they lift the vacuum law from a speculative 0.30 to a near-certain **0.96** — no new experimental data needed, just the structure of the reasoning itself.
+
+The code that produces this:
+
+```python
+from gaia.lang import claim, contradiction, deduction, abduction
+
+# The observation everyone agrees on
+obs_daily = claim("Heavy objects fall faster than light ones in air.")
+
+# Two competing explanations
+aristotle = claim("Speed is proportional to weight — heavier = faster.")
+air_resistance = claim("The speed difference is caused by air resistance, not weight.")
+
+# Abduction: which explanation better accounts for the observation?
+abduction(observation=obs_daily, hypothesis=air_resistance, alternative=aristotle,
+    reason="Both explain why heavy objects fall faster in air.")
+
+# Meanwhile, Aristotle's doctrine implies contradictory predictions
+composite_slower = claim("The composite falls SLOWER than the heavy stone alone.")
+composite_faster = claim("The composite falls FASTER than either stone alone.")
+deduction(premises=[aristotle], conclusion=composite_slower,
+    reason="If heavier = faster, the light stone drags the heavy one back.")
+deduction(premises=[aristotle], conclusion=composite_faster,
+    reason="If heavier = faster, the heavier composite must fall faster.")
+
+# Same premise, opposite conclusions — that's a contradiction!
+paradox = contradiction(composite_slower, composite_faster,
+    reason="Aristotle's own logic predicts both faster AND slower")
+
+# Remove the air, remove the difference
+vacuum_law = claim("In vacuum, all bodies fall at the same rate.")
+deduction(premises=[air_resistance], conclusion=vacuum_law,
+    reason="If air resistance is the sole cause, removing it means all fall equally.")
+```
 
 ## How it Works
 
