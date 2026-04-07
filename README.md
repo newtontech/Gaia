@@ -13,27 +13,27 @@ Galileo's thought experiment: tie a heavy stone to a light stone. Does the compo
 
 ```mermaid
 graph TD
-    obs_daily["Daily observation (0.90 → 1.00)"]:::premise
-    aristotle["Aristotle: heavier = faster (0.90 → 0.07)"]:::premise
-    air_resistance["Air resistance (0.50 → 0.94)"]:::derived
-    composite_slower["Composite slower (0.60 → 0.40)"]:::derived
-    composite_faster["Composite faster (0.60 → 0.40)"]:::derived
-    paradox["paradox (0.98)"]:::derived
-    vacuum_law["Vacuum law (0.30 → 0.96)"]:::derived
-    strat_0(["abduction"])
+    obs_daily["📋 Daily observation (0.90 → 1.00 📈)"]:::premise
+    aristotle["🏛️ Aristotle: heavier = faster (0.90 → 0.07 📉)"]:::premise
+    air_resistance["🌬️ Air resistance (0.50 → 0.94 📈)"]:::derived
+    composite_slower["🪨🪶 < 🪨 Composite slower (0.60 → 0.40 📉)"]:::derived
+    composite_faster["🪨🪶 > 🪨 Composite faster (0.60 → 0.40 📉)"]:::derived
+    paradox["⚔️ paradox (0.98)"]:::derived
+    vacuum_law["💡 Vacuum law (0.30 → 0.96 📈)"]:::derived
+    strat_0(["🔍 abduction"])
     obs_daily --> strat_0
     aristotle --> strat_0
     strat_0 --> air_resistance
-    strat_1(["deduction"])
+    strat_1(["🧠 deduction"])
     aristotle --> strat_1
     strat_1 --> composite_slower
-    strat_2(["deduction"])
+    strat_2(["🧠 deduction"])
     aristotle --> strat_2
     strat_2 --> composite_faster
-    strat_3(["deduction"])
+    strat_3(["🧠 deduction"])
     air_resistance --> strat_3
     strat_3 --> vacuum_law
-    oper_0{{"contradiction"}}:::contra
+    oper_0{{"⊗ contradiction"}}:::contra
     composite_slower --- oper_0
     composite_faster --- oper_0
     oper_0 --- paradox
@@ -51,31 +51,31 @@ The code that produces this:
 ```python
 from gaia.lang import claim, contradiction, deduction, abduction
 
-# The observation everyone agrees on
+# 📋 The observation everyone agrees on
 obs_daily = claim("Heavy objects fall faster than light ones in air.")
 
-# Two competing explanations
-aristotle = claim("Speed is proportional to weight — heavier = faster.")
-air_resistance = claim("The speed difference is caused by air resistance, not weight.")
+# 🏛️ Two competing explanations
+aristotle = claim("🏛️ Speed is proportional to weight — heavier = faster.")
+air_resistance = claim("🌬️ The speed difference is caused by air resistance, not weight.")
 
-# Abduction: which explanation better accounts for the observation?
+# 🔍 Abduction: which explanation better accounts for the observation?
 abduction(observation=obs_daily, hypothesis=air_resistance, alternative=aristotle,
     reason="Both explain why heavy objects fall faster in air.")
 
-# Meanwhile, Aristotle's doctrine implies contradictory predictions
-composite_slower = claim("The composite falls SLOWER than the heavy stone alone.")
-composite_faster = claim("The composite falls FASTER than either stone alone.")
+# 🤔 Meanwhile, Aristotle's doctrine implies contradictory predictions
+composite_slower = claim("🪨🪶 The composite falls SLOWER than the heavy stone alone.")
+composite_faster = claim("🪨🪶 The composite falls FASTER than either stone alone.")
 deduction(premises=[aristotle], conclusion=composite_slower,
     reason="If heavier = faster, the light stone drags the heavy one back.")
 deduction(premises=[aristotle], conclusion=composite_faster,
     reason="If heavier = faster, the heavier composite must fall faster.")
 
-# Same premise, opposite conclusions — that's a contradiction!
+# ⚔️ Same premise, opposite conclusions — that's a contradiction!
 paradox = contradiction(composite_slower, composite_faster,
     reason="Aristotle's own logic predicts both faster AND slower")
 
-# Remove the air, remove the difference
-vacuum_law = claim("In vacuum, all bodies fall at the same rate.")
+# 💡 Remove the air, remove the difference
+vacuum_law = claim("💡 In vacuum, all bodies fall at the same rate.")
 deduction(premises=[air_resistance], conclusion=vacuum_law,
     reason="If air resistance is the sole cause, removing it means all fall equally.")
 ```
