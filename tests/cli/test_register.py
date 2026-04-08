@@ -96,6 +96,16 @@ def test_register_dry_run_emits_registration_plan(tmp_path):
     assert plan["version"]["git_tag"] == "v1.2.0"
     assert plan["version"]["ir_hash"].startswith("sha256:")
     assert plan["deps"] == {"aristotle-mechanics-gaia": ">= 1.0.0"}
+    release_dir = "packages/register-demo/releases/1.2.0"
+    assert f"{release_dir}/exports.json" in plan["files"]
+    assert f"{release_dir}/premises.json" in plan["files"]
+    assert f"{release_dir}/holes.json" in plan["files"]
+    assert f"{release_dir}/bridges.json" in plan["files"]
+    exports_manifest = json.loads(plan["files"][f"{release_dir}/exports.json"])
+    premises_manifest = json.loads(plan["files"][f"{release_dir}/premises.json"])
+    assert exports_manifest["manifest_schema_version"] == 1
+    assert exports_manifest["exports"][0]["label"] == "exported_claim"
+    assert premises_manifest["premises"] == []
 
 
 def test_register_writes_registry_metadata_to_local_checkout(tmp_path):
@@ -130,9 +140,22 @@ def test_register_writes_registry_metadata_to_local_checkout(tmp_path):
     assert (package_dir / "Package.toml").exists()
     assert (package_dir / "Versions.toml").exists()
     assert (package_dir / "Deps.toml").exists()
+    release_dir = package_dir / "releases" / "1.2.0"
+    assert (release_dir / "exports.json").exists()
+    assert (release_dir / "premises.json").exists()
+    assert (release_dir / "holes.json").exists()
+    assert (release_dir / "bridges.json").exists()
     assert 'name = "register-demo"' in (package_dir / "Package.toml").read_text()
     assert 'git_tag = "v1.2.0"' in (package_dir / "Versions.toml").read_text()
     assert '"aristotle-mechanics-gaia" = ">= 1.0.0"' in (package_dir / "Deps.toml").read_text()
+    exports_manifest = json.loads((release_dir / "exports.json").read_text())
+    premises_manifest = json.loads((release_dir / "premises.json").read_text())
+    holes_manifest = json.loads((release_dir / "holes.json").read_text())
+    bridges_manifest = json.loads((release_dir / "bridges.json").read_text())
+    assert exports_manifest["exports"][0]["qid"] == "github:register_demo::exported_claim"
+    assert premises_manifest["premises"] == []
+    assert holes_manifest["holes"] == []
+    assert bridges_manifest["bridges"] == []
     assert (
         _run(["git", "branch", "--show-current"], cwd=registry_dir)
         == "register/register-demo-1.2.0"
