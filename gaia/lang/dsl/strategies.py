@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
+from typing import Literal
+
 from gaia.lang.runtime import Knowledge, Step, Strategy
 from gaia.lang.runtime.nodes import ReasonInput
 from gaia.lang.runtime.nodes import _current_package
@@ -37,7 +40,7 @@ def _attach_strategy(conclusion: Knowledge | None, strategy: Strategy) -> None:
     if conclusion is None:
         return
     pkg = _authoring_package()
-    if pkg is None or conclusion._package is None or conclusion._package == pkg:
+    if pkg is None or conclusion._package is None or conclusion._package is pkg:
         conclusion.strategy = strategy
 
 
@@ -57,7 +60,7 @@ def _named_strategy(
         conclusion=conclusion,
         background=background or [],
         reason=reason,
-        metadata=dict(metadata or {}),
+        metadata=deepcopy(metadata) if metadata is not None else {},
     )
     _attach_strategy(conclusion, strategy)
     return strategy
@@ -83,7 +86,7 @@ def _composite_strategy(
         background=background or [],
         reason=reason,
         sub_strategies=list(sub_strategies),
-        metadata=dict(metadata or {}),
+        metadata=deepcopy(metadata) if metadata is not None else {},
     )
     _attach_strategy(conclusion, strategy)
     return strategy
@@ -105,7 +108,7 @@ def _leaf_strategy(
         conclusion=conclusion,
         background=background or [],
         reason=reason,
-        metadata=dict(metadata or {}),
+        metadata=deepcopy(metadata) if metadata is not None else {},
     )
     _attach_strategy(conclusion, strategy)
     return strategy
@@ -177,8 +180,8 @@ def fills(
     source: Knowledge,
     target: Knowledge,
     *,
-    mode: str | None = None,
-    strength: str = "exact",
+    mode: Literal["deduction", "infer"] | None = None,
+    strength: Literal["exact", "partial", "conditional"] = "exact",
     background: list[Knowledge] | None = None,
     reason: ReasonInput = "",
 ) -> Strategy:

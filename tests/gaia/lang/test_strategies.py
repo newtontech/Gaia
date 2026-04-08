@@ -154,6 +154,27 @@ def test_fills_partial_defaults_to_infer():
     assert s.metadata["gaia"]["relation"]["mode"] == "infer"
 
 
+def test_fills_conditional_defaults_to_infer():
+    source = claim("Source theorem.")
+    target = claim("Target premise.")
+    s = fills(source=source, target=target, strength="conditional")
+    assert s.type == "infer"
+    assert s.metadata["gaia"]["relation"]["strength"] == "conditional"
+    assert s.metadata["gaia"]["relation"]["mode"] == "infer"
+
+
+def test_fills_explicit_mode_overrides_strength_default():
+    source = claim("Source theorem.")
+    target = claim("Target premise.")
+    s = fills(source=source, target=target, strength="partial", mode="deduction")
+    assert s.type == "deduction"
+    assert s.metadata["gaia"]["relation"] == {
+        "type": "fills",
+        "strength": "partial",
+        "mode": "deduction",
+    }
+
+
 def test_fills_rejects_non_claim_source():
     source = setting("Background.")
     target = claim("Target premise.")
