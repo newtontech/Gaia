@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from gaia.lang.runtime import Knowledge, Step, Strategy
 from gaia.lang.runtime.nodes import ReasonInput
+from gaia.lang.runtime.nodes import _current_package
+from gaia.lang.runtime.package import infer_package_from_callstack
 
 
 def _validate_step_premises(
@@ -24,6 +26,21 @@ def _validate_step_premises(
                     )
 
 
+def _authoring_package():
+    pkg = _current_package.get()
+    if pkg is None:
+        pkg = infer_package_from_callstack()
+    return pkg
+
+
+def _attach_strategy(conclusion: Knowledge | None, strategy: Strategy) -> None:
+    if conclusion is None:
+        return
+    pkg = _authoring_package()
+    if pkg is None or conclusion._package is None or conclusion._package == pkg:
+        conclusion.strategy = strategy
+
+
 def _named_strategy(
     type_: str,
     *,
@@ -31,6 +48,7 @@ def _named_strategy(
     conclusion: Knowledge,
     background: list[Knowledge] | None = None,
     reason: ReasonInput = "",
+    metadata: dict | None = None,
 ) -> Strategy:
     _validate_step_premises(reason, premises)
     strategy = Strategy(
@@ -39,8 +57,9 @@ def _named_strategy(
         conclusion=conclusion,
         background=background or [],
         reason=reason,
+        metadata=dict(metadata or {}),
     )
-    conclusion.strategy = strategy
+    _attach_strategy(conclusion, strategy)
     return strategy
 
 
@@ -52,6 +71,7 @@ def _composite_strategy(
     sub_strategies: list[Strategy],
     background: list[Knowledge] | None = None,
     reason: ReasonInput = "",
+    metadata: dict | None = None,
 ) -> Strategy:
     if not sub_strategies:
         raise ValueError("composite() requires at least one sub-strategy")
@@ -63,8 +83,31 @@ def _composite_strategy(
         background=background or [],
         reason=reason,
         sub_strategies=list(sub_strategies),
+        metadata=dict(metadata or {}),
     )
-    conclusion.strategy = strategy
+    _attach_strategy(conclusion, strategy)
+    return strategy
+
+
+def _leaf_strategy(
+    type_: str,
+    *,
+    premises: list[Knowledge],
+    conclusion: Knowledge,
+    background: list[Knowledge] | None = None,
+    reason: ReasonInput = "",
+    metadata: dict | None = None,
+) -> Strategy:
+    _validate_step_premises(reason, premises)
+    strategy = Strategy(
+        type=type_,
+        premises=list(premises),
+        conclusion=conclusion,
+        background=background or [],
+        reason=reason,
+        metadata=dict(metadata or {}),
+    )
+    _attach_strategy(conclusion, strategy)
     return strategy
 
 
@@ -104,16 +147,13 @@ def noisy_and(
     reason: ReasonInput = "",
 ) -> Strategy:
     """All premises jointly necessary, supporting conclusion with conditional probability p."""
-    _validate_step_premises(reason, premises)
-    s = Strategy(
-        type="noisy_and",
+    return _leaf_strategy(
+        "noisy_and",
         premises=premises,
         conclusion=conclusion,
-        background=background or [],
+        background=background,
         reason=reason,
     )
-    conclusion.strategy = s
-    return s
 
 
 def infer(
@@ -124,16 +164,65 @@ def infer(
     reason: ReasonInput = "",
 ) -> Strategy:
     """General CPT reasoning (2^k parameters). Rarely used directly."""
-    _validate_step_premises(reason, premises)
-    s = Strategy(
-        type="infer",
+    return _leaf_strategy(
+        "infer",
         premises=premises,
         conclusion=conclusion,
-        background=background or [],
+        background=background,
         reason=reason,
     )
-    conclusion.strategy = s
-    return s
+
+
+def fills(
+    source: Knowledge,
+    target: Knowledge,
+    *,
+    mode: str | None = None,
+    strength: str = "exact",
+    background: list[Knowledge] | None = None,
+    reason: ReasonInput = "",
+) -> Strategy:
+    """Declare that a source claim fills a target premise interface."""
+    if strength not in {"exact", "partial", "conditional"}:
+        raise ValueError("fills() strength must be one of: exact, partial, conditional")
+    if mode is not None and mode not in {"deduction", "infer"}:
+        raise ValueError("fills() mode must be one of: deduction, infer")
+    if source.type != "claim":
+        raise ValueError("fills() requires source.type == 'claim'")
+    if target.type != "claim":
+        raise ValueError("fills() requires target.type == 'claim'")
+
+    resolved_mode = mode
+    if resolved_mode is None:
+        resolved_mode = "deduction" if strength == "exact" else "infer"
+
+    metadata = {
+        "gaia": {
+            "relation": {
+                "type": "fills",
+                "strength": strength,
+                "mode": resolved_mode,
+            }
+        }
+    }
+
+    if resolved_mode == "deduction":
+        return _named_strategy(
+            "deduction",
+            premises=[source],
+            conclusion=target,
+            background=background,
+            reason=reason,
+            metadata=metadata,
+        )
+    return _leaf_strategy(
+        "infer",
+        premises=[source],
+        conclusion=target,
+        background=background,
+        reason=reason,
+        metadata=metadata,
+    )
 
 
 def deduction(
