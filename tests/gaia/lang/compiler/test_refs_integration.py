@@ -56,3 +56,87 @@ def test_compile_errors_on_label_citation_collision(tmp_path: Path) -> None:
     assert result.exit_code != 0, f"Expected non-zero exit but got output: {result.output}"
     assert "ambiguous" in result.output.lower()
     assert "bell_lemma" in result.output
+
+
+def test_compile_errors_on_mixed_type_bracket_group(tmp_path: Path) -> None:
+    """Per spec §3.2, a bracketed group must not mix knowledge refs and citations."""
+    pkg = _write_package(
+        tmp_path,
+        name="mixed_group_pkg",
+        module_body=(
+            "from gaia.lang import claim, deduction\n\n"
+            'lemma_a = claim("A helper lemma.")\n'
+            'main_result = claim("Main result. See [see @lemma_a; @Bell1964, p. 5] for context.")\n'
+            "deduction(premises=[lemma_a], conclusion=main_result)\n"
+            '__all__ = ["main_result", "lemma_a"]\n'
+        ),
+        references_json={"Bell1964": {"type": "article-journal", "title": "On EPR"}},
+    )
+    result = runner.invoke(app, ["compile", str(pkg)])
+    assert result.exit_code != 0, f"Expected non-zero exit but got: {result.output}"
+    assert "mixed" in result.output.lower()
+    assert "lemma_a" in result.output
+    assert "Bell1964" in result.output
+
+
+def test_compile_errors_on_strict_miss(tmp_path: Path) -> None:
+    """`[@nothing]` is strict form — unknown key must error."""
+    pkg = _write_package(
+        tmp_path,
+        name="strict_miss_pkg",
+        module_body=(
+            "from gaia.lang import claim, deduction\n\n"
+            'premise_a = claim("Premise A.")\n'
+            'main_result = claim("Main result. See [@nothing_at_all] for context.")\n'
+            "deduction(premises=[premise_a], conclusion=main_result)\n"
+            '__all__ = ["main_result", "premise_a"]\n'
+        ),
+    )
+    result = runner.invoke(app, ["compile", str(pkg)])
+    assert result.exit_code != 0, f"Expected non-zero exit but got: {result.output}"
+    assert "nothing_at_all" in result.output
+    # Error message should mention unknown/strict/bracket
+    out_lower = result.output.lower()
+    assert "unknown" in out_lower or "not" in out_lower
+
+
+def test_compile_tolerates_opportunistic_miss(tmp_path: Path) -> None:
+    """Bare `@nothing` is opportunistic — unknown key is treated as literal."""
+    pkg = _write_package(
+        tmp_path,
+        name="opp_miss_pkg",
+        module_body=(
+            "from gaia.lang import claim, deduction\n\n"
+            'premise_a = claim("Premise A.")\n'
+            'main_result = claim("Use the @dataclass decorator for this.")\n'
+            "deduction(premises=[premise_a], conclusion=main_result)\n"
+            '__all__ = ["main_result", "premise_a"]\n'
+        ),
+    )
+    result = runner.invoke(app, ["compile", str(pkg)])
+    assert result.exit_code == 0, f"Expected success but got: {result.output}"
+
+
+def test_compile_scans_sub_strategy_reasons(tmp_path: Path) -> None:
+    """Spec §3.2: sub_strategies of composite strategies must also be scanned
+    for references. A strict-form unknown ref in a sub_strategy must error."""
+    pkg = _write_package(
+        tmp_path,
+        name="sub_strategy_refs_pkg",
+        module_body=(
+            "from gaia.lang import claim, abduction, induction\n\n"
+            'obs1 = claim("First observation.")\n'
+            'obs2 = claim("Second observation.")\n'
+            'law = claim("A general law.")\n'
+            # Create sub-strategies manually to test recursion
+            "sub1 = abduction(obs1, law)\n"
+            "sub2 = abduction(obs2, law, reason='Justification [@missing_key]')\n"
+            "induction([sub1, sub2])\n"
+            '__all__ = ["law", "obs1", "obs2"]\n'
+        ),
+    )
+    result = runner.invoke(app, ["compile", str(pkg)])
+    # The sub_strategy's reason has a strict-form unknown ref,
+    # so this should fail. (Verifies sub_strategy recursion works.)
+    assert result.exit_code != 0, f"Expected error but got: {result.output}"
+    assert "missing_key" in result.output

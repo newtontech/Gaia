@@ -22,7 +22,7 @@ from gaia.ir import (
     formalize_named_strategy,
     make_qid,
 )
-from gaia.lang.refs import (  # noqa: F401
+from gaia.lang.refs import (
     ReferenceError,
     check_collisions,
     extract,
@@ -208,6 +208,51 @@ def _compile_reason(
     return ir_steps or None
 
 
+def _collect_refs_from_text(
+    text: str | None,
+    label_table: dict[str, str],
+    references: dict[str, Any],
+) -> tuple[list[str], list[str]]:
+    """Scan a piece of text and return (knowledge_refs, citation_refs).
+
+    Enforces:
+      - homogeneous-group rule (raises ReferenceError on mixed groups)
+      - strict-form errors on unknown keys (raises ReferenceError)
+    Ignores opportunistic (bare) misses silently.
+    """
+    if not text:
+        return [], []
+    result = extract(text)
+
+    # §3.2: mixed-group check
+    validate_groups(result.groups, result.markers, label_table, references)
+
+    knowledge_refs: list[str] = []
+    citation_refs: list[str] = []
+    for marker in result.markers:
+        kind = resolve(marker.key, label_table, references)
+        if kind == "knowledge":
+            knowledge_refs.append(marker.key)
+        elif kind == "citation":
+            citation_refs.append(marker.key)
+        else:  # unknown
+            if marker.strict:
+                raise ReferenceError(
+                    f"unknown reference key '@{marker.key}' in strict form "
+                    f"(in brackets): it is neither a knowledge label nor a "
+                    f"citation key. add it to the package or references.json, "
+                    f"or use the bare form `@{marker.key}` for opportunistic "
+                    f"handling."
+                )
+            # opportunistic miss → silent literal
+
+    # Dedupe while preserving order
+    return (
+        list(dict.fromkeys(knowledge_refs)),
+        list(dict.fromkeys(citation_refs)),
+    )
+
+
 def compile_package_artifact(
     pkg: CollectedPackage,
     *,
@@ -355,6 +400,29 @@ def compile_package_artifact(
 
     # Spec §3.5: fail-fast on label / citation-key collision.
     check_collisions(label_to_id, references)
+
+    # Spec §3.2 + §3.3: scan all text for references
+    # Strategy reasons can be str, list[str | Step], or None.
+    from gaia.lang.runtime.nodes import Step as DslStep
+
+    def _scan_strategy_refs(s) -> None:
+        """Recursively scan strategy and its sub_strategies for references."""
+        if isinstance(s.reason, str):
+            _collect_refs_from_text(s.reason, label_to_id, references)
+        elif isinstance(s.reason, list):
+            for entry in s.reason:
+                if isinstance(entry, str):
+                    _collect_refs_from_text(entry, label_to_id, references)
+                elif isinstance(entry, DslStep):
+                    _collect_refs_from_text(entry.reason, label_to_id, references)
+        for sub in s.sub_strategies:
+            _scan_strategy_refs(sub)
+
+    for s in pkg.strategies:
+        _scan_strategy_refs(s)
+
+    for k in knowledge_nodes:
+        _collect_refs_from_text(k.content, label_to_id, references)
 
     module_order = pkg._module_order if pkg._module_order else None
     module_titles = getattr(pkg, "_module_titles", None) or None
