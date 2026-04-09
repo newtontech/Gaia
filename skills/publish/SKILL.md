@@ -10,16 +10,16 @@ Generate a complete README for a Gaia knowledge package and push it to the GitHu
 ## Full Pipeline
 
 ```
-gaia compile . --github          # Step 1: generate skeleton + narrative outline
+gaia render . --target github    # Step 1: generate skeleton + narrative outline
 /gaia:publish                    # Step 2: this skill fills narrative + pushes
 ```
 
 ## Step 1: Generate Skeleton
 
-Run in the package directory:
+Run in the package directory (requires `gaia compile` and `gaia infer` to have been run first):
 
 ```bash
-gaia compile . --github
+gaia render . --target github
 ```
 
 This produces `.github-output/` containing:
@@ -171,7 +171,7 @@ Verify:
 ## Step 5: Generate Per-Module Graphs
 
 ```bash
-gaia compile . --module-graphs
+gaia render . --target docs
 ```
 
 This writes `docs/detailed-reasoning.md` with per-module Mermaid reasoning graphs and full claim details. Add a `[!NOTE]` callout in the README after the overview Mermaid graph:

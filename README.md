@@ -108,7 +108,7 @@ Gaia is agent-ready. A [Claude Code](https://claude.ai/code) plugin provides ski
 
 1. **`/gaia:formalization`** — Point Claude at your paper (PDF or text in `artifacts/`). The skill guides a six-pass process: extract knowledge nodes, connect reasoning strategies, check completeness, refine strategy types, verify structural integrity, and polish for readability. Output: a compilable Gaia package with review sidecar.
 
-2. **`/gaia:publish`** — After `gaia compile . --github` generates the skeleton, this skill fills in the narrative README, writes section summaries, and pushes to GitHub. Your repo gets a human-readable presentation of the formalized knowledge with interactive graphs.
+2. **`/gaia:publish`** — After `gaia render --target github` generates the skeleton, this skill fills in the narrative README, writes section summaries, and pushes to GitHub. Your repo gets a human-readable presentation of the formalized knowledge with interactive graphs.
 
 3. **`gaia register`** — Submit the package to the [Gaia Official Registry](https://github.com/SiliconEinstein/gaia-registry) so others can `gaia add` it as a dependency.
 
@@ -121,7 +121,7 @@ Gaia is agent-ready. A [Claude Code](https://claude.ai/code) plugin provides ski
 | `/gaia:gaia-cli` | CLI reference — `gaia init`, `compile`, `infer`, `check`, `register`, `add` |
 | `/gaia:gaia-lang` | DSL reference — knowledge types, operators, strategies, metadata, package structure |
 | `/gaia:review` | Write review sidecars — assign priors, judge strategies, parameterize inference |
-| `/gaia:publish` | Generate GitHub presentation (`--github` skeleton → narrative README → push) |
+| `/gaia:publish` | Generate GitHub presentation (`render --target github` skeleton → narrative README → push) |
 
 ## Install
 
@@ -149,8 +149,8 @@ Published Gaia knowledge packages:
 ## CLI Workflow
 
 ```
-gaia init → gaia add → write package → gaia compile → write review → gaia infer → gaia compile --github → /gaia:publish → gaia register
-(scaffold)  (add deps)   (DSL code)     (DSL → IR)   (self-review)  (BP preview)  (GitHub skeleton)      (fill narrative) (registry PR)
+gaia init → gaia add → write package → gaia compile → write review → gaia infer → gaia render → /gaia:publish → gaia register
+(scaffold)  (add deps)   (DSL code)     (DSL → IR)   (self-review)  (BP preview)  (present)     (fill narrative) (registry PR)
 ```
 
 | Command | Purpose |
@@ -158,10 +158,11 @@ gaia init → gaia add → write package → gaia compile → write review → g
 | `gaia init <name>` | Scaffold a new Gaia knowledge package |
 | `gaia add <package>` | Install a registered Gaia package from the [official registry](https://github.com/SiliconEinstein/gaia-registry) |
 | `gaia compile [path]` | Compile Python DSL to Gaia IR (`.gaia/ir.json`) |
-| `gaia compile --github [path]` | Generate GitHub presentation skeleton (`.github-output/`): wiki, README, React Pages, graph.json |
-| `gaia compile --module-graphs [path]` | Generate per-module detailed reasoning graphs to `docs/detailed-reasoning.md` |
 | `gaia check [path]` | Validate package structure and IR consistency (used by registry CI) |
 | `gaia infer [path]` | Run belief propagation with a review sidecar |
+| `gaia render --target github [path]` | Generate GitHub presentation skeleton (`.github-output/`): wiki, README, React Pages, graph.json |
+| `gaia render --target docs [path]` | Generate per-module detailed reasoning to `docs/detailed-reasoning.md` |
+| `gaia render [path]` | Default: render both docs and github targets (`--target all`) |
 | `gaia register [path]` | Submit package to the [Gaia Official Registry](https://github.com/SiliconEinstein/gaia-registry) |
 
 ## Quick Start
@@ -208,8 +209,8 @@ REVIEW = ReviewBundle(
 **4. Infer and publish**
 
 ```bash
-gaia infer .                  # compute beliefs via belief propagation
-gaia compile . --github       # generate GitHub presentation skeleton
+gaia infer .                      # compute beliefs via belief propagation
+gaia render . --target github     # generate GitHub presentation skeleton
 ```
 
 Then use `/gaia:publish` to fill in the narrative, and `gaia register` to submit to the official registry.

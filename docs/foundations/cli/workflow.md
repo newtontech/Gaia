@@ -8,12 +8,12 @@ since: v5-phase-1
 
 ## Overview
 
-The Gaia CLI is a knowledge package authoring toolkit. It provides a six-command
+The Gaia CLI is a knowledge package authoring toolkit. It provides a seven-command
 pipeline that takes a Python DSL package from scaffolding to registry registration:
 
 ```
-gaia init --> gaia add --> write package --> gaia compile --> write review --> gaia infer --> git tag --> gaia register
-(scaffold)   (add deps)    (DSL code)      (DSL -> IR)     (self-review)   (BP preview)              (registry PR)
+gaia init --> gaia add --> write package --> gaia compile --> write review --> gaia infer --> gaia render --> git tag --> gaia register
+(scaffold)   (add deps)    (DSL code)      (DSL -> IR)     (self-review)   (BP preview)    (present)              (registry PR)
 ```
 
 Entry point: installed as the `gaia` CLI command via `pyproject.toml`
@@ -169,6 +169,67 @@ fresh).
 Reference: [Inference](inference.md) for internals.
 
 
+### `gaia render [PATH] [--review NAME] [--target TARGET]`
+
+Render presentation outputs (detailed-reasoning docs and/or a GitHub presentation
+site) from a compiled package.
+
+```
+gaia render [PATH] [--review NAME] [--target docs|github|all]
+```
+
+| Argument / Option | Default | Description |
+|-------------------|---------|-------------|
+| `PATH`            | `.`     | Path to knowledge package directory |
+| `--review NAME`   | `None`  | Review sidecar name (as with `gaia infer`). Auto-selected when only one review exists. |
+| `--target TARGET` | `all`   | `docs` writes `docs/detailed-reasoning.md`; `github` writes `.github-output/`; `all` (default) writes both when possible. |
+
+**Strictness by target:**
+
+- `--target docs`: renders from the compiled IR alone. When a fresh
+  `beliefs.json` and `parameterization.json` are available they are loaded and
+  used to enrich the output; otherwise a warning is emitted and the docs are
+  written without belief values. This is the author-facing workflow — useful
+  during iteration on DSL code before a review sidecar exists, or when the
+  package has accumulated alternate/broken review sidecars.
+- `--target github`: strictly requires a review sidecar plus a matching
+  `beliefs.json`. Missing or stale inference results are hard errors. This is
+  the external-presentation workflow — a published site without belief values
+  would be misleading.
+- `--target all` (default): always renders docs, and adds the GitHub target
+  when inference results are available. When beliefs are missing, it degrades
+  to docs-only with a warning rather than failing.
+
+**Review sidecar load failures** (ambiguous candidates with no `--review`,
+unknown `--review NAME`, broken review module imports) propagate as follows:
+
+- Explicit `--review NAME` → always a hard error. An explicit request deserves
+  an explicit failure.
+- `--target github` → always a hard error, even in auto-select mode.
+- `--target docs` / `--target all` in auto-select mode → warn and fall back to
+  no-beliefs rendering. Accumulated experimental sidecars or a temporarily
+  broken review module must not block the IR-only authoring workflow.
+
+**What it does:**
+
+1. Loads and compiles the package (same gate as `gaia compile`).
+2. Verifies `.gaia/ir_hash` and `.gaia/ir.json` are present and not stale.
+3. Discovers the review sidecar via the same mechanism as `gaia infer`
+   (optional for `--target docs`).
+4. If `beliefs.json` is present, verifies its `ir_hash` matches the current
+   compiled graph; same check applied to `parameterization.json` if present.
+   Any stale artifact is a hard error.
+5. Dispatches to the selected targets, emitting warnings when `--target all`
+   or `--target docs` runs without inference results.
+
+**Prerequisites:** `gaia compile` must have been run. `gaia infer` must have
+been run for `--target github` and for the `github` portion of `--target all`.
+
+**Key output:**
+- `docs/detailed-reasoning.md` (when target includes `docs`)
+- `.github-output/` (when target includes `github` and beliefs are available)
+
+
 ### `gaia register [PATH] [OPTIONS]`
 
 Prepare or submit a registration for a tagged, GitHub-backed Gaia package.
@@ -230,6 +291,7 @@ Reference: [Registration](registration.md) for details.
 | Check    | `gaia check`     | (validation only) |
 | Add      | `gaia add`       | Updated `pyproject.toml` dependencies, `uv.lock` |
 | Infer    | `gaia infer`     | `.gaia/reviews/<name>/parameterization.json`, `.gaia/reviews/<name>/beliefs.json` |
+| Render   | `gaia render`    | `docs/detailed-reasoning.md`, `.github-output/` |
 | Register | `gaia register`  | `packages/<name>/Package.toml`, `Versions.toml`, `Deps.toml` (in registry repo) |
 
 

@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from gaia.cli.commands._classify import classify_ir, node_role
 
-# ── Mermaid CSS class definitions (self-contained, not imported from _readme) ──
+# ── Mermaid CSS class definitions (self-contained, not imported from _detailed_reasoning) ──
 
 _MERMAID_STYLES = """\
     classDef setting fill:#f0f0f0,stroke:#999,color:#333

@@ -88,17 +88,17 @@ Imports the top-level package, collects all DSL declarations, and writes:
 ### Generate per-module reasoning graphs
 
 ```bash
-gaia compile . --module-graphs
+gaia render . --target docs
 ```
 
-Generates `docs/detailed-reasoning.md` with per-module Mermaid reasoning graphs and full claim details. Run `gaia infer .` first so the output includes computed beliefs.
+Generates `docs/detailed-reasoning.md` with per-module Mermaid reasoning graphs and full claim details.
 
-Note: `--readme` is a deprecated alias that writes to `README.md` instead. Prefer `--github` for the main README (generates a skeleton for `/gaia:publish`) and `--module-graphs` for detailed reference.
+Note: run `gaia infer` before `gaia render` — render requires beliefs on disk.
 
 ### Generate GitHub presentation skeleton
 
 ```bash
-gaia compile . --github
+gaia render . --target github
 ```
 
 Generates `.github-output/` with wiki pages, README skeleton, React Pages template, `graph.json`, and manifest.
@@ -210,9 +210,9 @@ gaia init
       → gaia check .
         → write review sidecar
           → gaia infer .
-            → gaia compile . --github
+            → gaia render . --target github
               → /gaia:publish
-                → gaia compile . --module-graphs
+                → gaia render . --target docs
                   → gaia register . --registry-dir ../gaia-registry --create-pr
 ```
 
@@ -222,6 +222,6 @@ gaia init
 4. **Validate** — `gaia check .` to catch structural errors early
 5. **Review** — Write `reviews/self_review.py` with priors and strategy parameters
 6. **Infer** — `gaia infer .` to compute posterior beliefs
-7. **Present** — `gaia compile . --github` to generate GitHub presentation skeleton, then `/gaia:publish` to fill narrative content
-8. **Detail** — `gaia compile . --module-graphs` to generate per-module reasoning graphs
+7. **Present** — `gaia render . --target github` to generate GitHub presentation skeleton, then `/gaia:publish` to fill narrative content
+8. **Detail** — `gaia render . --target docs` to generate per-module reasoning graphs
 9. **Publish** — Tag, push, and `gaia register` to submit to the registry

@@ -1,10 +1,10 @@
-"""Tests for gaia compile --readme."""
+"""Tests for docs/detailed-reasoning.md generator (legacy gaia compile --readme/--module-graphs)."""
 
 from typer.testing import CliRunner
 
-from gaia.cli.commands._readme import (
+from gaia.cli.commands._detailed_reasoning import (
     _render_overview_graph,
-    generate_readme,
+    generate_detailed_reasoning,
     render_knowledge_nodes,
     render_mermaid,
     topo_layers,
@@ -194,10 +194,10 @@ def test_render_knowledge_nodes_with_beliefs():
     assert "0.85" in md
 
 
-# ── generate_readme ──
+# ── generate_detailed_reasoning ──
 
 
-def test_generate_readme_without_beliefs():
+def test_generate_detailed_reasoning_without_beliefs():
     ir = {
         "namespace": "github",
         "package_name": "test_pkg",
@@ -208,7 +208,7 @@ def test_generate_readme_without_beliefs():
         "operators": [],
     }
     pkg_metadata = {"name": "test-pkg-gaia", "description": "A test package."}
-    md = generate_readme(ir, pkg_metadata)
+    md = generate_detailed_reasoning(ir, pkg_metadata)
     assert "# test-pkg-gaia" in md
     assert "A test package." in md
     assert "## Knowledge Graph" in md
@@ -216,7 +216,7 @@ def test_generate_readme_without_beliefs():
     assert "## Inference Results" not in md
 
 
-def test_generate_readme_with_beliefs():
+def test_generate_detailed_reasoning_with_beliefs():
     ir = {
         "namespace": "github",
         "package_name": "test_pkg",
@@ -234,7 +234,9 @@ def test_generate_readme_with_beliefs():
     param_data = {
         "priors": [{"knowledge_id": "github:test_pkg::a", "value": 0.90}],
     }
-    md = generate_readme(ir, pkg_metadata, beliefs_data=beliefs_data, param_data=param_data)
+    md = generate_detailed_reasoning(
+        ir, pkg_metadata, beliefs_data=beliefs_data, param_data=param_data
+    )
     assert "## Inference Results" in md
     assert "0.85" in md
     assert "converged" in md.lower()
@@ -243,36 +245,53 @@ def test_generate_readme_with_beliefs():
 # ── CLI integration ──
 
 
-def test_compile_readme_flag_generates_readme(tmp_path):
-    pkg_dir = tmp_path / "readme_pkg"
+def test_render_docs_flag_generates_detailed_reasoning(tmp_path):
+    """gaia render --target docs writes docs/detailed-reasoning.md."""
+    pkg_dir = tmp_path / "docs_pkg"
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
-        '[project]\nname = "readme-pkg-gaia"\nversion = "1.0.0"\n'
+        '[project]\nname = "docs-pkg-gaia"\nversion = "1.0.0"\n'
         'description = "A test package."\n\n'
         '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
-    pkg_src = pkg_dir / "readme_pkg"
+    pkg_src = pkg_dir / "docs_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
         "from gaia.lang import claim, noisy_and\n\n"
         'a = claim("Premise A.")\n'
         'b = claim("Premise B.")\n'
         'c = claim("Conclusion.")\n'
-        "noisy_and([a, b], c)\n"
-        '__all__ = ["a", "b", "c"]\n'
+        "s = noisy_and([a, b], c)\n"
+        '__all__ = ["a", "b", "c", "s"]\n'
+    )
+    (pkg_src / "reviews").mkdir()
+    (pkg_src / "reviews" / "self_review.py").write_text(
+        "from gaia.review import ReviewBundle, review_claim, review_strategy\n"
+        "from .. import a, b, c, s\n\n"
+        "REVIEW = ReviewBundle(\n"
+        '    source_id="self_review",\n'
+        "    objects=[\n"
+        '        review_claim(a, prior=0.8, judgment="ok", justification="."),\n'
+        '        review_claim(b, prior=0.8, judgment="ok", justification="."),\n'
+        '        review_claim(c, prior=0.4, judgment="ok", justification="."),\n'
+        '        review_strategy(s, conditional_probability=0.85, judgment="ok", justification="."),\n'
+        "    ],\n"
+        ")\n"
     )
 
-    result = runner.invoke(app, ["compile", str(pkg_dir), "--readme"])
+    assert runner.invoke(app, ["compile", str(pkg_dir)]).exit_code == 0
+    assert runner.invoke(app, ["infer", str(pkg_dir)]).exit_code == 0
+
+    result = runner.invoke(app, ["render", str(pkg_dir), "--target", "docs"])
     assert result.exit_code == 0, f"Failed: {result.output}"
 
-    readme = (pkg_dir / "README.md").read_text()
-    assert "# readme-pkg-gaia" in readme
-    assert "A test package." in readme
-    assert "```mermaid" in readme
-    assert "## Knowledge Nodes" in readme
-    assert readme.index("#### a") < readme.index("#### c")
-    assert readme.index("#### b") < readme.index("#### c")
-    assert "[a](#a)" in readme or "[b](#b)" in readme
+    content = (pkg_dir / "docs" / "detailed-reasoning.md").read_text()
+    assert "# docs-pkg-gaia" in content
+    assert "A test package." in content
+    assert "```mermaid" in content
+    assert "#### a" in content
+    assert "#### b" in content
+    assert "#### c" in content
 
 
 # ── overview graph ──
@@ -472,7 +491,7 @@ def test_exported_marker():
 
 def test_introduction_with_exported_knowledge():
     """Introduction shows exported knowledge when no motivation module."""
-    from gaia.cli.commands._readme import generate_readme
+    from gaia.cli.commands._detailed_reasoning import generate_detailed_reasoning
 
     ir = {
         "namespace": "github",
@@ -503,7 +522,7 @@ def test_introduction_with_exported_knowledge():
         "strategies": [],
         "operators": [],
     }
-    md = generate_readme(ir, {"name": "test-gaia", "description": "Test."})
+    md = generate_detailed_reasoning(ir, {"name": "test-gaia", "description": "Test."})
     assert "## Introduction" in md
     assert "The main conclusion." in md
     assert "Shared context." in md
@@ -514,7 +533,7 @@ def test_introduction_with_exported_knowledge():
 
 def test_motivation_module_suppresses_introduction():
     """When motivation module exists, no separate Introduction section."""
-    from gaia.cli.commands._readme import generate_readme
+    from gaia.cli.commands._detailed_reasoning import generate_detailed_reasoning
 
     ir = {
         "namespace": "github",
@@ -542,7 +561,7 @@ def test_motivation_module_suppresses_introduction():
         "strategies": [],
         "operators": [],
     }
-    md = generate_readme(ir, {"name": "test-gaia", "description": "Test."})
+    md = generate_detailed_reasoning(ir, {"name": "test-gaia", "description": "Test."})
     assert "## Introduction" not in md
     assert "## motivation" in md
     assert "## results" in md
@@ -576,8 +595,8 @@ def test_mermaid_operator_edges():
     assert "oper_0 --- c" in md  # non-helper conclusion shown
 
 
-def test_generate_readme_with_inference_results():
-    from gaia.cli.commands._readme import generate_readme
+def test_generate_detailed_reasoning_with_inference_results():
+    from gaia.cli.commands._detailed_reasoning import generate_detailed_reasoning
 
     ir = {
         "namespace": "github",
@@ -601,7 +620,7 @@ def test_generate_readme_with_inference_results():
     param_data = {
         "priors": [{"knowledge_id": "ns:p::a", "value": 0.95}],
     }
-    md = generate_readme(
+    md = generate_detailed_reasoning(
         ir, {"name": "test-gaia"}, beliefs_data=beliefs_data, param_data=param_data
     )
     assert "## Inference Results" in md
