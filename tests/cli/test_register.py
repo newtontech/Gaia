@@ -455,3 +455,54 @@ def test_render_versions_toml_emits_gaia_lang_version_when_present():
     # Legacy entry at 1.0.0 has NO gaia_lang_version line
     v1_block = rendered.split('[versions."1.0.0"]')[1].split('[versions."1.1.0"]')[0]
     assert "gaia_lang_version" not in v1_block
+
+
+def test_render_versions_toml_preserves_unknown_keys():
+    """Forward-compat: keys not in the canonical list are preserved at the end
+    of each version block (alphabetically). This guards against silently
+    dropping fields added by future gaia versions when an older gaia re-emits
+    a Versions.toml it read from disk."""
+    from gaia.cli.commands.register import _render_versions_toml
+
+    versions = {
+        "2.0.0": {
+            "ir_hash": "sha256:xyz",
+            "git_tag": "v2.0.0",
+            "git_sha": "1234abcd",
+            "registered_at": "2027-01-01T00:00:00Z",
+            "gaia_lang_version": "0.3.0",
+            # Hypothetical future field not yet in _VERSIONS_CANONICAL_KEYS
+            "some_future_field": "forward-compat-value",
+            "another_future_field": "alphabetically-first",
+        },
+    }
+    rendered = _render_versions_toml(versions)
+
+    # Canonical fields emitted first in canonical order
+    assert 'ir_hash = "sha256:xyz"' in rendered
+    assert 'gaia_lang_version = "0.3.0"' in rendered
+    # Unknown fields are preserved (not silently dropped)
+    assert 'some_future_field = "forward-compat-value"' in rendered
+    assert 'another_future_field = "alphabetically-first"' in rendered
+    # Unknown fields come AFTER canonical fields
+    pos_canonical = rendered.find('gaia_lang_version = "0.3.0"')
+    pos_unknown = rendered.find("some_future_field")
+    assert pos_canonical < pos_unknown
+    # Unknown fields are sorted alphabetically among themselves
+    pos_another = rendered.find("another_future_field")
+    pos_some = rendered.find("some_future_field")
+    assert pos_another < pos_some
+
+
+def test_gaia_lang_version_fallback_when_metadata_missing(monkeypatch):
+    """_gaia_lang_version() returns 'unknown' when importlib.metadata can't
+    resolve the package (e.g. editable dev checkout without `uv sync`)."""
+    from importlib.metadata import PackageNotFoundError
+
+    from gaia.cli.commands import register as register_mod
+
+    def _raise(name):
+        raise PackageNotFoundError(name)
+
+    monkeypatch.setattr(register_mod, "_pkg_version", _raise)
+    assert register_mod._gaia_lang_version() == "unknown"
