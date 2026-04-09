@@ -32,6 +32,7 @@ logging.basicConfig(
         logging.StreamHandler(),
         logging.FileHandler(_LOG_FILE),
     ],
+    force=True,
 )
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)

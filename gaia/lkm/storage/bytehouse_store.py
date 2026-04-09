@@ -23,10 +23,10 @@ class ByteHouseEmbeddingStore:
     gcn_id performs an upsert (deduplication on primary key).
     """
 
-    TABLE = "node_embeddings_v2"
-    _LEGACY_TABLE = "node_embeddings"  # v1 without package_id
+    TABLE = "node_embeddings_v3"
+    _LEGACY_TABLE = "node_embeddings"  # v1 without package_id/role
 
-    _COLUMNS = ["gcn_id", "package_id", "content", "node_type", "embedding", "source_id"]
+    _COLUMNS = ["gcn_id", "package_id", "content", "node_type", "role", "embedding", "source_id"]
 
     _EMBEDDING_STATUS_TABLE = "embedding_status"
 
@@ -75,6 +75,7 @@ class ByteHouseEmbeddingStore:
             package_id  String DEFAULT '',
             content     String,
             node_type   String,
+            role        String DEFAULT '',
             embedding   Array(Float32),
             source_id   String,
             created_at  DateTime DEFAULT now()
@@ -137,8 +138,8 @@ class ByteHouseEmbeddingStore:
 
         logger.info("Migrating %d rows from %s to %s...", v1_count, self._LEGACY_TABLE, self.TABLE)
         self._client.command(f"""
-        INSERT INTO {self.TABLE} (gcn_id, package_id, content, node_type, embedding, source_id, created_at)
-        SELECT gcn_id, '' as package_id, content, node_type, embedding, source_id, created_at
+        INSERT INTO {self.TABLE} (gcn_id, package_id, content, node_type, role, embedding, source_id, created_at)
+        SELECT gcn_id, '' as package_id, content, node_type, '' as role, embedding, source_id, created_at
         FROM {self._LEGACY_TABLE}
         """)
 
@@ -167,6 +168,7 @@ class ByteHouseEmbeddingStore:
                 r.get("package_id", ""),
                 r["content"],
                 r["node_type"],
+                r.get("role", ""),
                 r["embedding"],
                 r["source_id"],
             ]
