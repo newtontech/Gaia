@@ -256,7 +256,7 @@ def test_compile_marks_foreign_dependency_public_premise(tmp_path, monkeypatch):
     dep_src = dep_dir / "src" / "dep_pkg"
     dep_src.mkdir(parents=True)
     (dep_src / "__init__.py").write_text(
-        'from gaia.lang import claim\n\n'
+        "from gaia.lang import claim\n\n"
         'dep_result = claim("Dependency theorem.")\n'
         '__all__ = ["dep_result"]\n'
     )
@@ -363,8 +363,8 @@ def test_compile_exported_local_hole_required_by_lists_downstream_exports(tmp_pa
             ],
         }
     ]
- 
- 
+
+
 def test_compile_interface_hash_is_deterministic(tmp_path):
     pkg_dir = tmp_path / "deterministic_pkg"
     pkg_dir.mkdir()
@@ -393,6 +393,8 @@ def test_compile_interface_hash_is_deterministic(tmp_path):
     second_hash = second_manifest["premises"][0]["interface_hash"]
 
     assert first_hash == second_hash
+
+
 def test_compile_fills_validates_foreign_local_hole_target(tmp_path, monkeypatch):
     dep_dir = tmp_path / "dep_pkg_root"
     dep_dir.mkdir()
@@ -435,7 +437,9 @@ def test_compile_fills_validates_foreign_local_hole_target(tmp_path, monkeypatch
     result = runner.invoke(app, ["compile", str(consumer_dir)])
     assert result.exit_code == 0, result.output
 
-    bridges_manifest = json.loads((consumer_dir / ".gaia" / "manifests" / "bridges.json").read_text())
+    bridges_manifest = json.loads(
+        (consumer_dir / ".gaia" / "manifests" / "bridges.json").read_text()
+    )
     assert len(bridges_manifest["bridges"]) == 1
     relation = bridges_manifest["bridges"][0]
     assert relation["relation_type"] == "fills"
@@ -495,7 +499,9 @@ def test_compile_fills_emits_conditional_infer_bridge_metadata(tmp_path, monkeyp
     result = runner.invoke(app, ["compile", str(consumer_dir)])
     assert result.exit_code == 0, result.output
 
-    bridges_manifest = json.loads((consumer_dir / ".gaia" / "manifests" / "bridges.json").read_text())
+    bridges_manifest = json.loads(
+        (consumer_dir / ".gaia" / "manifests" / "bridges.json").read_text()
+    )
     assert len(bridges_manifest["bridges"]) == 1
     relation = bridges_manifest["bridges"][0]
     assert relation["strength"] == "conditional"
@@ -608,7 +614,7 @@ def test_compile_fills_rejects_target_that_is_not_public_hole(tmp_path, monkeypa
     dep_src = dep_dir / "src" / "dep_pkg"
     dep_src.mkdir(parents=True)
     (dep_src / "__init__.py").write_text(
-        'from gaia.lang import claim\n\n'
+        "from gaia.lang import claim\n\n"
         'dep_result = claim("Dependency theorem.")\n'
         '__all__ = ["dep_result"]\n'
     )
@@ -662,6 +668,37 @@ def test_compile_fills_requires_foreign_target(tmp_path):
     assert "target must be a foreign claim" in result.output
 
 
+def test_compile_rejects_fills_strategy_with_multiple_premises(tmp_path):
+    """Bypass the fills() DSL to construct a bad strategy with 2 premises,
+    and verify compile rejects it with the 'exactly one source and one target' error."""
+    pkg_dir = tmp_path / "bad_fills_arity_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "bad-fills-arity-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "bad_fills_arity_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        "from gaia.lang import claim\n"
+        "from gaia.lang.runtime.nodes import Strategy\n\n"
+        'source_a = claim("Source A.")\n'
+        'source_b = claim("Source B.")\n'
+        'target = claim("Target.")\n'
+        "Strategy(\n"
+        '    type="deduction",\n'
+        "    premises=[source_a, source_b],\n"
+        "    conclusion=target,\n"
+        '    metadata={"gaia": {"relation": {"type": "fills", "strength": "exact", "mode": "deduction"}}},\n'
+        ")\n"
+        '__all__ = ["source_a", "source_b", "target"]\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code != 0
+    assert "exactly one source and one target" in result.output
+
+
 def test_compile_bridge_package_requires_source_dependency_declaration(tmp_path, monkeypatch):
     dep_a_dir = tmp_path / "dep_a_root"
     dep_a_dir.mkdir()
@@ -688,9 +725,7 @@ def test_compile_bridge_package_requires_source_dependency_declaration(tmp_path,
     dep_b_src = dep_b_dir / "src" / "dep_b"
     dep_b_src.mkdir(parents=True)
     (dep_b_src / "__init__.py").write_text(
-        'from gaia.lang import claim\n\n'
-        'b_result = claim("B theorem.")\n'
-        '__all__ = ["b_result"]\n'
+        'from gaia.lang import claim\n\nb_result = claim("B theorem.")\n__all__ = ["b_result"]\n'
     )
     monkeypatch.syspath_prepend(str(dep_a_dir / "src"))
     monkeypatch.syspath_prepend(str(dep_b_dir / "src"))
@@ -746,9 +781,7 @@ def test_compile_bridge_package_emits_declared_by_owner_false(tmp_path, monkeypa
     dep_b_src = dep_b_dir / "src" / "dep_b"
     dep_b_src.mkdir(parents=True)
     (dep_b_src / "__init__.py").write_text(
-        'from gaia.lang import claim\n\n'
-        'b_result = claim("B theorem.")\n'
-        '__all__ = ["b_result"]\n'
+        'from gaia.lang import claim\n\nb_result = claim("B theorem.")\n__all__ = ["b_result"]\n'
     )
     monkeypatch.syspath_prepend(str(dep_a_dir / "src"))
     monkeypatch.syspath_prepend(str(dep_b_dir / "src"))
@@ -821,7 +854,7 @@ def test_compile_rejects_duplicate_fills_relation(tmp_path, monkeypatch):
         "from dep_pkg import missing_lemma\n\n"
         'b_result = claim("B theorem.")\n'
         "fills(source=b_result, target=missing_lemma)\n"
-        "fills(source=b_result, target=missing_lemma, reason=\"duplicate\")\n"
+        'fills(source=b_result, target=missing_lemma, reason="duplicate")\n'
         '__all__ = ["b_result"]\n'
     )
 
