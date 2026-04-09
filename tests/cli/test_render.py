@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 from typer.testing import CliRunner
 
 from gaia.cli.main import app
@@ -79,3 +81,78 @@ def test_render_target_all_writes_docs_and_github(tmp_path):
     assert (github_dir / "manifest.json").exists()
     assert (github_dir / "docs" / "public" / "data" / "graph.json").exists()
     assert (github_dir / "README.md").exists()
+
+
+def test_render_fails_when_ir_artifacts_missing(tmp_path):
+    """render before compile → error about missing compiled artifacts."""
+    pkg_dir = tmp_path / "no_compile"
+    _write_base_package(pkg_dir, name="no_compile")
+    _write_minimal_source(pkg_dir, "no_compile")
+    _write_review(pkg_dir, "no_compile", "self_review")
+
+    result = runner.invoke(app, ["render", str(pkg_dir)])
+    assert result.exit_code != 0
+    assert "missing compiled artifacts" in result.output
+
+
+def test_render_fails_when_ir_stale(tmp_path):
+    """render when source changed after compile → stale-artifact error."""
+    pkg_dir = _prepare_inferred_package(tmp_path, name="stale_ir")
+
+    # Mutate source so re-compile yields a different ir_hash
+    (pkg_dir / "stale_ir" / "__init__.py").write_text(
+        "from gaia.lang import claim, noisy_and\n\n"
+        'evidence_a = claim("Observed evidence A (edited).")\n'
+        'evidence_b = claim("Observed evidence B.")\n'
+        'hypothesis = claim("Main hypothesis.")\n'
+        "support = noisy_and(premises=[evidence_a, evidence_b], conclusion=hypothesis)\n"
+        '__all__ = ["evidence_a", "evidence_b", "hypothesis", "support"]\n'
+    )
+
+    result = runner.invoke(app, ["render", str(pkg_dir)])
+    assert result.exit_code != 0
+    assert "stale" in result.output.lower()
+
+
+def test_render_fails_when_no_review_sidecar(tmp_path):
+    """render when no review.py / reviews/*.py exists → missing review error."""
+    pkg_dir = tmp_path / "no_review"
+    _write_base_package(pkg_dir, name="no_review")
+    _write_minimal_source(pkg_dir, "no_review")
+
+    compile_result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert compile_result.exit_code == 0
+
+    result = runner.invoke(app, ["render", str(pkg_dir)])
+    assert result.exit_code != 0
+    assert "review" in result.output.lower()
+
+
+def test_render_fails_when_beliefs_missing(tmp_path):
+    """render after compile but before infer → missing beliefs error."""
+    pkg_dir = tmp_path / "no_infer"
+    _write_base_package(pkg_dir, name="no_infer")
+    _write_minimal_source(pkg_dir, "no_infer")
+    _write_review(pkg_dir, "no_infer", "self_review")
+
+    compile_result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert compile_result.exit_code == 0
+
+    result = runner.invoke(app, ["render", str(pkg_dir)])
+    assert result.exit_code != 0
+    assert "beliefs" in result.output.lower()
+    assert "gaia infer" in result.output
+
+
+def test_render_fails_when_beliefs_stale(tmp_path):
+    """render when beliefs.json has a wrong ir_hash → stale beliefs error."""
+    pkg_dir = _prepare_inferred_package(tmp_path, name="stale_beliefs")
+    beliefs_path = pkg_dir / ".gaia" / "reviews" / "self_review" / "beliefs.json"
+    beliefs = json.loads(beliefs_path.read_text())
+    beliefs["ir_hash"] = "not-the-real-hash"
+    beliefs_path.write_text(json.dumps(beliefs))
+
+    result = runner.invoke(app, ["render", str(pkg_dir)])
+    assert result.exit_code != 0
+    assert "stale" in result.output.lower()
+    assert "beliefs" in result.output.lower()
