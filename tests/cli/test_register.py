@@ -457,11 +457,15 @@ def test_render_versions_toml_emits_gaia_lang_version_when_present():
     assert "gaia_lang_version" not in v1_block
 
 
-def test_render_versions_toml_preserves_unknown_keys():
-    """Forward-compat: keys not in the canonical list are preserved at the end
-    of each version block (alphabetically). This guards against silently
-    dropping fields added by future gaia versions when an older gaia re-emits
-    a Versions.toml it read from disk."""
+def test_render_versions_toml_preserves_unknown_keys_with_types():
+    """Forward-compat: keys not in the canonical list are preserved AND their
+    native TOML type is respected (not silently coerced to strings). This
+    guards against the corruption mode where an older gaia reads a
+    Versions.toml with a bool/int field added by a newer gaia and re-emits it
+    as a quoted string.
+
+    Regression test for Codex adversarial review Finding 3 (medium).
+    """
     from gaia.cli.commands.register import _render_versions_toml
 
     versions = {
@@ -471,9 +475,11 @@ def test_render_versions_toml_preserves_unknown_keys():
             "git_sha": "1234abcd",
             "registered_at": "2027-01-01T00:00:00Z",
             "gaia_lang_version": "0.3.0",
-            # Hypothetical future field not yet in _VERSIONS_CANONICAL_KEYS
+            # Hypothetical future fields with different types
+            "needs_rebuild": True,
+            "retry_count": 3,
+            "freshness_score": 0.85,
             "some_future_field": "forward-compat-value",
-            "another_future_field": "alphabetically-first",
         },
     }
     rendered = _render_versions_toml(versions)
@@ -481,28 +487,91 @@ def test_render_versions_toml_preserves_unknown_keys():
     # Canonical fields emitted first in canonical order
     assert 'ir_hash = "sha256:xyz"' in rendered
     assert 'gaia_lang_version = "0.3.0"' in rendered
-    # Unknown fields are preserved (not silently dropped)
+
+    # Non-string extras emitted as native TOML literals — the critical fix
+    assert "needs_rebuild = true" in rendered  # bool, NOT "true"
+    assert "retry_count = 3" in rendered  # int, NOT "3"
+    assert "freshness_score = 0.85" in rendered  # float, NOT "0.85"
+    # String extras still quoted
     assert 'some_future_field = "forward-compat-value"' in rendered
-    assert 'another_future_field = "alphabetically-first"' in rendered
-    # Unknown fields come AFTER canonical fields
+
+    # Unknown fields come AFTER canonical fields, alphabetically sorted
     pos_canonical = rendered.find('gaia_lang_version = "0.3.0"')
-    pos_unknown = rendered.find("some_future_field")
-    assert pos_canonical < pos_unknown
-    # Unknown fields are sorted alphabetically among themselves
-    pos_another = rendered.find("another_future_field")
+    pos_freshness = rendered.find("freshness_score")
+    pos_needs = rendered.find("needs_rebuild")
+    pos_retry = rendered.find("retry_count")
     pos_some = rendered.find("some_future_field")
-    assert pos_another < pos_some
+    assert pos_canonical < pos_freshness
+    assert pos_freshness < pos_needs
+    assert pos_needs < pos_retry
+    assert pos_retry < pos_some
 
 
-def test_gaia_lang_version_fallback_when_metadata_missing(monkeypatch):
-    """_gaia_lang_version() returns 'unknown' when importlib.metadata can't
-    resolve the package (e.g. editable dev checkout without `uv sync`)."""
-    from importlib.metadata import PackageNotFoundError
+def test_render_versions_toml_rejects_complex_types():
+    """Unsupported types (arrays, dicts, None) must raise ValueError rather
+    than silently corrupting the output. Explicit failure beats silent data
+    loss for the forward-compat path."""
+    import pytest as _pytest
 
-    from gaia.cli.commands import register as register_mod
+    from gaia.cli.commands.register import _render_versions_toml
 
-    def _raise(name):
-        raise PackageNotFoundError(name)
+    for bad_value in ([1, 2, 3], {"nested": "dict"}, None):
+        versions = {
+            "1.0.0": {
+                "ir_hash": "sha256:aaa",
+                "git_tag": "v1.0.0",
+                "git_sha": "deadbeef",
+                "registered_at": "2026-01-01T00:00:00Z",
+                "gaia_lang_version": "0.2.7",
+                "weird_field": bad_value,
+            },
+        }
+        with _pytest.raises(ValueError, match="Cannot render Versions.toml value of type"):
+            _render_versions_toml(versions)
 
-    monkeypatch.setattr(register_mod, "_pkg_version", _raise)
-    assert register_mod._gaia_lang_version() == "unknown"
+
+def test_read_gaia_lang_version_from_compile_metadata(tmp_path):
+    """Register reads gaia_lang_version from `.gaia/compile_metadata.json`
+    rather than from the live process environment. This makes registration
+    reproducible from a committed package state regardless of which gaia-lang
+    the operator has installed at register time.
+
+    Covers all three branches of the helper:
+    1. File present and well-formed → returns the recorded version
+    2. File missing → returns "unknown"
+    3. File present but malformed / missing field → returns "unknown"
+    """
+    from gaia.cli.commands.register import _read_gaia_lang_version_from_compile_metadata
+
+    # Case 1: file present, concrete version
+    pkg_dir = tmp_path / "with_metadata"
+    (pkg_dir / ".gaia").mkdir(parents=True)
+    (pkg_dir / ".gaia" / "compile_metadata.json").write_text(
+        json.dumps(
+            {
+                "gaia_lang_version": "0.3.1",
+                "compiled_at": "2026-05-01T00:00:00Z",
+                "ir_hash": "sha256:fake",
+            }
+        )
+    )
+    assert _read_gaia_lang_version_from_compile_metadata(pkg_dir) == "0.3.1"
+
+    # Case 2: file missing
+    pkg_dir_missing = tmp_path / "no_metadata"
+    pkg_dir_missing.mkdir()
+    assert _read_gaia_lang_version_from_compile_metadata(pkg_dir_missing) == "unknown"
+
+    # Case 3: file present but malformed
+    pkg_dir_bad = tmp_path / "malformed_metadata"
+    (pkg_dir_bad / ".gaia").mkdir(parents=True)
+    (pkg_dir_bad / ".gaia" / "compile_metadata.json").write_text("not-valid-json {{{")
+    assert _read_gaia_lang_version_from_compile_metadata(pkg_dir_bad) == "unknown"
+
+    # Case 4: file present and valid JSON but missing the field
+    pkg_dir_noField = tmp_path / "no_field_metadata"
+    (pkg_dir_noField / ".gaia").mkdir(parents=True)
+    (pkg_dir_noField / ".gaia" / "compile_metadata.json").write_text(
+        json.dumps({"compiled_at": "2026-05-01T00:00:00Z"})
+    )
+    assert _read_gaia_lang_version_from_compile_metadata(pkg_dir_noField) == "unknown"

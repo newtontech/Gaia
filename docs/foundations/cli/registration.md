@@ -133,9 +133,11 @@ Versions are sorted lexicographically by version string in the rendered output.
 | `git_tag` | `--tag` / derived from pyproject version | Must exist and point to HEAD |
 | `git_sha` | `git rev-parse <tag>` | Commit the tag points to |
 | `registered_at` | `datetime.utcnow()` at register time | UTC, ISO-8601 |
-| `gaia_lang_version` | `importlib.metadata.version("gaia-lang")` | Which `gaia-lang` produced the registered beliefs. Consumers can use this to detect BP engine version drift — the same `ir_hash` can produce slightly different beliefs across `gaia-lang` patch releases when the BP engine is improved. If the package metadata is unresolvable (dev checkout without `uv sync`), the field is emitted as `"unknown"`. |
+| `gaia_lang_version` | `.gaia/compile_metadata.json` (written at `gaia compile` time) | Which `gaia-lang` compiled the IR being registered. Read from the committed compile metadata file, **not** from the live process environment — this decouples the registered provenance from whatever version happens to be installed when `gaia register` runs. When the metadata file is missing or malformed (e.g. legacy packages compiled before the field was introduced), the value is emitted as `"unknown"` and a warning is printed. Consumers can use this to detect BP engine version drift across patch releases that keep `ir_hash` stable but refine numerical inference. |
 
 Older entries that pre-date the `gaia_lang_version` field are preserved as-is when the registry file is re-rendered — the renderer emits only keys present in the payload. This keeps historical entries stable across registrations.
+
+**Forward-compat note:** The renderer respects native TOML types for canonical and unknown fields alike — a future `gaia-lang` that adds a boolean or integer field to `Versions.toml` can safely coexist with older CLIs reading the same file. Complex types (arrays, nested tables, datetimes) are explicitly rejected rather than silently coerced.
 
 ### Deps.toml
 
