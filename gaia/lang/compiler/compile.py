@@ -418,25 +418,37 @@ def compile_package_artifact(
             current[1].update(c_refs)
 
     def _scan_strategy_refs(s) -> None:
-        """Recursively scan strategy and its sub_strategies for references."""
-        target = s.conclusion  # Knowledge node whose metadata carries refs from this strategy
-        if isinstance(s.reason, str):
-            if target is not None:
-                _accumulate(target, s.reason)
+        """Recursively scan strategy and its sub_strategies for references.
+
+        Refs from the strategy's reason are attributed to ``s.conclusion``
+        (the Knowledge node whose metadata carries the provenance). If the
+        conclusion is foreign (e.g. a ``fills()`` bridge whose target is an
+        imported dep node) or ``None``, refs are still VALIDATED — mixed
+        groups and strict-form unknowns still fail compile — but they are
+        NOT accumulated into provenance. Bridge provenance belongs to the
+        local source or the bridge manifest, not the dep-owned target.
+        """
+        target = s.conclusion
+        target_is_local = target is not None and _is_local(target, pkg)
+
+        def _handle(text: str | None) -> None:
+            if not text:
+                return
+            if target_is_local:
+                _accumulate(target, text)
             else:
-                _collect_refs_from_text(s.reason, label_to_id, references)
+                # Still run validation (mixed groups, strict misses) but
+                # drop provenance — we have no local node to attach it to.
+                _collect_refs_from_text(text, label_to_id, references)
+
+        if isinstance(s.reason, str):
+            _handle(s.reason)
         elif isinstance(s.reason, list):
             for entry in s.reason:
                 if isinstance(entry, str):
-                    if target is not None:
-                        _accumulate(target, entry)
-                    else:
-                        _collect_refs_from_text(entry, label_to_id, references)
+                    _handle(entry)
                 elif isinstance(entry, DslStep):
-                    if target is not None:
-                        _accumulate(target, entry.reason)
-                    else:
-                        _collect_refs_from_text(entry.reason, label_to_id, references)
+                    _handle(entry.reason)
         for sub in s.sub_strategies:
             _scan_strategy_refs(sub)
 
@@ -452,7 +464,12 @@ def compile_package_artifact(
             _accumulate(k, k.content)
 
     # Write provenance metadata onto IR knowledge nodes.
+    # Belt-and-suspenders: never mutate foreign nodes' metadata even if
+    # refs_by_knowledge somehow picks them up — provenance belongs to the
+    # package that owns the node.
     for k in knowledge_nodes:
+        if not _is_local(k, pkg):
+            continue
         refs = refs_by_knowledge.get(id(k))
         if not refs:
             continue

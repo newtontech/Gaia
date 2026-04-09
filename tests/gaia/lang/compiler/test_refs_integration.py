@@ -377,3 +377,102 @@ def test_consumer_compile_tolerates_dep_content_with_unknown_refs(
         f"against its own (empty) references.json. Foreign node content is "
         f"the dep author's responsibility, not the consumer's.\n{result.output}"
     )
+
+
+def test_bridge_reason_does_not_leak_provenance_to_foreign_target(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Regression for Codex adversarial review finding #2: a bridge
+    package's fills() reason may contain citations, but those citations
+    must NOT be attributed to the foreign ``target`` node's IR metadata.
+
+    Scenario:
+      - dep_pkg has a ``missing_lemma`` claim that is a local hole
+      - bridge_pkg does ``fills(source=b_result, target=missing_lemma,
+        reason="See [@Bell1964]")`` with Bell1964 in its own
+        references.json
+      - the bridge pkg's compiled IR must leave the foreign
+        ``missing_lemma`` node's metadata.gaia.provenance alone
+
+    Otherwise the consumer's citations leak onto dependency-owned nodes
+    and make cross-consumer provenance queries return wrong answers.
+    """
+    # --- dep_pkg with a local hole -----------------------------------------
+    dep_dir = tmp_path / "refs_dep_bridge_root"
+    dep_dir.mkdir()
+    (dep_dir / "pyproject.toml").write_text(
+        '[project]\nname = "refs-dep-bridge-gaia"\nversion = "0.4.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    dep_src = dep_dir / "src" / "refs_dep_bridge"
+    dep_src.mkdir(parents=True)
+    (dep_src / "__init__.py").write_text(
+        "from gaia.lang import claim, deduction\n\n"
+        'missing_lemma = claim("A missing lemma.")\n'
+        'main_theorem = claim("Main theorem.")\n'
+        "deduction(premises=[missing_lemma], conclusion=main_theorem)\n"
+        '__all__ = ["main_theorem"]\n'
+    )
+    monkeypatch.syspath_prepend(str(dep_dir / "src"))
+    dep_compile = runner.invoke(app, ["compile", str(dep_dir)])
+    assert dep_compile.exit_code == 0, dep_compile.output
+
+    # --- bridge_pkg that fills() the foreign hole with a citation ----------
+    bridge_dir = tmp_path / "refs_bridge_pkg"
+    bridge_dir.mkdir()
+    (bridge_dir / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "refs-bridge-pkg-gaia"\n'
+        'version = "1.0.0"\n'
+        'dependencies = ["refs-dep-bridge-gaia>=0.4.0"]\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    (bridge_dir / "references.json").write_text(
+        json.dumps(
+            {
+                "Bell1964": {
+                    "type": "article-journal",
+                    "title": "On the Einstein Podolsky Rosen Paradox",
+                }
+            }
+        )
+    )
+    bridge_src = bridge_dir / "refs_bridge_pkg"
+    bridge_src.mkdir()
+    (bridge_src / "__init__.py").write_text(
+        "from gaia.lang import claim, fills\n"
+        "from refs_dep_bridge import missing_lemma\n\n"
+        'b_result = claim("A new theorem that proves the missing lemma.")\n'
+        "fills(\n"
+        "    source=b_result,\n"
+        "    target=missing_lemma,\n"
+        '    reason="Theorem 3 establishes the lemma. See [@Bell1964].",\n'
+        ")\n"
+        '__all__ = ["b_result"]\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(bridge_dir)])
+    assert result.exit_code == 0, result.output
+
+    ir_path = bridge_dir / ".gaia" / "ir.json"
+    ir = json.loads(ir_path.read_text())
+
+    # Find the foreign missing_lemma entry in the bridge's compiled IR.
+    foreign_nodes = [k for k in ir["knowledges"] if k["id"].endswith("::missing_lemma")]
+    assert len(foreign_nodes) == 1, (
+        f"Expected exactly one missing_lemma node, got {len(foreign_nodes)}"
+    )
+    foreign_node = foreign_nodes[0]
+
+    # Foreign node must not carry consumer-local citations in its provenance.
+    foreign_provenance = foreign_node.get("metadata", {}).get("gaia", {}).get("provenance", {})
+    assert "Bell1964" not in foreign_provenance.get("cited_refs", []), (
+        "Consumer-local citation 'Bell1964' leaked onto the foreign "
+        "missing_lemma node's provenance. Bridge strategy reasons must not "
+        "attribute refs to foreign targets — they belong to the dep author, "
+        f"not the consumer. Got: {foreign_provenance}"
+    )
+
+    # Sanity check: Bell1964 should still have been VALIDATED (it is in the
+    # bridge's references.json, so compile succeeds). The citation is simply
+    # dropped from provenance writeback since there is no local owner.

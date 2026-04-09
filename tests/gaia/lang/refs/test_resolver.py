@@ -180,6 +180,5 @@ def test_validate_groups_multiple_bare_and_groups_interleaved() -> None:
     for group in result.groups:
         group_keys = {result.markers[i].key for i in group.marker_indices}
         assert group_keys in ({"Bell1964"}, {"CHSH1969"}), (
-            f"Group {group.raw!r} has corrupt marker_indices — resolves to "
-            f"{group_keys}"
+            f"Group {group.raw!r} has corrupt marker_indices — resolves to {group_keys}"
         )

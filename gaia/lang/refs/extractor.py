@@ -109,9 +109,7 @@ def extract(text: str) -> ExtractionResult:
         if not group_markers:
             continue
 
-        group_records.append(
-            (text[group_start:group_end], group_start, group_end, group_markers)
-        )
+        group_records.append((text[group_start:group_end], group_start, group_end, group_markers))
         bracket_spans.append((group_start, group_end))
 
     def _inside_bracket(pos: int) -> bool:
