@@ -19,7 +19,8 @@ from gaia.lang.refs.types import (
     RefMarker,
 )
 
-# TODO(task-2): from gaia.lang.refs.extractor import extract
+from gaia.lang.refs.extractor import extract
+
 # TODO(task-3): from gaia.lang.refs.resolver import (
 #     check_collisions,
 #     resolve,
@@ -33,7 +34,7 @@ __all__ = [
     "RefKind",
     "RefMarker",
     "ReferenceError",
-    # TODO(task-2): "extract",
+    "extract",
     # TODO(task-3): "check_collisions",
     # TODO(task-3): "resolve",
     # TODO(task-3): "validate_groups",
