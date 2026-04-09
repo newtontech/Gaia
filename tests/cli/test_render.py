@@ -156,3 +156,83 @@ def test_render_fails_when_beliefs_stale(tmp_path):
     assert result.exit_code != 0
     assert "stale" in result.output.lower()
     assert "beliefs" in result.output.lower()
+
+
+def _write_second_review(pkg_dir, package_name: str, review_name: str) -> None:
+    reviews_dir = pkg_dir / package_name / "reviews"
+    (reviews_dir / f"{review_name}.py").write_text(
+        "from gaia.review import ReviewBundle, review_claim, review_strategy\n"
+        "from .. import evidence_a, evidence_b, hypothesis, support\n\n"
+        "REVIEW = ReviewBundle(\n"
+        f'    source_id="{review_name}",\n'
+        "    objects=[\n"
+        '        review_claim(evidence_a, prior=0.5, judgment="tentative", justification="Alt."),\n'
+        '        review_claim(evidence_b, prior=0.5, judgment="tentative", justification="Alt."),\n'
+        '        review_claim(hypothesis, prior=0.5, judgment="tentative", justification="Alt."),\n'
+        '        review_strategy(support, conditional_probability=0.5, judgment="weak", justification="Alt."),\n'
+        "    ],\n"
+        ")\n"
+    )
+
+
+def test_render_fails_when_multiple_reviews_without_flag(tmp_path):
+    """Two review sidecars and no --review → error listing candidates."""
+    pkg_dir = _prepare_inferred_package(tmp_path, name="multi_review")
+    _write_second_review(pkg_dir, "multi_review", "alt_review")
+    # Run infer for the second review so both have beliefs on disk
+    alt_infer = runner.invoke(app, ["infer", str(pkg_dir), "--review", "alt_review"])
+    assert alt_infer.exit_code == 0, alt_infer.output
+
+    result = runner.invoke(app, ["render", str(pkg_dir)])
+    assert result.exit_code != 0
+    assert "multiple review sidecars" in result.output
+    assert "self_review" in result.output
+    assert "alt_review" in result.output
+
+
+def test_render_selects_named_review(tmp_path):
+    """--review <name> selects that review's beliefs for rendering."""
+    pkg_dir = _prepare_inferred_package(tmp_path, name="named_review")
+    _write_second_review(pkg_dir, "named_review", "alt_review")
+    alt_infer = runner.invoke(app, ["infer", str(pkg_dir), "--review", "alt_review"])
+    assert alt_infer.exit_code == 0, alt_infer.output
+
+    result = runner.invoke(app, ["render", str(pkg_dir), "--review", "alt_review"])
+    assert result.exit_code == 0, result.output
+    assert "Review: alt_review" in result.output
+
+
+def test_render_target_docs_only(tmp_path):
+    """--target docs creates docs/detailed-reasoning.md but not .github-output/."""
+    pkg_dir = _prepare_inferred_package(tmp_path, name="docs_only")
+
+    result = runner.invoke(app, ["render", str(pkg_dir), "--target", "docs"])
+    assert result.exit_code == 0, result.output
+
+    assert (pkg_dir / "docs" / "detailed-reasoning.md").exists()
+    assert not (pkg_dir / ".github-output").exists()
+    assert "Docs:" in result.output
+    assert "GitHub:" not in result.output
+
+
+def test_render_target_github_only(tmp_path):
+    """--target github creates .github-output/ but not docs/detailed-reasoning.md."""
+    pkg_dir = _prepare_inferred_package(tmp_path, name="github_only")
+
+    result = runner.invoke(app, ["render", str(pkg_dir), "--target", "github"])
+    assert result.exit_code == 0, result.output
+
+    assert (pkg_dir / ".github-output" / "manifest.json").exists()
+    assert not (pkg_dir / "docs" / "detailed-reasoning.md").exists()
+    assert "GitHub:" in result.output
+    assert "Docs:" not in result.output
+
+
+def test_render_target_all_is_default(tmp_path):
+    """Omitting --target is the same as --target all."""
+    pkg_dir = _prepare_inferred_package(tmp_path, name="all_default")
+
+    result = runner.invoke(app, ["render", str(pkg_dir)])
+    assert result.exit_code == 0, result.output
+    assert (pkg_dir / "docs" / "detailed-reasoning.md").exists()
+    assert (pkg_dir / ".github-output" / "manifest.json").exists()

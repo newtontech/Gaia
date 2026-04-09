@@ -119,7 +119,7 @@ def load_gaia_review(
             available = ", ".join(sorted(candidates))
             raise GaiaCliError(
                 "Error: multiple review sidecars found; choose one with "
-                f"`gaia infer --review <name>`. Available: {available}"
+                f"`--review <name>`. Available: {available}"
             )
     elif review_name not in candidates:
         available = ", ".join(sorted(candidates))
