@@ -501,7 +501,55 @@ def _knowledge_manifest_entry(knowledge) -> dict[str, Any]:
 
 
 def build_package_manifests(loaded: LoadedGaiaPackage, compiled) -> dict[str, dict[str, Any]]:
-    """Build package-level interface manifests from compiled IR plus runtime package state."""
+    """Build package-level interface manifests from compiled IR plus runtime package state.
+
+    Emits four sibling manifest files under ``.gaia/manifests/``:
+
+    - ``exports.json`` — every knowledge node in the package flagged ``exported``.
+      These are the package's public interface claims that downstream packages
+      may depend on.
+    - ``premises.json`` — every **leaf** claim (a claim with no supporting
+      strategy in the local package) that feeds into an exported conclusion.
+      Each entry carries a ``role`` field:
+
+        * ``local_hole`` — the leaf claim is declared in the **current** package
+          but has no derivation chain. These are the package's primary evidence
+          and abduction alternatives — i.e. the propositions the author accepts
+          as given inputs to the reasoning graph.
+        * ``foreign_dependency`` — the leaf claim originates in an upstream
+          ``*-gaia`` dependency and is consumed by a local strategy via the
+          dependency's ``exports.json``.
+
+    - ``holes.json`` — the subset of ``premises.json`` entries whose role is
+      ``local_hole``. Despite the name, a "hole" here does **not** mean an
+      unresolved cross-package reference (foreign dependencies already have
+      their own resolution path via the dep's exports). A ``local_hole`` is a
+      local leaf claim that a *downstream* package could optionally "fill" with
+      more specific evidence via the ``fills`` relation — but the current
+      package is perfectly valid with its leaves unfilled.
+    - ``bridges.json`` — ``fills`` relations declared in the local package that
+      point at hole qids in an upstream dependency's manifest. Empty for
+      packages with no upstream deps.
+
+    Concrete example from the ``watson-rfdiffusion-2023-gaia`` package:
+
+    - 7 exports (the paper's exported conclusions, e.g. ``binder_success_rate``)
+    - 32 local holes: 20 primary observations (e.g. ``denoising_process``,
+      ``binder_specificity``) + 12 abduction alternatives
+      (``alt_nonspecific_binding_p53_mdm2``, etc.)
+    - 0 foreign dependencies (watson has no upstream ``*-gaia`` deps)
+    - 0 bridges (watson doesn't fill any upstream holes)
+
+    All 32 holes are **declared claims** in the local package — they appear in
+    ``ir.json`` as regular knowledge nodes with ``exported=false`` and no
+    supporting strategy. They are reported as "holes" because the `holes.json`
+    manifest is indexing *local leaves that downstream packages could optionally
+    refine*, not *unresolved references*.
+
+    See ``docs/specs/2026-04-08-gaia-lang-hole-fills-design.md`` §3.2 for the
+    full rationale on why "hole" is a release-scoped interface role rather than
+    a source primitive.
+    """
     fills_relations = _resolve_fills_relations(loaded, compiled)
     graph = compiled.graph
     knowledge_by_qid = {knowledge.id: knowledge for knowledge in graph.knowledges if knowledge.id}

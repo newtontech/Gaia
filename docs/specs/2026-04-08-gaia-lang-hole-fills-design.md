@@ -88,6 +88,26 @@
 - 作者不能通过 `hole(...)` 直接“声明” hole 身份
 - 旧原型实现若已存在，应在 replacement implementation 中删除
 
+#### 命名说明：为什么叫 "hole"？
+
+⚠️ "hole" 这个词在日常英文里常让人误以为是"缺失/未解引用"，但在本协议里它的准确含义是：
+
+> 当前 package 里**已声明**的叶子 claim（没有本地支持策略），它在这个 release 的接口层面可以被下游包通过 `fills` **选择性精炼**。
+
+关键点：
+
+- **一个 `local_hole` 不是 bug，也不是未完成状态**。它是包的合法公开前提 —— 作者把某个命题作为原始证据/观察/abduction 替代方案留在叶子位置，让论文整体结构保持真实。
+- **一个 `local_hole` 不会阻塞编译、推理或注册**。它在 `ir.json` 里是普通的 `claim` node，在 BP 里按 review sidecar 给的 prior 参与推理。
+- **一个 `local_hole` 是否被下游 fill 是可选的**。大多数 self-contained 的论文包永远不会被下游 fill，这是正常状态。
+
+反例（便于排歧义）：
+
+- ❌ `local_hole` ≠ "未解引用" — 未解引用会让 validator 报错，根本进不到 manifest
+- ❌ `local_hole` ≠ "缺失依赖" — 跨包依赖的 leaf 走 `foreign_dependency` 角色，不是 `local_hole`
+- ❌ `local_hole` ≠ "TODO 标记" — 作者不需要"填补"本地 hole；整个包完全 self-contained 时所有 hole 都会一直是 hole
+
+如果你读完 `holes.json` 里有 32 个 entry 却没有任何 fill 关系，这是**正确**的状态 —— 它只是告诉下游生态"这 32 个原始证据位置**可能**可以被更强的观察工作 refine"。真实例子见 `watson-rfdiffusion-2023-gaia@0.1.1`：32 个 local holes，其中 20 个是原始观察（如 denoising_process 的实验描述），12 个是 abduction 的替代解释（如 alt_nonspecific_binding_p53_mdm2）。包本身完全合法，这些 holes 也不需要被填。
+
 ### 3.3 `fills` 仍然保留，但 target 不再语义化为“永久 hole object”
 
 推荐的 author-facing API 改成：
