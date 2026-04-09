@@ -317,18 +317,18 @@ def test_compile_public_premise_required_by_uses_nearest_exported_claim(tmp_path
     assert premise["required_by"] == ["github:nearest_root_pkg::helper_claim"]
 
 
-def test_compile_exported_public_premise_lists_other_exported_roots(tmp_path):
-    pkg_dir = tmp_path / "exp_premise_pkg"
+def test_compile_exported_local_hole_required_by_lists_downstream_exports(tmp_path):
+    pkg_dir = tmp_path / "exported_hole_pkg"
     pkg_dir.mkdir()
     (pkg_dir / "pyproject.toml").write_text(
-        '[project]\nname = "exp-premise-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[project]\nname = "exported-hole-pkg-gaia"\nversion = "1.0.0"\n\n'
         '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
     )
-    pkg_src = pkg_dir / "exp_premise_pkg"
+    pkg_src = pkg_dir / "exported_hole_pkg"
     pkg_src.mkdir()
     (pkg_src / "__init__.py").write_text(
         "from gaia.lang import claim, deduction\n\n"
-        'shared_premise = claim("Shared premise.")\n'
+        'shared_premise = claim("Shared premise exported as hole.")\n'
         'theorem_a = claim("Theorem A.")\n'
         'theorem_b = claim("Theorem B.")\n'
         "deduction(premises=[shared_premise], conclusion=theorem_a)\n"
@@ -340,16 +340,30 @@ def test_compile_exported_public_premise_lists_other_exported_roots(tmp_path):
     assert result.exit_code == 0, result.output
 
     premises_manifest = json.loads((pkg_dir / ".gaia" / "manifests" / "premises.json").read_text())
+    holes_manifest = json.loads((pkg_dir / ".gaia" / "manifests" / "holes.json").read_text())
     assert len(premises_manifest["premises"]) == 1
     premise = premises_manifest["premises"][0]
-    assert premise["qid"] == "github:exp_premise_pkg::shared_premise"
+    assert premise["qid"] == "github:exported_hole_pkg::shared_premise"
     assert premise["exported"] is True
     assert premise["required_by"] == [
-        "github:exp_premise_pkg::theorem_a",
-        "github:exp_premise_pkg::theorem_b",
+        "github:exported_hole_pkg::theorem_a",
+        "github:exported_hole_pkg::theorem_b",
     ]
-
-
+    assert holes_manifest["holes"] == [
+        {
+            "content": "Shared premise exported as hole.",
+            "content_hash": premise["content_hash"],
+            "interface_hash": premise["interface_hash"],
+            "label": "shared_premise",
+            "qid": "github:exported_hole_pkg::shared_premise",
+            "required_by": [
+                "github:exported_hole_pkg::theorem_a",
+                "github:exported_hole_pkg::theorem_b",
+            ],
+        }
+    ]
+ 
+ 
 def test_compile_interface_hash_is_deterministic(tmp_path):
     pkg_dir = tmp_path / "deterministic_pkg"
     pkg_dir.mkdir()
@@ -378,8 +392,6 @@ def test_compile_interface_hash_is_deterministic(tmp_path):
     second_hash = second_manifest["premises"][0]["interface_hash"]
 
     assert first_hash == second_hash
-
-
 def test_compile_fills_validates_foreign_local_hole_target(tmp_path, monkeypatch):
     dep_dir = tmp_path / "dep_pkg_root"
     dep_dir.mkdir()
@@ -438,6 +450,56 @@ def test_compile_fills_validates_foreign_local_hole_target(tmp_path, monkeypatch
     assert relation["justification"] == "Theorem 3 establishes A."
     assert relation["relation_id"].startswith("bridge_")
     assert relation["target_interface_hash"].startswith("sha256:")
+
+
+def test_compile_fills_emits_conditional_infer_bridge_metadata(tmp_path, monkeypatch):
+    dep_dir = tmp_path / "dep_pkg_root"
+    dep_dir.mkdir()
+    (dep_dir / "pyproject.toml").write_text(
+        '[project]\nname = "dep-pkg-gaia"\nversion = "0.4.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    dep_src = dep_dir / "src" / "dep_pkg"
+    dep_src.mkdir(parents=True)
+    (dep_src / "__init__.py").write_text(
+        "from gaia.lang import claim, deduction\n\n"
+        'missing_lemma = claim("A missing lemma.")\n'
+        'main_theorem = claim("Main theorem.")\n'
+        "deduction(premises=[missing_lemma], conclusion=main_theorem)\n"
+        '__all__ = ["main_theorem"]\n'
+    )
+    monkeypatch.syspath_prepend(str(dep_dir / "src"))
+    dep_compile = runner.invoke(app, ["compile", str(dep_dir)])
+    assert dep_compile.exit_code == 0, dep_compile.output
+
+    consumer_dir = tmp_path / "consumer_pkg"
+    consumer_dir.mkdir()
+    (consumer_dir / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "consumer-pkg-gaia"\n'
+        'version = "1.0.0"\n'
+        'dependencies = ["dep-pkg-gaia>=0.4.0"]\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    consumer_src = consumer_dir / "consumer_pkg"
+    consumer_src.mkdir()
+    (consumer_src / "__init__.py").write_text(
+        "from gaia.lang import claim, fills\n"
+        "from dep_pkg import missing_lemma\n\n"
+        'b_result = claim("B theorem.")\n'
+        'bridge = fills(source=b_result, target=missing_lemma, strength="conditional", mode="infer", reason="Only under extra assumptions.")\n'
+        '__all__ = ["b_result", "bridge"]\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(consumer_dir)])
+    assert result.exit_code == 0, result.output
+
+    bridges_manifest = json.loads((consumer_dir / ".gaia" / "manifests" / "bridges.json").read_text())
+    assert len(bridges_manifest["bridges"]) == 1
+    relation = bridges_manifest["bridges"][0]
+    assert relation["strength"] == "conditional"
+    assert relation["mode"] == "infer"
+    assert relation["justification"] == "Only under extra assumptions."
 
 
 def test_compile_fills_requires_dependency_manifest(tmp_path, monkeypatch):
