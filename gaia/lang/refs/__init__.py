@@ -20,13 +20,12 @@ from gaia.lang.refs.types import (
 )
 
 from gaia.lang.refs.extractor import extract
+from gaia.lang.refs.loader import load_references
 from gaia.lang.refs.resolver import (
     check_collisions,
     resolve,
     validate_groups,
 )
-
-# TODO(task-4): from gaia.lang.refs.loader import load_references
 
 __all__ = [
     "BracketGroup",
@@ -38,5 +37,5 @@ __all__ = [
     "check_collisions",
     "resolve",
     "validate_groups",
-    # TODO(task-4): "load_references",
+    "load_references",
 ]
