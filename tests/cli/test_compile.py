@@ -39,6 +39,23 @@ def test_compile_creates_ir_json(tmp_path):
     result = validate_local_graph(LocalCanonicalGraph(**ir))
     assert result.valid, result.errors
 
+    exports_manifest = json.loads((gaia_dir / "manifests" / "exports.json").read_text())
+    premises_manifest = json.loads((gaia_dir / "manifests" / "premises.json").read_text())
+    assert exports_manifest["manifest_schema_version"] == 1
+    assert premises_manifest["manifest_schema_version"] == 1
+    assert exports_manifest["package"] == "test-pkg"
+    assert exports_manifest["version"] == "1.0.0"
+    assert exports_manifest["exports"] == [
+        {
+            "content": "A test claim.",
+            "content_hash": ir["knowledges"][0]["content_hash"],
+            "label": "my_claim",
+            "qid": "github:test_pkg::my_claim",
+            "type": "claim",
+        }
+    ]
+    assert premises_manifest["premises"] == []
+
 
 def test_compile_no_pyproject(tmp_path):
     """Error when no pyproject.toml exists."""
@@ -177,6 +194,175 @@ def test_compile_preserves_structured_steps_and_provenance(tmp_path):
             "premises": ["github:step_pkg::evidence_a", "github:step_pkg::evidence_b"],
         }
     ]
+
+
+def test_compile_emits_public_premise_manifest_for_local_hole(tmp_path):
+    pkg_dir = tmp_path / "premise_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "premise-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "premise_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        "from gaia.lang import claim, deduction\n\n"
+        'missing_lemma = claim("A missing lemma.")\n'
+        'main_theorem = claim("Main theorem.")\n'
+        "deduction(premises=[missing_lemma], conclusion=main_theorem)\n"
+        '__all__ = ["main_theorem"]\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code == 0, result.output
+
+    premises_manifest = json.loads((pkg_dir / ".gaia" / "manifests" / "premises.json").read_text())
+    assert premises_manifest["manifest_schema_version"] == 1
+    assert premises_manifest["package"] == "premise-pkg"
+    assert premises_manifest["version"] == "1.0.0"
+    assert len(premises_manifest["premises"]) == 1
+    premise = premises_manifest["premises"][0]
+    assert premise["qid"] == "github:premise_pkg::missing_lemma"
+    assert premise["label"] == "missing_lemma"
+    assert premise["role"] == "local_hole"
+    assert premise["exported"] is False
+    assert premise["required_by"] == ["github:premise_pkg::main_theorem"]
+    assert premise["interface_hash"].startswith("sha256:")
+
+
+def test_compile_marks_foreign_dependency_public_premise(tmp_path, monkeypatch):
+    dep_dir = tmp_path / "dep_pkg_root"
+    dep_dir.mkdir()
+    (dep_dir / "pyproject.toml").write_text(
+        '[project]\nname = "dep-pkg-gaia"\nversion = "0.4.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    dep_src = dep_dir / "src" / "dep_pkg"
+    dep_src.mkdir(parents=True)
+    (dep_src / "__init__.py").write_text(
+        'from gaia.lang import claim\n\n'
+        'dep_result = claim("Dependency theorem.")\n'
+        '__all__ = ["dep_result"]\n'
+    )
+    monkeypatch.syspath_prepend(str(dep_dir / "src"))
+
+    pkg_dir = tmp_path / "consumer_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "consumer-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "consumer_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        "from gaia.lang import claim, deduction\n"
+        "from dep_pkg import dep_result\n\n"
+        'main_theorem = claim("Consumer theorem.")\n'
+        "deduction(premises=[dep_result], conclusion=main_theorem)\n"
+        '__all__ = ["main_theorem"]\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code == 0, result.output
+
+    premises_manifest = json.loads((pkg_dir / ".gaia" / "manifests" / "premises.json").read_text())
+    assert len(premises_manifest["premises"]) == 1
+    premise = premises_manifest["premises"][0]
+    assert premise["qid"] == "github:dep_pkg::dep_result"
+    assert premise["role"] == "foreign_dependency"
+    assert premise["required_by"] == ["github:consumer_pkg::main_theorem"]
+
+
+def test_compile_public_premise_required_by_uses_nearest_exported_claim(tmp_path):
+    pkg_dir = tmp_path / "nearest_root_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "nearest-root-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "nearest_root_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        "from gaia.lang import claim, deduction\n\n"
+        'shared_premise = claim("Shared premise.")\n'
+        'helper_claim = claim("Helper claim.")\n'
+        'main_theorem = claim("Main theorem.")\n'
+        "deduction(premises=[shared_premise], conclusion=helper_claim)\n"
+        "deduction(premises=[helper_claim], conclusion=main_theorem)\n"
+        '__all__ = ["helper_claim", "main_theorem"]\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code == 0, result.output
+
+    premises_manifest = json.loads((pkg_dir / ".gaia" / "manifests" / "premises.json").read_text())
+    assert len(premises_manifest["premises"]) == 1
+    premise = premises_manifest["premises"][0]
+    assert premise["qid"] == "github:nearest_root_pkg::shared_premise"
+    assert premise["required_by"] == ["github:nearest_root_pkg::helper_claim"]
+
+
+def test_compile_exported_public_premise_lists_other_exported_roots(tmp_path):
+    pkg_dir = tmp_path / "exp_premise_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "exp-premise-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "exp_premise_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        "from gaia.lang import claim, deduction\n\n"
+        'shared_premise = claim("Shared premise.")\n'
+        'theorem_a = claim("Theorem A.")\n'
+        'theorem_b = claim("Theorem B.")\n'
+        "deduction(premises=[shared_premise], conclusion=theorem_a)\n"
+        "deduction(premises=[shared_premise], conclusion=theorem_b)\n"
+        '__all__ = ["shared_premise", "theorem_a", "theorem_b"]\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code == 0, result.output
+
+    premises_manifest = json.loads((pkg_dir / ".gaia" / "manifests" / "premises.json").read_text())
+    assert len(premises_manifest["premises"]) == 1
+    premise = premises_manifest["premises"][0]
+    assert premise["qid"] == "github:exp_premise_pkg::shared_premise"
+    assert premise["exported"] is True
+    assert premise["required_by"] == [
+        "github:exp_premise_pkg::theorem_a",
+        "github:exp_premise_pkg::theorem_b",
+    ]
+
+
+def test_compile_interface_hash_is_deterministic(tmp_path):
+    pkg_dir = tmp_path / "deterministic_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "deterministic-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "deterministic_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        "from gaia.lang import claim, deduction\n\n"
+        'missing_lemma = claim("A missing lemma.")\n'
+        'main_theorem = claim("Main theorem.")\n'
+        "deduction(premises=[missing_lemma], conclusion=main_theorem)\n"
+        '__all__ = ["main_theorem"]\n'
+    )
+
+    first = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert first.exit_code == 0, first.output
+    first_manifest = json.loads((pkg_dir / ".gaia" / "manifests" / "premises.json").read_text())
+    first_hash = first_manifest["premises"][0]["interface_hash"]
+
+    second = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert second.exit_code == 0, second.output
+    second_manifest = json.loads((pkg_dir / ".gaia" / "manifests" / "premises.json").read_text())
+    second_hash = second_manifest["premises"][0]["interface_hash"]
+
+    assert first_hash == second_hash
 
 
 def test_compile_named_strategy_uses_ir_canonical_formalization(tmp_path):

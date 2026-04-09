@@ -6,7 +6,8 @@ import json
 
 import typer
 
-from gaia.cli._packages import GaiaCliError, compile_loaded_package, load_gaia_package
+from gaia.cli._packages import GaiaCliError, build_package_manifests, load_gaia_package
+from gaia.cli._packages import compile_loaded_package_artifact
 from gaia.cli._packages import write_compiled_artifacts
 from gaia.ir import LocalCanonicalGraph
 from gaia.ir.validator import validate_local_graph
@@ -29,7 +30,9 @@ def compile_command(
     """Compile a knowledge package to .gaia/ir.json."""
     try:
         loaded = load_gaia_package(path)
-        ir = compile_loaded_package(loaded)
+        compiled = compile_loaded_package_artifact(loaded)
+        ir = compiled.to_json()
+        manifests = build_package_manifests(loaded, compiled)
     except GaiaCliError as exc:
         typer.echo(str(exc), err=True)
         raise typer.Exit(1)
@@ -42,7 +45,7 @@ def compile_command(
             typer.echo(f"Error: {error}", err=True)
         raise typer.Exit(1)
 
-    gaia_dir = write_compiled_artifacts(loaded.pkg_path, ir)
+    gaia_dir = write_compiled_artifacts(loaded.pkg_path, ir, manifests=manifests)
 
     typer.echo(
         f"Compiled {len(ir['knowledges'])} knowledge, "
