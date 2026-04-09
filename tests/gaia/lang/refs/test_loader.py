@@ -193,3 +193,59 @@ def test_load_accepts_valid_pandoc_keys(tmp_path: Path) -> None:
     )
     refs = load_references(path)
     assert len(refs) == 6
+
+
+# ---------------------------------------------------------------------------
+# Codex adversarial review round 3: malformed type/title field values must
+# raise ReferenceError, not TypeError/AttributeError. Previously _validate_entry
+# called `entry_type not in _CSL_TYPES` without first checking that entry_type
+# was a string, crashing the CLI with an uncaught TypeError on unhashable
+# inputs like `{"type": []}`.
+# ---------------------------------------------------------------------------
+
+
+def test_load_rejects_list_type_value_with_reference_error(tmp_path: Path) -> None:
+    """An unhashable type value (list) must raise ReferenceError, not crash."""
+    path = tmp_path / "references.json"
+    path.write_text(json.dumps({"Bad": {"type": [], "title": "X"}}))
+    with pytest.raises(ReferenceError) as exc:
+        load_references(path)
+    assert "Bad" in str(exc.value)
+    assert "type" in str(exc.value).lower()
+
+
+def test_load_rejects_dict_type_value_with_reference_error(tmp_path: Path) -> None:
+    """An unhashable type value (dict) must raise ReferenceError, not crash."""
+    path = tmp_path / "references.json"
+    path.write_text(json.dumps({"Bad": {"type": {}, "title": "X"}}))
+    with pytest.raises(ReferenceError) as exc:
+        load_references(path)
+    assert "Bad" in str(exc.value)
+
+
+def test_load_rejects_integer_type_value_with_reference_error(tmp_path: Path) -> None:
+    """A non-string but hashable type value must also raise ReferenceError."""
+    path = tmp_path / "references.json"
+    path.write_text(json.dumps({"Bad": {"type": 42, "title": "X"}}))
+    with pytest.raises(ReferenceError) as exc:
+        load_references(path)
+    assert "Bad" in str(exc.value)
+
+
+def test_load_rejects_null_type_value_with_reference_error(tmp_path: Path) -> None:
+    """A null type value must raise ReferenceError."""
+    path = tmp_path / "references.json"
+    path.write_text(json.dumps({"Bad": {"type": None, "title": "X"}}))
+    with pytest.raises(ReferenceError) as exc:
+        load_references(path)
+    assert "Bad" in str(exc.value)
+
+
+def test_load_rejects_non_string_title_with_reference_error(tmp_path: Path) -> None:
+    """A non-string title must also raise ReferenceError, not crash."""
+    path = tmp_path / "references.json"
+    path.write_text(json.dumps({"Bad": {"type": "book", "title": []}}))
+    with pytest.raises(ReferenceError) as exc:
+        load_references(path)
+    assert "Bad" in str(exc.value)
+    assert "title" in str(exc.value).lower()

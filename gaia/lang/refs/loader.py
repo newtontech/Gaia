@@ -140,6 +140,17 @@ def _validate_entry(key: str, entry: Any, *, location: str) -> None:
             location=location,
         )
     entry_type = entry["type"]
+    # Validate the field type BEFORE doing the allowlist membership check.
+    # `entry_type not in _CSL_TYPES` would raise TypeError on unhashable
+    # values like [] or {}, which leaks a Python traceback to the CLI user
+    # instead of the clean ReferenceError path.
+    if not isinstance(entry_type, str):
+        raise ReferenceError(
+            f"reference entry '{key}' has non-string 'type' field: got "
+            f"{type(entry_type).__name__}. must be a string matching one of "
+            f"the CSL 1.0.2 types.",
+            location=location,
+        )
     if entry_type not in _CSL_TYPES:
         raise ReferenceError(
             f"reference entry '{key}' has invalid type '{entry_type}'. "
@@ -148,8 +159,20 @@ def _validate_entry(key: str, entry: Any, *, location: str) -> None:
             location=location,
         )
 
-    if "title" not in entry or not entry["title"]:
+    if "title" not in entry:
         raise ReferenceError(
             f"reference entry '{key}' is missing required field 'title'",
+            location=location,
+        )
+    title = entry["title"]
+    if not isinstance(title, str):
+        raise ReferenceError(
+            f"reference entry '{key}' has non-string 'title' field: got "
+            f"{type(title).__name__}. must be a non-empty string.",
+            location=location,
+        )
+    if not title:
+        raise ReferenceError(
+            f"reference entry '{key}' has empty 'title' field",
             location=location,
         )
