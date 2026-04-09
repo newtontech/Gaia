@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import subprocess
 from datetime import datetime, timezone
+from importlib.metadata import PackageNotFoundError, version as _pkg_version
 from pathlib import Path
 from uuid import UUID
 
@@ -24,6 +25,17 @@ except ImportError:
 
 def _utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _gaia_lang_version() -> str:
+    """Return the installed gaia-lang version, or 'unknown' if the package
+    metadata is not available (e.g. running from an un-built editable checkout
+    without `uv sync`). The 'unknown' fallback keeps register usable in dev
+    environments while still surfacing that the version is not recorded."""
+    try:
+        return _pkg_version("gaia-lang")
+    except PackageNotFoundError:
+        return "unknown"
 
 
 def _run(
@@ -90,13 +102,28 @@ def _render_package_toml(
     )
 
 
+_VERSIONS_CANONICAL_KEYS = (
+    "ir_hash",
+    "git_tag",
+    "git_sha",
+    "registered_at",
+    "gaia_lang_version",
+)
+
+
 def _render_versions_toml(versions: dict[str, dict[str, str]]) -> str:
     lines: list[str] = []
     for version in sorted(versions):
         payload = versions[version]
         lines.append(f'[versions."{version}"]')
-        for key in ("ir_hash", "git_tag", "git_sha", "registered_at"):
-            lines.append(f'{key} = "{payload[key]}"')
+        for key in _VERSIONS_CANONICAL_KEYS:
+            if key in payload:
+                lines.append(f'{key} = "{payload[key]}"')
+        # Preserve any extra keys not in the canonical list (forward compat for
+        # older Versions.toml entries we may be appending to).
+        for key in sorted(payload):
+            if key not in _VERSIONS_CANONICAL_KEYS:
+                lines.append(f'{key} = "{payload[key]}"')
         lines.append("")
     return "\n".join(lines)
 
@@ -289,6 +316,7 @@ def register_command(
             "git_tag": tag_name,
             "git_sha": tag_sha,
             "registered_at": registered_at,
+            "gaia_lang_version": _gaia_lang_version(),
         }
     }
     deps_payload = {version: deps}

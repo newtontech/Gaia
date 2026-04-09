@@ -113,15 +113,29 @@ ir_hash = "sha256:a1b2c3d4..."
 git_tag = "v4.0.0"
 git_sha = "abc123def456..."
 registered_at = "2026-04-02T10:30:00Z"
+gaia_lang_version = "0.2.5"
 
 [versions."4.1.0"]
 ir_hash = "sha256:e5f6g7h8..."
 git_tag = "v4.1.0"
 git_sha = "789abc012def..."
 registered_at = "2026-04-10T15:00:00Z"
+gaia_lang_version = "0.2.7"
 ```
 
 Versions are sorted lexicographically by version string in the rendered output.
+
+**Fields:**
+
+| Field | Source | Notes |
+|-------|--------|-------|
+| `ir_hash` | `.gaia/ir_hash` | Content hash of the compiled IR — structural identity |
+| `git_tag` | `--tag` / derived from pyproject version | Must exist and point to HEAD |
+| `git_sha` | `git rev-parse <tag>` | Commit the tag points to |
+| `registered_at` | `datetime.utcnow()` at register time | UTC, ISO-8601 |
+| `gaia_lang_version` | `importlib.metadata.version("gaia-lang")` | Which `gaia-lang` produced the registered beliefs. Consumers can use this to detect BP engine version drift — the same `ir_hash` can produce slightly different beliefs across `gaia-lang` patch releases when the BP engine is improved. If the package metadata is unresolvable (dev checkout without `uv sync`), the field is emitted as `"unknown"`. |
+
+Older entries that pre-date the `gaia_lang_version` field are preserved as-is when the registry file is re-rendered — the renderer emits only keys present in the payload. This keeps historical entries stable across registrations.
 
 ### Deps.toml
 

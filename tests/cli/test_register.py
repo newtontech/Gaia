@@ -202,7 +202,20 @@ def test_register_writes_registry_metadata_to_local_checkout(tmp_path):
     assert (release_dir / "bridges.json").exists()
     assert (release_dir / "exports.json").read_text().endswith("\n")
     assert 'name = "register-demo"' in (package_dir / "Package.toml").read_text()
-    assert 'git_tag = "v1.2.0"' in (package_dir / "Versions.toml").read_text()
+    versions_text = (package_dir / "Versions.toml").read_text()
+    assert 'git_tag = "v1.2.0"' in versions_text
+    # gaia_lang_version is recorded so downstream consumers know which
+    # BP engine produced the registered beliefs. Must be a concrete PEP 440
+    # version from importlib.metadata, not the 'unknown' fallback.
+    import re as _re
+
+    _match = _re.search(r'gaia_lang_version = "([^"]+)"', versions_text)
+    assert _match is not None, f"gaia_lang_version missing from Versions.toml:\n{versions_text}"
+    assert _match.group(1) != "unknown", (
+        "gaia_lang_version fell back to 'unknown' — importlib.metadata should "
+        "resolve it in this test environment"
+    )
+    assert _re.match(r"^\d+\.\d+", _match.group(1)), f"unexpected version format: {_match.group(1)}"
     assert '"aristotle-mechanics-gaia" = ">= 1.0.0"' in (package_dir / "Deps.toml").read_text()
     exports_manifest = json.loads((release_dir / "exports.json").read_text())
     premises_manifest = json.loads((release_dir / "premises.json").read_text())
@@ -405,3 +418,40 @@ def test_register_fails_on_invalid_fills_target(tmp_path, monkeypatch):
     )
     assert result.exit_code != 0
     assert "missing .gaia/manifests/premises.json" in result.output
+
+
+def test_render_versions_toml_emits_gaia_lang_version_when_present():
+    """New entries with gaia_lang_version emit it in canonical order; older entries
+    lacking the field render unchanged (forward compat when appending)."""
+    from gaia.cli.commands.register import _render_versions_toml
+
+    versions = {
+        "1.0.0": {
+            "ir_hash": "sha256:aaa",
+            "git_tag": "v1.0.0",
+            "git_sha": "deadbeef",
+            "registered_at": "2026-01-01T00:00:00Z",
+            # Missing gaia_lang_version — simulates a legacy Versions.toml entry
+        },
+        "1.1.0": {
+            "ir_hash": "sha256:bbb",
+            "git_tag": "v1.1.0",
+            "git_sha": "cafebabe",
+            "registered_at": "2026-04-09T12:00:00Z",
+            "gaia_lang_version": "0.2.7",
+        },
+    }
+    rendered = _render_versions_toml(versions)
+
+    # 1.0.0 is untouched — no gaia_lang_version emitted
+    assert '[versions."1.0.0"]' in rendered
+    # 1.1.0 emits the new field in canonical order (after registered_at)
+    assert '[versions."1.1.0"]' in rendered
+    assert 'gaia_lang_version = "0.2.7"' in rendered
+    # Canonical order: registered_at comes immediately before gaia_lang_version
+    pos_registered = rendered.find('registered_at = "2026-04-09T12:00:00Z"')
+    pos_gaia = rendered.find('gaia_lang_version = "0.2.7"')
+    assert pos_registered < pos_gaia
+    # Legacy entry at 1.0.0 has NO gaia_lang_version line
+    v1_block = rendered.split('[versions."1.0.0"]')[1].split('[versions."1.1.0"]')[0]
+    assert "gaia_lang_version" not in v1_block
