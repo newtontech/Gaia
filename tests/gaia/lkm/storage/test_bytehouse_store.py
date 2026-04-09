@@ -78,6 +78,7 @@ def test_upsert_embeddings(store):
     records = [
         {
             "gcn_id": "node1",
+            "package_id": "paper:123",
             "content": "some content",
             "node_type": "claim",
             "embedding": [0.1] * 512,
@@ -85,6 +86,7 @@ def test_upsert_embeddings(store):
         },
         {
             "gcn_id": "node2",
+            "package_id": "paper:456",
             "content": "other content",
             "node_type": "question",
             "embedding": [0.2] * 512,
