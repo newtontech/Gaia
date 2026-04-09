@@ -68,12 +68,20 @@ def extract(text: str) -> ExtractionResult:
         ExtractionResult containing:
         - markers: All extracted markers in source order (both bare and strict)
         - groups: All bracket groups containing at least one marker
+
+    Group membership is tracked by marker identity during Pass 1, then
+    converted to final list indices AFTER the markers list is sorted. This
+    makes the group indices robust to the sort step even when bare markers
+    appear before or between bracket groups.
     """
     if not text:
         return ExtractionResult(markers=(), groups=())
 
     markers: list[RefMarker] = []
-    groups: list[BracketGroup] = []
+    # During Pass 1, groups are recorded with the actual RefMarker objects
+    # that belong to them (not list indices), so we can rebuild indices
+    # after sort. Each tuple: (raw_text, start, end, group_markers).
+    group_records: list[tuple[str, int, int, list[RefMarker]]] = []
     # Character positions covered by bracket groups, so the bare scanner can
     # skip them.
     bracket_spans: list[tuple[int, int]] = []
@@ -85,31 +93,24 @@ def extract(text: str) -> ExtractionResult:
         body = group_match.group(1)
         body_offset = group_match.start(1)
 
-        marker_indices: list[int] = []
-        group_index = len(groups)
+        group_markers: list[RefMarker] = []
+        group_index = len(group_records)
         for key_match in _INNER_KEY_RE.finditer(body):
-            marker_index = len(markers)
-            markers.append(
-                RefMarker(
-                    key=key_match.group(1),
-                    start=body_offset + key_match.start(1) - 1,  # include `@`
-                    end=body_offset + key_match.end(1),
-                    strict=True,
-                    group_index=group_index,
-                )
+            marker = RefMarker(
+                key=key_match.group(1),
+                start=body_offset + key_match.start(1) - 1,  # include `@`
+                end=body_offset + key_match.end(1),
+                strict=True,
+                group_index=group_index,
             )
-            marker_indices.append(marker_index)
+            markers.append(marker)
+            group_markers.append(marker)
 
-        if not marker_indices:
+        if not group_markers:
             continue
 
-        groups.append(
-            BracketGroup(
-                raw=text[group_start:group_end],
-                start=group_start,
-                end=group_end,
-                marker_indices=tuple(marker_indices),
-            )
+        group_records.append(
+            (text[group_start:group_end], group_start, group_end, group_markers)
         )
         bracket_spans.append((group_start, group_end))
 
@@ -130,5 +131,21 @@ def extract(text: str) -> ExtractionResult:
             )
         )
 
+    # Sort markers by source position AFTER all Pass 1 and Pass 2 markers
+    # are collected. Group membership still points at the original RefMarker
+    # objects, so we rebuild marker_indices by identity lookup against the
+    # sorted list.
     markers.sort(key=lambda m: m.start)
-    return ExtractionResult(markers=tuple(markers), groups=tuple(groups))
+    new_index_of: dict[int, int] = {id(m): i for i, m in enumerate(markers)}
+
+    groups = tuple(
+        BracketGroup(
+            raw=raw,
+            start=start,
+            end=end,
+            marker_indices=tuple(new_index_of[id(m)] for m in group_markers),
+        )
+        for raw, start, end, group_markers in group_records
+    )
+
+    return ExtractionResult(markers=tuple(markers), groups=groups)
