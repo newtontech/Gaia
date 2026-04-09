@@ -485,12 +485,51 @@ async def test_count_unknown_table_raises(store: BytehouseLkmStore, mock_client:
         await store.count("nonexistent")
 
 
-async def test_list_ingested_package_ids(store: BytehouseLkmStore, mock_client: MagicMock) -> None:
+async def test_list_ingested_package_ids_uses_distinct(
+    store: BytehouseLkmStore, mock_client: MagicMock
+) -> None:
+    """import_status is an attempt log — DISTINCT is required to dedupe."""
     mock_client.query.return_value = _query_result([("pkg-a",), ("pkg-b",)], ["package_id"])
     out = await store.list_ingested_package_ids()
     assert out == ["pkg-a", "pkg-b"]
     sql = mock_client.query.call_args.args[0]
     assert "status = 'ingested'" in sql
+    assert "DISTINCT" in sql
+
+
+async def test_get_import_status_picks_latest_attempt(
+    store: BytehouseLkmStore, mock_client: MagicMock
+) -> None:
+    """get_import_status must ORDER BY started_at DESC to return the latest attempt."""
+    cols = [
+        "package_id",
+        "status",
+        "variable_count",
+        "factor_count",
+        "prior_count",
+        "factor_param_count",
+        "started_at",
+        "completed_at",
+        "error",
+    ]
+    latest_row = (
+        "paper:retry",
+        "ingested",
+        5,
+        0,
+        0,
+        0,
+        "2026-04-08T07:00:00+00:00",
+        "2026-04-08T07:00:10+00:00",
+        "",
+    )
+    mock_client.query.return_value = _query_result([latest_row], cols)
+    result = await store.get_import_status("paper:retry")
+    assert result is not None
+    assert result.status == "ingested"
+    sql = mock_client.query.call_args.args[0]
+    assert "ORDER BY started_at DESC" in sql
+    assert "LIMIT 1" in sql
 
 
 async def test_update_global_variable_members_id_mismatch(

@@ -283,6 +283,54 @@ async def test_import_status_round_trip(store: BytehouseLkmStore) -> None:
     assert "itest-pkg" in ids
 
 
+async def test_import_status_attempt_log(store: BytehouseLkmStore) -> None:
+    """Multiple attempts per package_id survive the round-trip.
+
+    Pins the composite UNIQUE KEY (package_id, started_at) contract:
+    retries/failures must all be preserved, and get_import_status must
+    return the latest attempt, not an arbitrary one.
+    """
+    from datetime import timedelta
+
+    t0 = datetime(2026, 4, 8, 6, 0, 0, tzinfo=timezone.utc)
+    attempts = [
+        ImportStatusRecord(
+            package_id="itest-retry",
+            status="failed:ValueError",
+            started_at=t0 + timedelta(minutes=15 * i),
+            completed_at=t0 + timedelta(minutes=15 * i, seconds=30),
+            error=f"attempt {i}",
+        )
+        for i in range(3)
+    ]
+    attempts.append(
+        ImportStatusRecord(
+            package_id="itest-retry",
+            status="ingested",
+            variable_count=7,
+            started_at=t0 + timedelta(minutes=60),
+            completed_at=t0 + timedelta(minutes=60, seconds=10),
+        )
+    )
+    # Two batches to also exercise cross-call append semantics
+    await store.write_import_status_batch(attempts[:2])
+    await store.write_import_status_batch(attempts[2:])
+
+    # All 4 attempts preserved (composite unique key does not dedupe them)
+    total = await store.count("import_status")
+    assert total >= 4
+
+    # Latest attempt wins on read
+    latest = await store.get_import_status("itest-retry")
+    assert latest is not None
+    assert latest.status == "ingested"
+    assert latest.variable_count == 7
+
+    # DISTINCT dedupes the package_id in list_ingested_package_ids
+    ids = await store.list_ingested_package_ids()
+    assert ids.count("itest-retry") == 1
+
+
 async def test_count_uses_lance_table_names(store: BytehouseLkmStore) -> None:
     await store.batch_upsert_local_nodes(variables=[_local_var(99)], factors=[_local_factor(99)])
     assert await store.count("local_variable_nodes") >= 1

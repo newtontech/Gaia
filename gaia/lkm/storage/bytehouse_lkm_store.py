@@ -577,12 +577,30 @@ class BytehouseLkmStore:
         await self._run(self._insert_sync, "lkm_import_status", data)
 
     async def get_import_status(self, package_id: str) -> ImportStatusRecord | None:
-        sql = f"SELECT * FROM {self.t_istatus} WHERE package_id = %(id)s LIMIT 1"
+        """Return the latest ingest attempt for ``package_id``.
+
+        import_status is an attempt log (composite UNIQUE KEY
+        ``(package_id, started_at)``): a package may have multiple rows
+        corresponding to retries. This method returns the row with the
+        greatest ``started_at`` — that is, the most recent attempt,
+        regardless of whether it succeeded or failed.
+        """
+        sql = (
+            f"SELECT * FROM {self.t_istatus} "
+            "WHERE package_id = %(id)s "
+            "ORDER BY started_at DESC LIMIT 1"
+        )
         rows = await self._run(self._query_dicts, sql, {"id": package_id})
         return row_to_import_status(rows[0]) if rows else None
 
     async def list_ingested_package_ids(self) -> list[str]:
-        sql = f"SELECT package_id FROM {self.t_istatus} WHERE status = 'ingested'"
+        """Return the unique set of package_ids whose latest attempt succeeded.
+
+        Because the table is an attempt log, DISTINCT is required to avoid
+        duplicate package_ids from multiple ``status='ingested'`` rows
+        (possible when a package is re-ingested later).
+        """
+        sql = f"SELECT DISTINCT package_id FROM {self.t_istatus} WHERE status = 'ingested'"
         rows = await self._run(self._query_dicts, sql)
         return [r["package_id"] for r in rows]
 

@@ -157,6 +157,9 @@ LKM_TABLES: dict[str, str] = {
         UNIQUE KEY source_id
         SETTINGS index_granularity = 128
     """,
+    # import_status is an attempt log: one row per ingest attempt. A single
+    # package_id can legitimately have many rows (retries, failures), each
+    # with a distinct started_at. That is why the UNIQUE KEY is composite.
     "lkm_import_status": """
         CREATE TABLE IF NOT EXISTS {table} (
             package_id          String,
@@ -170,8 +173,8 @@ LKM_TABLES: dict[str, str] = {
             error               String
         )
         {engine}
-        ORDER BY package_id
-        UNIQUE KEY package_id
+        ORDER BY (package_id, started_at)
+        UNIQUE KEY (package_id, started_at)
         SETTINGS index_granularity = 128
     """,
 }
