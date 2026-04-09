@@ -630,9 +630,7 @@ class BytehouseLkmStore:
         """
         for ddl_key in LKM_TABLES:
             physical = self._phys(ddl_key)
-            await self._run(
-                self._client.command, f"DROP TABLE IF EXISTS {physical} SYNC"
-            )
+            await self._run(self._client.command, f"DROP TABLE IF EXISTS {physical} SYNC")
 
 
 __all__ = ["BytehouseLkmStore", "LANCE_TO_BH_TABLE"]
