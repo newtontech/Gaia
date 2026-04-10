@@ -7,6 +7,7 @@ import subprocess
 
 from typer.testing import CliRunner
 
+from gaia.cli.commands import register as register_module
 from gaia.cli.main import app
 
 runner = CliRunner()
@@ -408,6 +409,46 @@ def test_register_no_orphan_branch_on_validation_failure(tmp_path):
     # Registry should still be on the original branch (no checkout happened)
     current_branch = _run(["git", "rev-parse", "--abbrev-ref", "HEAD"], cwd=registry_dir)
     assert current_branch != "register/register-demo-1.2.0"
+
+
+def test_register_fails_gracefully_when_checkout_fails(tmp_path, monkeypatch):
+    """Cover the except branch when git checkout -b fails after validation passes."""
+    pkg_dir = tmp_path / "register_demo"
+    remote_dir = tmp_path / "register_demo_remote.git"
+    registry_dir = tmp_path / "gaia-registry"
+    _write_package(pkg_dir)
+    _init_git_repo(pkg_dir, remote_dir)
+    _init_registry_repo(registry_dir)
+
+    compile_result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert compile_result.exit_code == 0, compile_result.output
+
+    _run(["git", "tag", "v1.2.0"], cwd=pkg_dir)
+    _run(["git", "push", "origin", "v1.2.0"], cwd=pkg_dir)
+
+    # Make git checkout -b fail by monkeypatching _run
+    original_run = register_module._run
+
+    def failing_run(args, *, cwd, check=True):
+        if "checkout" in args and "-b" in args:
+            raise register_module.GaiaCliError("Error running git checkout -b: simulated failure")
+        return original_run(args, cwd=cwd, check=check)
+
+    monkeypatch.setattr(register_module, "_run", failing_run)
+
+    result = runner.invoke(
+        app,
+        [
+            "register",
+            str(pkg_dir),
+            "--repo",
+            "https://github.com/example/RegisterDemo.gaia",
+            "--registry-dir",
+            str(registry_dir),
+        ],
+    )
+    assert result.exit_code != 0
+    assert "simulated failure" in result.output
 
 
 def test_register_fails_on_invalid_fills_target(tmp_path, monkeypatch):
