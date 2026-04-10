@@ -22,6 +22,13 @@ from gaia.ir import (
     formalize_named_strategy,
     make_qid,
 )
+from gaia.lang.refs import (
+    ReferenceError,
+    check_collisions,
+    extract,
+    resolve,
+    validate_groups,
+)
 from gaia.lang.runtime import Knowledge, Operator
 from gaia.lang.runtime.package import CollectedPackage
 
@@ -174,69 +181,6 @@ def _step_refs(
     return [ref for ref in refs if ref is not None]
 
 
-_AT_LABEL_RE = re.compile(r"@([a-z_][a-z0-9_]*)")
-
-
-def _extract_at_labels(reason: str | list | None) -> set[str]:
-    """Extract all @label references from a reason string or list."""
-    if reason is None:
-        return set()
-    texts: list[str] = []
-    if isinstance(reason, str):
-        texts.append(reason)
-    elif isinstance(reason, list):
-        from gaia.lang.runtime.nodes import Step as DslStep
-
-        for entry in reason:
-            if isinstance(entry, str):
-                texts.append(entry)
-            elif isinstance(entry, DslStep):
-                texts.append(entry.reason)
-    return {m.group(1) for t in texts for m in _AT_LABEL_RE.finditer(t)}
-
-
-def _validate_at_labels(
-    strategy,
-    knowledge_map: dict[int, str],
-    label_to_id: dict[str, str],
-    warnings: list[str],
-) -> None:
-    """Validate @label references in strategy reason text."""
-    labels = _extract_at_labels(strategy.reason)
-    if not labels:
-        return
-
-    # Build set of QIDs referenced by this strategy's premises + background + conclusion
-    referenced_qids: set[str] = set()
-    for k in strategy.premises:
-        qid = knowledge_map.get(id(k))
-        if qid:
-            referenced_qids.add(qid)
-    for k in strategy.background:
-        qid = knowledge_map.get(id(k))
-        if qid:
-            referenced_qids.add(qid)
-    if strategy.conclusion:
-        qid = knowledge_map.get(id(strategy.conclusion))
-        if qid:
-            referenced_qids.add(qid)
-
-    conclusion_label = getattr(strategy.conclusion, "label", None) or ""
-
-    for label in labels:
-        qid = label_to_id.get(label)
-        if qid is None:
-            warnings.append(
-                f"Strategy → {conclusion_label}: @{label} in reason does not "
-                f"match any knowledge label in this package"
-            )
-        elif qid not in referenced_qids:
-            warnings.append(
-                f"Strategy → {conclusion_label}: @{label} in reason is not in "
-                f"premises or background"
-            )
-
-
 def _compile_reason(
     reason: str | list,
     knowledge_map: dict[int, str],
@@ -264,8 +208,59 @@ def _compile_reason(
     return ir_steps or None
 
 
-def compile_package_artifact(pkg: CollectedPackage) -> CompiledPackage:
+def _collect_refs_from_text(
+    text: str | None,
+    label_table: dict[str, str],
+    references: dict[str, Any],
+) -> tuple[list[str], list[str]]:
+    """Scan a piece of text and return (knowledge_refs, citation_refs).
+
+    Enforces:
+      - homogeneous-group rule (raises ReferenceError on mixed groups)
+      - strict-form errors on unknown keys (raises ReferenceError)
+    Ignores opportunistic (bare) misses silently.
+    """
+    if not text:
+        return [], []
+    result = extract(text)
+
+    # §3.2: mixed-group check
+    validate_groups(result.groups, result.markers, label_table, references)
+
+    knowledge_refs: list[str] = []
+    citation_refs: list[str] = []
+    for marker in result.markers:
+        kind = resolve(marker.key, label_table, references)
+        if kind == "knowledge":
+            knowledge_refs.append(marker.key)
+        elif kind == "citation":
+            citation_refs.append(marker.key)
+        else:  # unknown
+            if marker.strict:
+                raise ReferenceError(
+                    f"unknown reference key '@{marker.key}' in strict form "
+                    f"(in brackets): it is neither a knowledge label nor a "
+                    f"citation key. add it to the package or references.json, "
+                    f"or use the bare form `@{marker.key}` for opportunistic "
+                    f"handling."
+                )
+            # opportunistic miss → silent literal
+
+    # Dedupe while preserving order
+    return (
+        list(dict.fromkeys(knowledge_refs)),
+        list(dict.fromkeys(citation_refs)),
+    )
+
+
+def compile_package_artifact(
+    pkg: CollectedPackage,
+    *,
+    references: dict[str, Any] | None = None,
+) -> CompiledPackage:
     """Compile collected declarations into Gaia IR plus runtime mappings."""
+    if references is None:
+        references = {}
     # Build knowledge closure: local declarations + referenced foreign nodes.
     knowledge_nodes: list[Knowledge] = []
     seen_knowledge: set[int] = set()
@@ -397,19 +392,105 @@ def compile_package_artifact(pkg: CollectedPackage) -> CompiledPackage:
         ir_strategies.append(compile_strategy(s))
         emitted_strategies.add(strategy_key)
 
-    # Validate @label references in reason text
+    # Build label-to-QID table from the full knowledge closure (local + imported foreign nodes).
     label_to_id: dict[str, str] = {}
     for k in knowledge_nodes:
         if k.label:
             label_to_id[k.label] = knowledge_map[id(k)]
-    at_label_warnings: list[str] = []
-    for s in pkg.strategies:
-        _validate_at_labels(s, knowledge_map, label_to_id, at_label_warnings)
-    if at_label_warnings:
-        import warnings as _warnings
 
-        for w in at_label_warnings:
-            _warnings.warn(w, stacklevel=2)
+    # Spec §3.5: fail-fast on label / citation-key collision.
+    check_collisions(label_to_id, references)
+
+    # Spec §3.2 + §3.3: scan all text for references and accumulate per-node.
+    # Strategy reasons can be str, list[str | Step], or None.
+    from gaia.lang.runtime.nodes import Step as DslStep
+
+    # Accumulate (knowledge_refs, citation_refs) per Knowledge node by id().
+    refs_by_knowledge: dict[int, tuple[set[str], set[str]]] = {}
+
+    def _accumulate(k: Knowledge, text: str | None) -> None:
+        if not text:
+            return
+        k_refs, c_refs = _collect_refs_from_text(text, label_to_id, references)
+        if k_refs or c_refs:
+            current = refs_by_knowledge.setdefault(id(k), (set(), set()))
+            current[0].update(k_refs)
+            current[1].update(c_refs)
+
+    def _scan_strategy_refs(s) -> None:
+        """Recursively scan strategy and its sub_strategies for references.
+
+        Refs from the strategy's reason are attributed to ``s.conclusion``
+        (the Knowledge node whose metadata carries the provenance). If the
+        conclusion is foreign (e.g. a ``fills()`` bridge whose target is an
+        imported dep node) or ``None``, refs are still VALIDATED — mixed
+        groups and strict-form unknowns still fail compile — but they are
+        NOT accumulated into provenance. Bridge provenance belongs to the
+        local source or the bridge manifest, not the dep-owned target.
+        """
+        target = s.conclusion
+        target_is_local = target is not None and _is_local(target, pkg)
+
+        def _handle(text: str | None) -> None:
+            if not text:
+                return
+            if target_is_local:
+                _accumulate(target, text)
+            else:
+                # Still run validation (mixed groups, strict misses) but
+                # drop provenance — we have no local node to attach it to.
+                _collect_refs_from_text(text, label_to_id, references)
+
+        if isinstance(s.reason, str):
+            _handle(s.reason)
+        elif isinstance(s.reason, list):
+            for entry in s.reason:
+                if isinstance(entry, str):
+                    _handle(entry)
+                elif isinstance(entry, DslStep):
+                    _handle(entry.reason)
+        for sub in s.sub_strategies:
+            _scan_strategy_refs(sub)
+
+    for s in pkg.strategies:
+        _scan_strategy_refs(s)
+
+    # Only scan content of LOCAL knowledge nodes. Foreign (imported) nodes
+    # were already validated when the dependency was compiled; re-validating
+    # them against the consumer's symbol table would break cross-package
+    # imports the moment a dep adopts the new reference syntax.
+    for k in knowledge_nodes:
+        if _is_local(k, pkg):
+            _accumulate(k, k.content)
+
+    # Write provenance metadata onto IR knowledge nodes.
+    # Belt-and-suspenders: never mutate foreign nodes' metadata even if
+    # refs_by_knowledge somehow picks them up — provenance belongs to the
+    # package that owns the node.
+    for k in knowledge_nodes:
+        if not _is_local(k, pkg):
+            continue
+        refs = refs_by_knowledge.get(id(k))
+        if not refs:
+            continue
+        k_refs, c_refs = refs
+        if not k_refs and not c_refs:
+            continue
+        qid = knowledge_map[id(k)]
+        for i, ir_k in enumerate(ir_knowledges):
+            if ir_k.id != qid:
+                continue
+            metadata = dict(ir_k.metadata) if ir_k.metadata else {}
+            gaia_meta = dict(metadata.get("gaia", {}))
+            provenance: dict[str, Any] = dict(gaia_meta.get("provenance", {}))
+            if c_refs:
+                provenance["cited_refs"] = sorted(c_refs)
+            if k_refs:
+                provenance["referenced_claims"] = sorted(k_refs)
+            gaia_meta["provenance"] = provenance
+            metadata["gaia"] = gaia_meta
+            ir_knowledges[i] = ir_k.model_copy(update={"metadata": metadata})
+            break
 
     module_order = pkg._module_order if pkg._module_order else None
     module_titles = getattr(pkg, "_module_titles", None) or None
@@ -430,6 +511,10 @@ def compile_package_artifact(pkg: CollectedPackage) -> CompiledPackage:
     )
 
 
-def compile_package(pkg: CollectedPackage) -> dict[str, Any]:
+def compile_package(
+    pkg: CollectedPackage,
+    *,
+    references: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """Compile collected declarations into LocalCanonicalGraph JSON."""
-    return compile_package_artifact(pkg).to_json()
+    return compile_package_artifact(pkg, references=references).to_json()

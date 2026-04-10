@@ -258,6 +258,27 @@ __all__ = ["bg", "hypothesis"]
 
 ---
 
+## Reference Syntax
+
+Claim content and strategy reasons may contain references using the
+unified `@` syntax:
+
+- `[@label]` — strict reference to a local or imported knowledge node, or
+  to a citation key in `references.json`. Missing key is a compile error.
+- `@label` — opportunistic reference (Pandoc narrative form). Missing key
+  is treated as literal text.
+- `\@label` — escape, forces literal.
+
+Compile enforces two invariants: (1) a key cannot exist in both the label
+table and `references.json` (collision → compile error), and (2) a single
+`[...]` group cannot mix knowledge refs and citations (mixed group →
+compile error).
+
+The full grammar, resolution rules, and rendering pipeline are specified
+in [References & `@` Syntax Unification Design](../../specs/2026-04-09-references-and-at-syntax.md).
+
+---
+
 ## Complete Example
 
 **`pyproject.toml`:**
