@@ -73,43 +73,51 @@ Read the original source material in `artifacts/` cover-to-cover. The agent must
 
 #### Conclusion pages (`conclusions/*.md`)
 
-Rewrite into a complete article about this claim:
+Rewrite into a complete article about this claim.
 
-**Completeness standard:** Each page should contain ALL information from the original source that is relevant to its topic. The reader should never need to go back to the paper. Don't aim for a word count — aim for information completeness. A claim that involves a 3-page derivation in the paper needs a proportionally detailed explanation in the wiki.
+**Completeness standard:** The page is a faithful, readable reproduction of everything the original paper says about this topic — including appendix material. Don't summarize or compress; rewrite for readability while preserving all derivations, equations, data, and arguments. If the paper devotes 3 pages to the derivation, the wiki page should reproduce those 3 pages worth of content in a more readable form.
 
-1. **Title**: Keep or translate the `# heading`
-2. **Content**: Replace the terse blockquote with a full explanation of the claim — what it states, what evidence supports it, what method produced it. Include ALL relevant numbers, equations, experimental conditions, and comparisons from the original source. If the paper devotes a paragraph to this claim, the wiki page should contain equivalent information.
-3. **Derivation**: Rewrite in prose. Don't just list premises — explain the complete logical chain: WHY each premise supports this conclusion, what the mathematical/physical argument is. Keep wikilinks but wrap them in explanatory sentences. Reproduce key equations from the paper.
-4. **Supports**: Rewrite as prose — what downstream conclusions depend on this claim and why.
-5. **Context**: Explain the claim's full scientific context from `artifacts/`. Embed all relevant figures with `![[filename]]` and informative captions. Include experimental setup, measurement methods, data tables, comparison with prior work.
-6. **Significance**: Why this matters for the overall argument. What breaks if this claim is wrong?
-7. **Caveats**: Limitations, alternative explanations, sources of uncertainty.
+**Section ordering (top to bottom):**
+
+1. **Title**: Translate the `# heading`
+2. **Content**: Replace the terse blockquote with a full explanation of the claim. Include ALL relevant numbers, equations, experimental conditions.
+3. **Background** (新增, 放在推导之前): The complete scientific context for this claim. What problem does it address? What is known from prior work? What gap exists? Embed relevant figures from `artifacts/images/`. This section sets up the reader to understand the derivation that follows.
+4. **Derivation** (核心, 最详尽的部分): Reproduce the paper's full argument for this claim — not a summary but a readable rewrite of the original derivation. Include:
+   - All key equations with explanation of each step
+   - Physical reasoning behind each mathematical step
+   - Approximations made and why they are justified
+   - Numerical validations cited in the paper
+   - Appendix material that supports this derivation
+   - Keep wikilinks to premises but embed them in explanatory prose
+5. **Supports**: What downstream conclusions depend on this claim.
+6. **Significance**: Why this matters. What breaks if wrong?
+7. **Caveats**: Limitations, alternative explanations, uncertainty sources.
 
 #### Evidence pages (`evidence/*.md`)
 
-Rewrite into a complete source documentation page:
+Rewrite into a complete source documentation page. Evidence pages are leaf nodes — they represent facts the paper takes as given or demonstrates directly.
 
-1. **Content**: Fully describe the evidence — not a one-liner but the complete statement with all quantitative details.
-2. **Source**: Where does this evidence come from? Reproduce the relevant data: experimental method, measurement conditions, precision, error bars, known limitations. If the paper has a table or figure for this data, embed it.
-3. **Supports**: Which conclusions depend on this evidence and why — the logical connection, not just a list.
-4. **Figures**: Embed all relevant figures from `artifacts/images/`.
+1. **Content**: Full statement of the evidence with all quantitative details, equations, and conditions.
+2. **Background**: Scientific context — why this evidence matters, what it establishes, how it was obtained. Reproduce the paper's full discussion of this point including any appendix material.
+3. **Source**: Experimental method, measurement conditions, precision, error bars, known limitations. Embed relevant figures and data tables from the paper.
+4. **Supports**: Which conclusions depend on this evidence — explain the logical connection, not just list names.
 
 #### Module pages (`modules/*.md`)
 
-Rewrite into a comprehensive chapter overview:
+Rewrite into a comprehensive chapter that mirrors the corresponding section of the paper.
 
-1. **Overview**: What scientific question this module addresses, what approach is taken, and the key results. Write as you would a section of a review paper — the reader should understand the module's complete contribution.
-2. **Transition**: How this module builds on previous modules and what it enables for subsequent ones. Name specific concepts and results that flow between modules.
-3. **Claims section**: For each claim:
-   - Exported claims: expand into a substantive summary with key numbers and the reasoning behind them.
-   - Inlined claims: rewrite the content and derivation into readable prose with full explanations. Include equations, data, and physical reasoning — not just "Derived via X from Y."
+1. **Overview**: What scientific question this module addresses, what approach is taken, and the key results. Write as a section of a review paper.
+2. **Transition**: How this module builds on previous modules and enables subsequent ones.
+3. **Claims section**: For each claim, reproduce the paper's full treatment:
+   - Exported claims: substantive summary with all key numbers, equations, and the reasoning chain.
+   - Inlined claims: rewrite the paper's content for this claim in full — equations, derivations, data, physical reasoning. Don't compress a 2-paragraph paper discussion into one sentence.
 
 #### Strategy pages (`reasoning/*.md`)
 
-Rewrite into a complete reasoning explanation:
+Rewrite into a complete reasoning explanation that reproduces the paper's argument in full:
 
-1. **Overview**: What type of reasoning and what it establishes.
-2. **Premises → Conclusion**: For each premise, explain the full scientific argument for WHY it supports the conclusion. Reproduce the mathematical derivation or physical reasoning from the paper.
+1. **Overview**: What type of reasoning, what it establishes, and in which section of the paper.
+2. **Premises → Conclusion**: Reproduce the paper's complete argument — all equations, derivation steps, physical reasoning, and numerical evidence. This is not a summary but a readable rewrite of the original proof/argument.
 3. **Strength assessment**: How strong is this reasoning? What assumptions does it depend on? What could weaken it?
 
 #### Overview page (`overview.md`)
@@ -131,40 +139,60 @@ Add a package description (3-5 sentences) with the most striking quantitative re
 
 ### Quality bar
 
-**The standard is information completeness, not word count.** If the paper devotes 2 pages to a topic, the wiki page should contain equivalent depth. If a claim is a single well-known fact, a short page is fine. Length follows content, not a target.
+**The standard is faithful reproduction, not summarization.** The wiki page should contain the same depth as the paper's treatment of the topic. If the paper devotes 2 pages to a derivation, reproduce those 2 pages in readable form — don't compress to 2 sentences. Appendix material that supports the topic should be included.
+
+**Think of it as:** rewriting the paper into a wiki, not summarizing it into a wiki.
 
 **Every page must include:**
 - ALL relevant numerical values from the original source (with units, error bars)
-- Key equations in LaTeX — reproduce derivations where they are central to the argument
+- ALL key equations with step-by-step explanation
+- ALL derivation steps the paper provides (including appendix material)
 - Cross-references via wikilinks to related pages
 - Figure embeds from `artifacts/images/` for every figure relevant to the topic
 
-**BAD — thin rewrite:**
+**BAD — derivation as summary:**
 ```
-## 背景
-铝的 r_s = 2.07，预测 T_c = 0.96 K，接近实验值 1.2 K。
+## 推导
+
+将第一性原理工作流应用于铝（[[ab_initio_workflow]]），
+代入材料参数，得到 T_c = 0.96 K。
 ```
 
-**GOOD — rich rewrite:**
+**GOOD — derivation reproduces the paper's argument:**
 ```
-## 背景
+## 推导
 
-铝是超导理论的基准测试材料。Wigner-Seitz 半径 $r_s = 2.07$，
-带质量 $m_b = 1.05$，处于弱耦合区间。声子吸引（$\lambda = 0.44$，
-来自 DFPT 计算，$\omega_{\log} = 320$ K）与 Coulomb 排斥
-（$\mu^* = 0.13$，来自 [[mu_vdiagmc_values]] 在 $r_s = 2.07$
-处的值经 BTS 重正化）之间的竞争仅留下很小的净配对相互作用。
+铝的超导转变温度由下折叠 Eliashberg 方程（[[downfolded_bse]]）
+结合第一性原理输入参数预测。
 
-唯象方法预测 $T_c = 1.9$ K，比实验值 1.2 K 高估 58%——根本
-原因是传统取值 $\mu^* \approx 0.10$ 低估了 Coulomb 排斥。
-第一性原理值 $\mu^* = 0.13$ 恰好增大了足够的排斥，将 $T_c$
-降低到 0.96 K，偏差在 20% 以内。
+**库仑赝势的确定：** 铝的 Wigner-Seitz 半径 $r_s = 2.07$，
+带质量 $m_b = 1.05$。从 vDiagMC 参数化
+（[[mu_vdiagmc_values]]）查表得 $\mu_{E_F}(2.07) = 0.56$。
+通过 BTS 重正化关系
 
-![[8_0.jpg]]
-*图 4：vDiagMC 计算的 $\mu_{E_F}(r_s)$（圆圈带误差棒），
-与静态 RPA（虚线）、动态 RPA（点线）和 Morel-Anderson 常数
-（点划线）的对比。改编自 Cai et al., arXiv:2512.19382。*
+$$\mu^*(\omega_D) = \frac{\mu_{E_F}}{1 + \mu_{E_F} \ln(E_F/\omega_D)}$$
+
+取 $E_F = 11.7$ eV，$\omega_D = 36$ meV（对应 Debye 温度
+$\Theta_D = 428$ K），对数因子 $\ln(E_F/\omega_D) = 5.78$，
+得到 $\mu^* = 0.56/(1+0.56 \times 5.78) = 0.13$。
+
+**电声耦合：** DFPT 计算（[[dfpt_reliable_for_simple_metals]]）
+给出 $\lambda = 0.44$，$\omega_{\log} = 320$ K。Allen-Dynes
+公式的有效耦合为 $g = \lambda - \mu^*(1+0.62\lambda) =
+0.44 - 0.13 \times 1.27 = 0.275$。
+
+**$T_c$ 求解：** 将 $\mu^* = 0.13$, $\lambda = 0.44$,
+$\omega_{\log} = 320$ K 代入 PCF 外推得到
+$T_c^{\text{EFT}} = 0.96$ K，与实验值 $T_c^{\text{exp}} = 1.2$ K
+偏差 20%。相比之下，唯象取值 $\mu^* \approx 0.10$ 给出
+$T_c = 1.9$ K，偏差 58%。
+
+![[14_0.jpg]]
+*图 6：铝的 $T_c$ 随压力变化。实心圆为第一性原理预测，
+空心圆为实验数据。改编自 Cai et al., arXiv:2512.19382。*
 ```
+
+The good version reproduces the actual calculation steps, intermediate values, and equations — the reader can follow the derivation without opening the paper.
 
 ### DO NOT
 
