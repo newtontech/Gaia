@@ -596,3 +596,132 @@ class TestStructural:
         assert "_index.md" in pages
         assert "overview.md" in pages
         assert ".obsidian/graph.json" in pages
+
+
+# ---------------------------------------------------------------------------
+# Regression tests (Codex review findings)
+# ---------------------------------------------------------------------------
+
+
+class TestCodexRegressions:
+    def test_overview_no_double_mermaid_fence(self):
+        """P2: render_mermaid already returns fenced block — don't wrap again."""
+        ir = _make_ir(
+            knowledges=[
+                {
+                    "id": "github:test_pkg::c1",
+                    "label": "c1",
+                    "type": "claim",
+                    "content": "C.",
+                    "module": "m",
+                    "exported": True,
+                },
+            ]
+        )
+        pages = generate_obsidian_vault(ir)
+        overview = pages["overview.md"]
+        # Should have exactly one opening fence
+        assert overview.count("```mermaid") == 1
+
+    def test_unlabeled_nodes_treated_as_helpers(self):
+        """P2: Nodes with None/empty label should not create pages."""
+        ir = _make_ir(
+            knowledges=[
+                {
+                    "id": "github:test_pkg::_anon_op_1",
+                    "label": None,
+                    "type": "claim",
+                    "content": "Helper.",
+                    "module": "m",
+                },
+                {
+                    "id": "github:test_pkg::_anon_op_2",
+                    "type": "claim",
+                    "content": "Another helper.",
+                    "module": "m",
+                },
+                {
+                    "id": "github:test_pkg::real",
+                    "label": "real",
+                    "type": "claim",
+                    "content": "Real.",
+                    "module": "m",
+                    "exported": True,
+                },
+            ]
+        )
+        pages = generate_obsidian_vault(ir)
+        # No page with empty path segment
+        for path in pages:
+            assert "/." not in path
+            assert path != "evidence/.md"
+            assert path != "conclusions/.md"
+
+    def test_reason_from_metadata(self):
+        """P2: Strategy reason lives in metadata.reason, not top-level reason."""
+        ir = _make_ir(
+            knowledges=[
+                {
+                    "id": "github:test_pkg::p1",
+                    "label": "p1",
+                    "type": "claim",
+                    "content": "P.",
+                    "module": "m",
+                },
+                {
+                    "id": "github:test_pkg::c1",
+                    "label": "c1",
+                    "type": "claim",
+                    "content": "C.",
+                    "module": "m",
+                    "exported": True,
+                },
+            ],
+            strategies=[
+                {
+                    "strategy_id": "lcs_s1",
+                    "type": "noisy_and",
+                    "premises": ["github:test_pkg::p1"],
+                    "conclusion": "github:test_pkg::c1",
+                    "metadata": {"reason": "Because X implies Y."},
+                },
+            ],
+        )
+        pages = generate_obsidian_vault(ir)
+        page = pages["conclusions/c1.md"]
+        assert "Because X implies Y." in page
+
+    def test_root_module_count_correct(self):
+        """P3: Nodes without module field should count under Root."""
+        ir = _make_ir(
+            knowledges=[
+                {
+                    "id": "github:test_pkg::c1",
+                    "label": "c1",
+                    "type": "claim",
+                    "content": "C.",
+                    "exported": True,
+                },
+            ]
+        )
+        pages = generate_obsidian_vault(ir)
+        index = pages["_index.md"]
+        assert "| [[Root]] | 1 |" in index
+
+    def test_no_beliefs_link_when_no_infer(self):
+        """P3: _index.md should not link to meta/beliefs when beliefs are absent."""
+        ir = _make_ir(
+            knowledges=[
+                {
+                    "id": "github:test_pkg::c1",
+                    "label": "c1",
+                    "type": "claim",
+                    "content": "C.",
+                    "module": "m",
+                    "exported": True,
+                },
+            ]
+        )
+        pages = generate_obsidian_vault(ir)
+        index = pages["_index.md"]
+        assert "[[meta/beliefs]]" not in index

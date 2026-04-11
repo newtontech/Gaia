@@ -18,7 +18,9 @@ from gaia.cli.commands._detailed_reasoning import render_mermaid
 # ---------------------------------------------------------------------------
 
 
-def _is_helper(label: str) -> bool:
+def _is_helper(label: str | None) -> bool:
+    if not label:
+        return True
     return label.startswith("__") or label.startswith("_anon")
 
 
@@ -151,7 +153,7 @@ def _generate_claim_page(
             for p in premises:
                 p_label = label_for_id.get(p, p.split("::")[-1])
                 lines.append(f"  - [[{p_label}]]")
-        reason = s.get("reason", "")
+        reason = (s.get("metadata") or {}).get("reason", "") or s.get("reason", "")
         if reason:
             lines.append("")
             lines.append("> [!REASONING]")
@@ -316,7 +318,7 @@ def _generate_strategy_page(
             lines.append(f"- [[{p_label}]]")
         lines.append("")
 
-    reason = s.get("reason", "")
+    reason = (s.get("metadata") or {}).get("reason", "") or s.get("reason", "")
     if reason:
         lines.append("## Reasoning")
         lines.append(reason)
@@ -414,7 +416,9 @@ def _generate_index(
     lines.append("|--------|--------|")
     for mod in modules:
         count = sum(
-            1 for k in all_k if k.get("module") == mod and not _is_helper(k.get("label", ""))
+            1
+            for k in all_k
+            if k.get("module", "Root") == mod and not _is_helper(k.get("label", ""))
         )
         lines.append(f"| [[{mod}]] | {count} |")
     lines.append("")
@@ -437,7 +441,8 @@ def _generate_index(
     lines.append("## Quick Links")
     lines.append("")
     lines.append("- [[overview]] — Reasoning graph")
-    lines.append("- [[meta/beliefs]] — Full belief table")
+    if beliefs:
+        lines.append("- [[meta/beliefs]] — Full belief table")
     lines.append("- [[meta/holes]] — Leaf premises")
     lines.append("")
 
@@ -450,10 +455,7 @@ def _generate_overview(ir: dict) -> str:
     lines = ["---", "type: overview", "tags: [overview]", "---", ""]
     lines.append(f"# {pkg} — Overview")
     lines.append("")
-    mermaid = render_mermaid(ir)
-    lines.append("```mermaid")
-    lines.append(mermaid)
-    lines.append("```")
+    lines.append(render_mermaid(ir))
     lines.append("")
     return "\n".join(lines)
 
