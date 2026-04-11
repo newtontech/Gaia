@@ -75,53 +75,47 @@ Read the original source material in `artifacts/` cover-to-cover. The agent must
 
 Rewrite into a complete article about this claim:
 
-1. **Title**: Keep or translate the `# heading`
-2. **Content**: Replace the terse blockquote with 2-3 paragraphs fully explaining the claim — what it states, what evidence supports it, what method produced it. Include specific numbers, equations, experimental conditions.
-3. **Derivation**: Rewrite in prose. Don't just list premises — explain the logical chain: WHY each premise supports this conclusion. Keep wikilinks but wrap them in explanatory sentences.
-4. **Supports**: Rewrite as prose — what downstream conclusions depend on this claim and why.
-5. **Context**: Add 2-3 paragraphs explaining the claim's scientific context from `artifacts/`. Include figures with `![[filename]]`.
-6. **Significance**: 1-2 paragraphs on why this matters for the overall argument.
-7. **Caveats**: Note limitations, alternative explanations, sources of uncertainty.
+**Completeness standard:** Each page should contain ALL information from the original source that is relevant to its topic. The reader should never need to go back to the paper. Don't aim for a word count — aim for information completeness. A claim that involves a 3-page derivation in the paper needs a proportionally detailed explanation in the wiki.
 
-Target: 500-800 words per conclusion page.
+1. **Title**: Keep or translate the `# heading`
+2. **Content**: Replace the terse blockquote with a full explanation of the claim — what it states, what evidence supports it, what method produced it. Include ALL relevant numbers, equations, experimental conditions, and comparisons from the original source. If the paper devotes a paragraph to this claim, the wiki page should contain equivalent information.
+3. **Derivation**: Rewrite in prose. Don't just list premises — explain the complete logical chain: WHY each premise supports this conclusion, what the mathematical/physical argument is. Keep wikilinks but wrap them in explanatory sentences. Reproduce key equations from the paper.
+4. **Supports**: Rewrite as prose — what downstream conclusions depend on this claim and why.
+5. **Context**: Explain the claim's full scientific context from `artifacts/`. Embed all relevant figures with `![[filename]]` and informative captions. Include experimental setup, measurement methods, data tables, comparison with prior work.
+6. **Significance**: Why this matters for the overall argument. What breaks if this claim is wrong?
+7. **Caveats**: Limitations, alternative explanations, sources of uncertainty.
 
 #### Evidence pages (`evidence/*.md`)
 
-Rewrite into a source documentation page:
+Rewrite into a complete source documentation page:
 
-1. **Content**: Expand the terse blockquote into a full description of the evidence.
-2. **Source**: Where does this evidence come from? Specific experiment, dataset, calculation, or literature. Method, precision, known limitations.
-3. **Supports**: Which conclusions depend on this evidence and why.
-4. **Figures**: Embed relevant figures from `artifacts/images/`.
-
-Target: 200-400 words per evidence page.
+1. **Content**: Fully describe the evidence — not a one-liner but the complete statement with all quantitative details.
+2. **Source**: Where does this evidence come from? Reproduce the relevant data: experimental method, measurement conditions, precision, error bars, known limitations. If the paper has a table or figure for this data, embed it.
+3. **Supports**: Which conclusions depend on this evidence and why — the logical connection, not just a list.
+4. **Figures**: Embed all relevant figures from `artifacts/images/`.
 
 #### Module pages (`modules/*.md`)
 
-Rewrite into a chapter-level overview:
+Rewrite into a comprehensive chapter overview:
 
-1. **Overview**: 2-3 paragraphs — what scientific question this module addresses, what approach is taken, key results. Write as a review paper section introduction.
-2. **Transition**: How this module connects to adjacent modules.
-3. **Claims section**: For each claim listed:
-   - Exported claims (with `[[link]] ★`): expand the one-line description into 2-3 sentences.
-   - Inlined claims: rewrite the content and derivation info into readable prose. Don't just say "Derived via X from Y" — explain the reasoning.
-
-Target: 400-800 words per module page.
+1. **Overview**: What scientific question this module addresses, what approach is taken, and the key results. Write as you would a section of a review paper — the reader should understand the module's complete contribution.
+2. **Transition**: How this module builds on previous modules and what it enables for subsequent ones. Name specific concepts and results that flow between modules.
+3. **Claims section**: For each claim:
+   - Exported claims: expand into a substantive summary with key numbers and the reasoning behind them.
+   - Inlined claims: rewrite the content and derivation into readable prose with full explanations. Include equations, data, and physical reasoning — not just "Derived via X from Y."
 
 #### Strategy pages (`reasoning/*.md`)
 
-Rewrite into a reasoning explanation:
+Rewrite into a complete reasoning explanation:
 
-1. **Overview**: What type of reasoning is this and what does it establish?
-2. **Premises → Conclusion**: For each premise, explain WHY it supports the conclusion. Include the mathematical or physical argument.
-3. **Strength assessment**: How strong is this reasoning? What could weaken it?
-
-Target: 300-500 words per strategy page.
+1. **Overview**: What type of reasoning and what it establishes.
+2. **Premises → Conclusion**: For each premise, explain the full scientific argument for WHY it supports the conclusion. Reproduce the mathematical derivation or physical reasoning from the paper.
+3. **Strength assessment**: How strong is this reasoning? What assumptions does it depend on? What could weaken it?
 
 #### Overview page (`overview.md`)
 
-1. **Citation**: Add proper bibliographic reference to original work.
-2. **Abstract**: 3-4 paragraphs summarizing the entire package — central question, methodology, key quantitative results, limitations.
+1. **Citation**: Proper bibliographic reference to original work.
+2. **Abstract**: A comprehensive summary of the entire package — central question, methodology, key quantitative results, limitations. The reader should be able to decide whether to explore further.
 3. **Reasoning graph**: Keep the Mermaid diagram as-is.
 
 Target: 300-500 words.
@@ -137,11 +131,13 @@ Add a package description (3-5 sentences) with the most striking quantitative re
 
 ### Quality bar
 
+**The standard is information completeness, not word count.** If the paper devotes 2 pages to a topic, the wiki page should contain equivalent depth. If a claim is a single well-known fact, a short page is fine. Length follows content, not a target.
+
 **Every page must include:**
-- Specific numerical values (with units, error bars where available)
-- Key equations in LaTeX where they clarify the argument
+- ALL relevant numerical values from the original source (with units, error bars)
+- Key equations in LaTeX — reproduce derivations where they are central to the argument
 - Cross-references via wikilinks to related pages
-- At least one figure embed from `artifacts/images/` if relevant figures exist
+- Figure embeds from `artifacts/images/` for every figure relevant to the topic
 
 **BAD — thin rewrite:**
 ```
