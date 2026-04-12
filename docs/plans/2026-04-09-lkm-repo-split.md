@@ -306,7 +306,7 @@ Alternative (heavier): use a tool like `github-migration-tool` to re-create issu
 
 1. ~~**Package registry**: PyPI public, or internal?~~ **Resolved.** `gaia-lang` v0.3.0 already on public PyPI.
 2. ~~**Does `gaia-lkm` ever need to modify `gaia.ir/`?**~~ **Resolved: No.** Cross-import audit (2026-04-12) confirms LKM only imports `gaia.ir` type definitions (Pydantic models). LKM is strictly a consumer. If IR changes are needed, they go through a PR on Gaia → release new `gaia-lang` version → `gaia-lkm` bumps dependency.
-3. **Frontend hosting**: does it deploy from new repo, or separately? Confirm build/deploy pipeline ownership.
+3. ~~**Frontend hosting**~~ **Resolved: entirely LKM-owned.** Frontend deploys from `gaia-lkm` repo. Build/deploy pipeline moves with it.
 4. **`docs/specs/`**: which specs belong to which repo? Need a full audit.
 5. **`docs/plans/`**: which plans belong to which? Same.
 6. ~~**Shared `.claude/skills/`**~~ **Resolved: duplicate and accept drift.** Skills are config files, not code. Maintenance burden is negligible.
