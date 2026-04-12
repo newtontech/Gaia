@@ -283,6 +283,40 @@ class TestFormalStrategy:
             result.strategy.premises[1]
         ]
 
+    def test_implication_order_matters_for_id(self):
+        """A→B and B→A must produce distinct FormalStrategy IDs."""
+        fs_fwd = FormalStrategy(
+            scope="local",
+            type="deduction",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
+            formal_expr=FormalExpr(
+                operators=[
+                    Operator(
+                        operator="implication",
+                        variables=["github:test::a", "github:test::b"],
+                        conclusion="github:test::h_fwd",
+                    ),
+                ]
+            ),
+        )
+        fs_rev = FormalStrategy(
+            scope="local",
+            type="deduction",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
+            formal_expr=FormalExpr(
+                operators=[
+                    Operator(
+                        operator="implication",
+                        variables=["github:test::b", "github:test::a"],
+                        conclusion="github:test::h_rev",
+                    ),
+                ]
+            ),
+        )
+        assert fs_fwd.strategy_id != fs_rev.strategy_id
+
     def test_reductio_formalization_deferred(self):
         leaf = Strategy(
             scope="local",
