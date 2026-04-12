@@ -228,8 +228,8 @@ class TestFormalStrategy:
                     ),
                     Operator(
                         operator="implication",
-                        variables=["github:test::m"],
-                        conclusion="github:test::c",
+                        variables=["github:test::m", "github:test::c"],
+                        conclusion="github:test::h",
                     ),
                 ]
             ),
@@ -249,8 +249,8 @@ class TestFormalStrategy:
                     operators=[
                         Operator(
                             operator="implication",
-                            variables=["github:test::p"],
-                            conclusion="github:test::q",
+                            variables=["github:test::p", "github:test::q"],
+                            conclusion="github:test::impl_h",
                         ),
                         Operator(
                             operator="contradiction",
@@ -351,7 +351,7 @@ class TestFormalStrategy:
                 conclusion="b",
                 formal_expr=FormalExpr(
                     operators=[
-                        Operator(operator="implication", variables=["a"], conclusion="b"),
+                        Operator(operator="implication", variables=["a", "b"], conclusion="h"),
                     ]
                 ),
             )
@@ -365,7 +365,7 @@ class TestFormalStrategy:
             conclusion="b",
             formal_expr=FormalExpr(
                 operators=[
-                    Operator(operator="implication", variables=["a"], conclusion="b"),
+                    Operator(operator="implication", variables=["a", "b"], conclusion="h"),
                 ]
             ),
         )
@@ -380,7 +380,7 @@ class TestFormalStrategy:
             conclusion="b",
             formal_expr=FormalExpr(
                 operators=[
-                    Operator(operator="implication", variables=["a"], conclusion="b"),
+                    Operator(operator="implication", variables=["a", "b"], conclusion="h1"),
                 ]
             ),
         )
@@ -391,8 +391,8 @@ class TestFormalStrategy:
             conclusion="b",
             formal_expr=FormalExpr(
                 operators=[
-                    Operator(operator="implication", variables=["a"], conclusion="b"),
-                    Operator(operator="implication", variables=["b"], conclusion="c"),
+                    Operator(operator="implication", variables=["a", "b"], conclusion="h1"),
+                    Operator(operator="implication", variables=["b", "c"], conclusion="h2"),
                 ]
             ),
         )
@@ -407,7 +407,7 @@ class TestFormalStrategy:
             conclusion="b",
             formal_expr=FormalExpr(
                 operators=[
-                    Operator(operator="implication", variables=["a"], conclusion="b"),
+                    Operator(operator="implication", variables=["a", "b"], conclusion="h"),
                 ]
             ),
         )

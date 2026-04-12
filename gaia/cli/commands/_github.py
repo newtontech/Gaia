@@ -333,8 +333,9 @@ def _render_coarse_mermaid(
         "equivalence": "\u2261",
         "complement": "\u2295",
         "disjunction": "\u2228",
+        "implication": "\u2192",
     }
-    _UNDIRECTED = {"equivalence", "contradiction", "complement"}
+    _UNDIRECTED = {"equivalence", "contradiction", "complement", "implication"}
     for i, o in enumerate(coarse.get("operators", [])):
         otype = o.get("operator", "")
         symbol = _OP_SYMBOLS.get(otype, otype)
