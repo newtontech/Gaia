@@ -115,11 +115,12 @@ def lower_local_graph(
             _ensure_claim_var(fg, vid, priors, claim_ids)
         concl = op.conclusion
         if concl not in fg.variables:
-            # TODO(warrant-redesign): when review tools are ready (Phase 5),
-            # change relation operator default to 0.5 (awaiting reviewer audit).
-            # Currently 1-ε for backward compat — assumes author's assertion holds.
-            default = 1.0 - CROMWELL_EPS if op.operator in _RELATION_OPS else 0.5
-            fg.add_variable(concl, priors.get(concl, default))
+            if op.operator in _RELATION_OPS:
+                # Relation operator helper claims are structural — ignore node_priors,
+                # always assert 1-ε. Reviewer overrides via PriorRecord in Phase 5.
+                fg.add_variable(concl, 1.0 - CROMWELL_EPS)
+            else:
+                fg.add_variable(concl, priors.get(concl, 0.5))
         fg.add_factor(fid, ft, op.variables, concl)
 
     seen_strategies: set[str] = set()
@@ -247,10 +248,12 @@ def _lower_strategy(
                 _ensure_claim_var(fg, vid, priors, claim_ids)
             concl = op.conclusion
             if concl not in fg.variables:
-                # TODO(warrant-redesign): same as above — change to 0.5 in Phase 5.
-                default = 1.0 - CROMWELL_EPS if op.operator in _RELATION_OPS else 0.5
-                fg.add_variable(concl, priors.get(concl, default))
-            elif op.operator in _RELATION_OPS and concl not in priors:
+                if op.operator in _RELATION_OPS:
+                    # Structural — ignore node_priors, always assert.
+                    fg.add_variable(concl, 1.0 - CROMWELL_EPS)
+                else:
+                    fg.add_variable(concl, priors.get(concl, 0.5))
+            elif op.operator in _RELATION_OPS:
                 # Variable was pre-registered with wrong default (0.5) by
                 # _ensure_claim_var during auto-formalization.  Override to
                 # assertion prior for relation operator conclusions.

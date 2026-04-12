@@ -704,3 +704,54 @@ def test_e2e_single_premise_deduction_binary_implication():
     beliefs, _ = exact_inference(fg)
     assert all(0 < beliefs[v] < 1 for v in beliefs)
     assert beliefs["github:lowertest::q"] > 0.5
+
+
+def test_relation_helper_ignores_node_priors():
+    """Regression: relation operator helper claims ignore node_priors.
+
+    Even if node_priors includes the implication helper at 0.5,
+    lowering must override to 1-ε (structural assertion).
+    """
+    s = Strategy(
+        scope="local",
+        type="deduction",
+        premises=["github:lowertest::a"],
+        conclusion="github:lowertest::b",
+    )
+    g = _lg(
+        knowledges=[
+            Knowledge(id="github:lowertest::a", type="claim", content="A"),
+            Knowledge(id="github:lowertest::b", type="claim", content="B"),
+        ],
+        strategies=[s],
+    )
+
+    # First lower to discover the helper claim ID
+    fg_ref = lower_local_graph(
+        g,
+        node_priors={
+            "github:lowertest::a": 0.8,
+            "github:lowertest::b": 0.5,
+        },
+    )
+    impl_f = [f for f in fg_ref.factors if f.factor_type == FactorType.IMPLICATION][0]
+    helper_id = impl_f.conclusion
+
+    # Now lower again WITH the helper in node_priors at 0.5
+    fg = lower_local_graph(
+        g,
+        node_priors={
+            "github:lowertest::a": 0.8,
+            "github:lowertest::b": 0.5,
+            helper_id: 0.5,  # attacker tries to neutralize the relation
+        },
+    )
+
+    from gaia.bp.factor_graph import CROMWELL_EPS
+
+    # Helper must still be at 1-ε regardless of node_priors
+    assert fg.variables[helper_id] == pytest.approx(1.0 - CROMWELL_EPS)
+
+    # BP should still propagate: B > 0.5
+    beliefs, _ = exact_inference(fg)
+    assert beliefs["github:lowertest::b"] > 0.5
