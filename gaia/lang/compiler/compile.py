@@ -280,6 +280,10 @@ def compile_package_artifact(
             register_knowledge(background)
         if strategy.conclusion is not None:
             register_knowledge(strategy.conclusion)
+        # composition_warrant is review-only metadata, not a BP variable.
+        # Do NOT register it as knowledge — it has no prior, no lowering,
+        # no factor graph participation. Phase 5 review tools will read it
+        # directly from the Strategy object.
         if strategy.formal_expr:
             for op in strategy.formal_expr:
                 formal_operators.add(id(op))
