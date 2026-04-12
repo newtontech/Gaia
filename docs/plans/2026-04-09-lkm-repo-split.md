@@ -307,8 +307,8 @@ Alternative (heavier): use a tool like `github-migration-tool` to re-create issu
 1. ~~**Package registry**: PyPI public, or internal?~~ **Resolved.** `gaia-lang` v0.3.0 already on public PyPI.
 2. ~~**Does `gaia-lkm` ever need to modify `gaia.ir/`?**~~ **Resolved: No.** Cross-import audit (2026-04-12) confirms LKM only imports `gaia.ir` type definitions (Pydantic models). LKM is strictly a consumer. If IR changes are needed, they go through a PR on Gaia → release new `gaia-lang` version → `gaia-lkm` bumps dependency.
 3. ~~**Frontend hosting**~~ **Resolved: entirely LKM-owned.** Frontend deploys from `gaia-lkm` repo. Build/deploy pipeline moves with it.
-4. **`docs/specs/`**: which specs belong to which repo? Need a full audit.
-5. **`docs/plans/`**: which plans belong to which? Same.
+4. ~~**`docs/specs/`**: which specs belong to which repo?~~ **✅ Audited 2026-04-12.** See appendix below.
+5. ~~**`docs/plans/`**: which plans belong to which?~~ **✅ Audited 2026-04-12.** See appendix below.
 6. ~~**Shared `.claude/skills/`**~~ **Resolved: duplicate and accept drift.** Skills are config files, not code. Maintenance burden is negligible.
 
 ## Decision Log
@@ -333,3 +333,113 @@ Migration is complete when:
 - [ ] Claude Code memory + config ported to new repo path
 - [ ] No broken cross-references in docs (verified by link checker)
 - [ ] Team notified, onboarding docs updated
+
+---
+
+## Appendix: docs/specs/ and docs/plans/ Ownership Audit (2026-04-12)
+
+101 files classified. Summary: **54 Gaia, 43 gaia-lkm, 3 shared, 1 archive.**
+
+### docs/specs/ → gaia-lkm (16 files)
+
+| File | Topic |
+|------|-------|
+| `2026-03-14-v2-database-visualization-design.md` | React frontend browser |
+| `2026-03-17-curation-service-design.md` | Curation service |
+| `2026-03-17-simplified-global-canonicalization-design.md` | Global canonicalization (M5) |
+| `2026-03-19-curation-batch-pipeline-design.md` | Curation batch pipeline |
+| `2026-03-25-lkm-minimal-pipeline-spec.md` | LKM end-to-end pipeline |
+| `2026-03-31-lkm-master-plan.md` | LKM overall plan |
+| `2026-03-31-m1-data-models.md` | M1 data models |
+| `2026-03-31-m2-storage.md` | M2 storage layer |
+| `2026-03-31-m3-pipeline-a.md` | M3 lowering pipeline |
+| `2026-03-31-m4-pipeline-b.md` | M4 paper extraction |
+| `2026-03-31-m5-integrate.md` | M5 global integration |
+| `2026-03-31-m6-curation.md` | M6 curation discovery |
+| `2026-03-31-m7-global-bp.md` | M7 global BP inference |
+| `2026-03-31-m8-api.md` | M8 API server |
+| `2026-04-04-m6-semantic-discovery.md` | M6 embedding + clustering |
+| `2026-04-04-m6c-graph-health.md` | M6c conflict detection |
+| `2026-04-04-relation-analysis.md` | M6b relation analysis |
+| `2026-04-07-m6-scaling-semantic-clustering.md` | M6 scaling to 100M+ |
+
+### docs/specs/ → Gaia (27 files)
+
+| File | Topic |
+|------|-------|
+| `2026-03-16-noisy-and-leak-unified-factor-design.md` | Unified factor theory |
+| `2026-03-19-typst-graph-ir-compiler-design.md` | Typst → Graph IR compiler |
+| `2026-03-20-typst-dsl-v4-design.md` | Gaia Lang v4 |
+| `2026-03-25-gaia-lang-alignment-design.md` | Lang alignment |
+| `2026-03-25-theory-restructuring-design.md` | Theory restructuring |
+| `2026-03-26-graph-ir-restructuring-design.md` | IR restructuring |
+| `2026-03-26-theory-docs-restructuring-design.md` | Theory docs |
+| `2026-03-27-entailment-silence-analysis.md` | Entailment analysis |
+| `2026-03-28-package-management-design.md` | Package management |
+| `2026-04-02-gaia-lang-v5-python-dsl-design.md` | Gaia Lang v5 Python DSL |
+| `2026-04-02-gaia-registry-design.md` | Registry design |
+| `2026-04-03-gaia-init-add-registry-ci-design.md` | CLI init/add + registry CI |
+| `2026-04-03-gaia-lang-cli-docs-rewrite-design.md` | Lang + CLI docs rewrite |
+| `2026-04-03-gaia-lang-future-extensions-design.md` | DSL future extensions |
+| `2026-04-04-compile-readme-design.md` | compile --readme |
+| `2026-04-04-module-narrative-design.md` | Module narrative |
+| `2026-04-05-dsl-v6-support-witness-api-design.md` | v6 support/witness API |
+| `2026-04-05-dsl-v6-support-witness-design.md` | v6 support/witness |
+| `2026-04-05-gaia-layer-existing-python-packages-design.md` | Python package wrapping |
+| `2026-04-05-induction-strategy-design.md` | Induction strategy |
+| `2026-04-06-github-presentation-design.md` | GitHub presentation |
+| `2026-04-06-operator-strategy-redesign.md` | Operator redesign |
+| `2026-04-08-gaia-lang-hole-fills-design.md` | Hole/fills DSL |
+| `2026-04-08-gaia-package-hole-bridge-design.md` | Package hole/bridge |
+| `2026-04-08-registry-hole-bridge-index-design.md` | Registry hole index |
+| `2026-04-09-references-and-at-syntax.md` | @ reference syntax |
+| `2026-04-10-obsidian-wiki-backend.md` | Obsidian wiki backend |
+
+### docs/specs/ → shared / archive
+
+| File | Owner | Topic |
+|------|-------|-------|
+| `2026-03-29-decentralized-architecture-redesign.md` | shared | Ecosystem architecture |
+| `2026-04-05-dsl-v6-curry-howard-design.md` | archive | Superseded draft |
+
+### docs/plans/ → gaia-lkm (25 files)
+
+| File | Topic |
+|------|-------|
+| `2026-03-10-storage-v2-design.md` | V2 storage layer |
+| `2026-03-10-storage-v2-chunk1–4.md` (4 files) | Storage v2 implementation chunks |
+| `2026-03-10-cli-pipeline-convergence-design.md` | CLI → LKM pipeline |
+| `2026-03-11-cli-pipeline-convergence-impl.md` | Pipeline impl |
+| `2026-03-11-publish-state-machine.md` | Publish state machine |
+| `2026-03-11-storage-v2-chunk5-design.md` + `chunk5.md` | StorageManager facade |
+| `2026-03-12-storage-v2-package-knowledge-versioning-design.md` (+zh) | Package versioning |
+| `2026-03-12-server-v2-commit-review-merge.md` | Server commit/merge |
+| `2026-03-12-v2-e2e-paper-ingest.md` | E2E paper ingest |
+| `2026-03-13-storage-v2-graph-ir.md` | Graph IR in storage |
+| `2026-03-14-v2-database-visualization.md` | Frontend browser |
+| `2026-03-17-curation-service.md` | Curation service |
+| `2026-03-17-simplified-global-canonicalization.md` | Canonicalization |
+| `2026-03-18-abstraction-agent.md` | Abstraction agent |
+| `2026-03-19-factor-type-cleanup-gate-removal.md` | Factor type cleanup |
+| `2026-03-20-full-pipeline-100-papers.md` | 100-paper pipeline |
+| `2026-03-20-unified-graph-viewer.md` | Unified graph viewer |
+| `2026-03-21-multi-step-chains.md` | Multi-step chains |
+| `2026-03-25-lkm-minimal-pipeline.md` | LKM minimal pipeline |
+| `2026-04-01-lkm-development-roadmap.md` | LKM M1–M8 roadmap |
+| `2026-04-01-m1-lkm-data-models.md` | M1 impl |
+| `2026-04-01-m2-lkm-storage.md` | M2 impl |
+| `2026-04-03-import-pipeline-hardening.md` | Import pipeline |
+| `2026-04-04-m6-semantic-discovery.md` | M6 discovery |
+| `2026-04-09-bytehouse-as-primary-store.md` | ByteHouse migration |
+
+### docs/plans/ → Gaia (27 files)
+
+All theory restructuring, IR design, DSL v2–v5, QID identity, registry, CLI, package management, presentation plans. (Omitted for brevity — mirror of the specs Gaia list.)
+
+### docs/plans/ → shared
+
+| File | Topic |
+|------|-------|
+| `2026-03-11-review-pipeline-design.md` | Review pipeline (CLI + LKM) |
+| `2026-03-29-decentralized-architecture-rewrite.md` | Ecosystem architecture |
+| `2026-04-09-lkm-repo-split.md` | This plan (stays in both or Gaia) |
