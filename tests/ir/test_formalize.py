@@ -372,6 +372,104 @@ class TestFormalizeNamedStrategy:
                 metadata={"include_other_relevant_case": True},
             )
 
+    def test_formalize_support_single_premise(self):
+        """Support with single premise generates 2 IMPLIES (forward + reverse)."""
+        result = formalize_named_strategy(
+            scope="local",
+            type_="support",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
+            namespace="github",
+            package_name="test",
+            metadata={"reverse_reason": "B implies A"},
+        )
+
+        assert _operator_names(result.strategy) == ["implication", "implication"]
+        assert _role_counts(result.knowledges) == Counter({"implication_result": 2})
+        # Forward: variables=[a, b], Reverse: variables=[b, a]
+        fwd_op = result.strategy.formal_expr.operators[0]
+        rev_op = result.strategy.formal_expr.operators[1]
+        assert fwd_op.variables == ["github:test::a", "github:test::b"]
+        assert rev_op.variables == ["github:test::b", "github:test::a"]
+
+    def test_formalize_support_multi_premise(self):
+        """Support with multiple premises generates CONJUNCTION + 2 IMPLIES."""
+        result = formalize_named_strategy(
+            scope="local",
+            type_="support",
+            premises=["github:test::a", "github:test::b"],
+            conclusion="github:test::c",
+            namespace="github",
+            package_name="test",
+        )
+
+        assert _operator_names(result.strategy) == [
+            "conjunction",
+            "implication",
+            "implication",
+        ]
+        assert _role_counts(result.knowledges) == Counter(
+            {"conjunction_result": 1, "implication_result": 2}
+        )
+        # Conjunction: variables=[a, b]
+        conj_op = result.strategy.formal_expr.operators[0]
+        assert conj_op.variables == ["github:test::a", "github:test::b"]
+        # Forward implication: conjunction -> c
+        fwd_op = result.strategy.formal_expr.operators[1]
+        conj_id = result.knowledges[0].id
+        assert fwd_op.variables == [conj_id, "github:test::c"]
+        # Reverse implication: c -> conjunction
+        rev_op = result.strategy.formal_expr.operators[2]
+        assert rev_op.variables == ["github:test::c", conj_id]
+
+    def test_compare_template(self):
+        """Compare produces 2 equivalence + 1 implication operators."""
+        result = formalize_named_strategy(
+            scope="local",
+            type_="compare",
+            premises=[
+                "github:test::pred_h",
+                "github:test::pred_alt",
+                "github:test::obs",
+            ],
+            conclusion="github:test::comparison_claim",
+            namespace="github",
+            package_name="test",
+        )
+
+        assert _operator_names(result.strategy) == [
+            "equivalence",
+            "equivalence",
+            "implication",
+        ]
+        assert _role_counts(result.knowledges) == Counter({"equivalence_result": 2})
+
+        # Two equivalence operators: pred_h vs obs, pred_alt vs obs
+        eq1 = result.strategy.formal_expr.operators[0]
+        eq2 = result.strategy.formal_expr.operators[1]
+        assert eq1.variables == ["github:test::pred_h", "github:test::obs"]
+        assert eq2.variables == ["github:test::pred_alt", "github:test::obs"]
+
+        # Implication: h_match2 -> h_match1 -> comparison_claim
+        impl_op = result.strategy.formal_expr.operators[2]
+        h_match1 = result.knowledges[0]
+        h_match2 = result.knowledges[1]
+        assert impl_op.variables == [h_match2.id, h_match1.id]
+        # The implication's conclusion IS the strategy's conclusion (builder.conclusion)
+        assert impl_op.conclusion == "github:test::comparison_claim"
+
+    def test_compare_rejects_wrong_premise_count(self):
+        """Compare requires exactly 3 premises."""
+        with pytest.raises(ValueError, match="exactly 3 premises"):
+            formalize_named_strategy(
+                scope="local",
+                type_="compare",
+                premises=["github:test::a", "github:test::b"],
+                conclusion="github:test::c",
+                namespace="github",
+                package_name="test",
+            )
+
     def test_rejects_non_named_strategy_type(self):
         with pytest.raises(ValueError, match="only supports named FormalStrategy types"):
             formalize_named_strategy(

@@ -96,6 +96,7 @@ class _TemplateBuilder:
         *,
         namespace: str | None = None,
         package_name: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ):
         self.scope = scope
         self.strategy_type = strategy_type
@@ -103,6 +104,7 @@ class _TemplateBuilder:
         self.conclusion = conclusion
         self.namespace = namespace
         self.package_name = package_name
+        self.metadata = metadata
         self.knowledges: list[Knowledge] = []
         self._role_counters: dict[str, int] = defaultdict(int)
         self.interface_roles: dict[str, list[str]] = defaultdict(list)
@@ -481,6 +483,78 @@ def _build_extrapolation(builder: _TemplateBuilder) -> list[Operator]:
     ]
 
 
+def _build_support(builder: _TemplateBuilder) -> list[Operator]:
+    """Support: forward IMPLIES + reverse IMPLIES."""
+    if len(builder.premises) == 1:
+        antecedent = builder.premises[0]
+        ops: list[Operator] = []
+    else:
+        conj = builder.add_helper("conjunction", _all_true_name(builder.premises))
+        antecedent = conj.id
+        ops = [
+            Operator(
+                operator="conjunction",
+                variables=builder.premises,
+                conclusion=conj.id,
+            )
+        ]
+
+    h_fwd = builder.add_helper("implication", _implies_name(antecedent, builder.conclusion))
+    h_rev = builder.add_helper("implication", _implies_name(builder.conclusion, antecedent))
+
+    ops.extend(
+        [
+            Operator(
+                operator="implication",
+                variables=[antecedent, builder.conclusion],
+                conclusion=h_fwd.id,
+            ),
+            Operator(
+                operator="implication",
+                variables=[builder.conclusion, antecedent],
+                conclusion=h_rev.id,
+            ),
+        ]
+    )
+    return ops
+
+
+def _matches_name(left: str, right: str) -> str:
+    return f"matches({left},{right})"
+
+
+def _build_compare(builder: _TemplateBuilder) -> list[Operator]:
+    """Compare: 2 equivalences + 1 implication."""
+    if len(builder.premises) != 3:
+        raise ValueError(
+            "compare formalization requires exactly 3 premises: [pred_h, pred_alt, observation]"
+        )
+    pred_h, pred_alt, observation = (
+        builder.premises[0],
+        builder.premises[1],
+        builder.premises[2],
+    )
+    h_match1 = builder.add_helper("equivalence", _matches_name(pred_h, observation))
+    h_match2 = builder.add_helper("equivalence", _matches_name(pred_alt, observation))
+    return [
+        Operator(
+            operator="equivalence",
+            variables=[pred_h, observation],
+            conclusion=h_match1.id,
+        ),
+        Operator(
+            operator="equivalence",
+            variables=[pred_alt, observation],
+            conclusion=h_match2.id,
+        ),
+        Operator(
+            operator="implication",
+            variables=[h_match2.id, h_match1.id],
+            conclusion=builder.conclusion,
+        ),
+    ]
+
+
 _BUILDERS = {
     StrategyType.DEDUCTION: _build_deduction,
     StrategyType.ELIMINATION: _build_elimination,
@@ -489,6 +563,8 @@ _BUILDERS = {
     StrategyType.ABDUCTION: _build_abduction,
     StrategyType.ANALOGY: _build_analogy,
     StrategyType.EXTRAPOLATION: _build_extrapolation,
+    StrategyType.SUPPORT: _build_support,
+    StrategyType.COMPARE: _build_compare,
 }
 
 
@@ -534,6 +610,7 @@ def formalize_named_strategy(
         conclusion=conclusion,
         namespace=namespace,
         package_name=package_name,
+        metadata=metadata,
     )
     if strategy_type == StrategyType.CASE_ANALYSIS and (metadata or {}).get(
         "include_other_relevant_case"
