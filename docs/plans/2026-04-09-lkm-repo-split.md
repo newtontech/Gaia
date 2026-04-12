@@ -35,7 +35,7 @@ SiliconEinstein/gaia-lkm    (new)
 
 - **Not** merging any GitHub PRs/issues into the new repo. History references only.
 - **Not** changing the Gaia IR contract during the split. Contract freeze.
-- **Not** rewriting existing commit messages or squashing history.
+- **Not** preserving commit history in the new repo. Fresh start, clean `initial commit`. Historical context via PR archive markdown + links to `SiliconEinstein/Gaia` commits.
 - **Not** moving `.env` secrets via git. Each repo gets its own `.env.example`.
 
 ## Boundary Decisions
@@ -52,7 +52,11 @@ SiliconEinstein/gaia-lkm    (new)
 | `docs/plans/2026-04-03-import-pipeline-hardening.md` | LKM pipeline plan |
 | `frontend/` | Only consumer today is LKM API |
 | `scripts/dedupe-s3-lance.py` | LKM ops |
-| `scripts/` (LKM-specific) | Audit individually |
+| `scripts/migrate_lance_to_bytehouse.py` | LKM backfill (imports `gaia.lkm.storage`) |
+| `scripts/dump_lance_to_local.py` | LKM lance snapshot (imports `gaia.lkm.storage`) |
+| `scripts/run_full_discovery.py` | LKM embedding + clustering pipeline |
+| `scripts/try_discovery.py` | LKM discovery experiment |
+| `scripts/build_lance_indexes.py` | LKM storage ops |
 | `.github/workflows/ci.yml` (LKM jobs) | Will be split |
 
 ### Stay in `Gaia`
@@ -76,9 +80,9 @@ SiliconEinstein/gaia-lkm    (new)
 | **B. Git submodule** | Easy sync, no publish overhead | Painful DX (checkout, update, worktree interaction), contract drift still possible |
 | **C. Vendored copy + sync script** | Dead simple | Contract silently drifts, merge conflicts, anti-pattern |
 
-**Recommendation: A.** Set up `gaia-lang` as installable package (private PyPI or git+ URL in `pyproject.toml`). Initial pin: `gaia-lang==0.2.1` (current version). Gaia IR contract changes must bump the version.
+**Recommendation: A.** Set up `gaia-lang` as installable package (private PyPI or git+ URL in `pyproject.toml`). Initial pin: `gaia-lang==0.3.0` (current version on PyPI). Gaia IR contract changes must bump the version.
 
-**Action before migration:** Verify `gaia.lang`, `gaia.ir`, `gaia.bp` are cleanly installable as a package (no hidden cross-imports into `gaia.lkm`). This is a prerequisite gate.
+**Action before migration:** ~~Verify `gaia.lang`, `gaia.ir`, `gaia.bp` are cleanly installable as a package (no hidden cross-imports into `gaia.lkm`).~~ **✅ Done.** `gaia-lang` v0.3.0 is already published on PyPI and pip-installable. Cross-import audit confirms clean separation (see below).
 
 ### Cross-Repo Doc References
 
@@ -133,43 +137,86 @@ Rationale: Sphinx's `intersphinx` is the only tool that gives true build-time ve
 
 1. **Alignment meeting**: Confirm boundary with all stakeholders. Capture decisions inline in this doc.
 2. **Contract option decision**: A / B / C (recommended A).
-3. **Audit cross-imports**: Grep `gaia.lkm` imports in `gaia.lang/ir/bp` and vice versa. Any unexpected coupling must be resolved first.
-   ```bash
-   grep -r "from gaia.lkm" gaia/lang/ gaia/ir/ gaia/bp/ cli/
-   grep -r "from gaia\.\(lang\|ir\|bp\)" gaia/lkm/
-   ```
-4. **Package publish dry-run** (if Option A): `uv build` on `gaia-lang` subset, verify it imports standalone.
+3. ~~**Audit cross-imports**~~ **✅ Completed 2026-04-12.** See results below.
+4. ~~**Package publish dry-run**~~ **✅ Done.** `gaia-lang` v0.3.0 is on PyPI and pip-installable.
 5. **Freeze `gaia/lkm/` new feature merges** for Phase 1 dry run (~2 days).
+
+#### Cross-Import Audit Results (2026-04-12)
+
+**Conclusion: `gaia.lkm` and `gaia.lang/ir/bp` are cleanly separable. No refactoring needed.**
+
+**Reverse dependencies (should be zero — core must not know about LKM):**
+
+| Direction | Result |
+|-----------|--------|
+| `gaia.lang/ir/bp/cli/review` → `gaia.lkm` | **0 imports** ✅ |
+| `libs/` → `gaia.lkm` | **0 imports** ✅ |
+| `services/` → `gaia.lkm` | **0 imports** ✅ |
+| `tests/gaia/{lang,ir,bp}` → `gaia.lkm` | **0 imports** ✅ |
+
+**Forward dependencies (LKM consuming core — expected and acceptable):**
+
+| File | Imports | Purpose |
+|------|---------|---------|
+| `gaia/lkm/core/lower.py` | `gaia.ir.graphs.LocalCanonicalGraph`, `gaia.ir.knowledge.Knowledge`, `gaia.ir.operator.Operator`, `gaia.ir.strategy.Strategy` | Lowering: converts Gaia IR graph → LKM internal models |
+| `gaia/lkm/pipelines/lower.py` | `gaia.ir.graphs.LocalCanonicalGraph` | Pipeline entry point calls lower |
+| `gaia/lkm/scripts/ingest.py` | `gaia.ir.graphs.LocalCanonicalGraph` | CLI ingest script |
+
+All 6 imports are **type definitions only** (Pydantic models), not runtime functions. All concentrated in the lowering boundary layer. After split, these resolve via `gaia-lang>=0.3.0` pip dependency — zero code changes needed.
+
+**Other clean boundaries confirmed:**
+
+| Direction | Result |
+|-----------|--------|
+| `gaia.lkm` → `libs/` | **0 imports** ✅ |
+| `gaia.lkm` → `services/` | **0 imports** ✅ |
+| `frontend/` → Python | **0 imports** ✅ (pure React, API only) |
+
+**Scripts audit (all → gaia-lkm):**
+
+| Script | Dependency |
+|--------|-----------|
+| `scripts/migrate_lance_to_bytehouse.py` | `gaia.lkm.storage` |
+| `scripts/dump_lance_to_local.py` | `gaia.lkm.storage` |
+| `scripts/run_full_discovery.py` | `gaia.lkm.pipelines` |
+| `scripts/try_discovery.py` | `gaia.lkm.models`, `gaia.lkm.core`, `gaia.lkm.storage` |
+| `scripts/build_lance_indexes.py` | `gaia.lkm.storage` |
+| `scripts/dedupe-s3-lance.py` | `gaia.lkm` (ops) |
 
 ### Phase 1 — Dry Run (Week 1)
 
-Goal: verify the extraction mechanics on a throwaway copy without touching real infrastructure.
+Goal: verify the new repo structure works standalone, without touching real infrastructure.
 
-1. Clone a sacrificial copy:
+> **History decision (2026-04-12):** No commit history preservation. The new repo starts with a clean `initial commit` containing the current state of all migrated files. Historical context is preserved via PR archive markdown (Phase 4) and links back to `SiliconEinstein/Gaia`. This eliminates `git filter-repo` complexity, commit hash breakage, and PR reference rewriting.
+
+1. Create a local dry-run directory with only the migrated files:
    ```bash
-   git clone --no-local https://github.com/SiliconEinstein/Gaia.git /tmp/gaia-lkm-dryrun
-   cd /tmp/gaia-lkm-dryrun
+   mkdir /tmp/gaia-lkm-dryrun && cd /tmp/gaia-lkm-dryrun
+   git init
+
+   # Copy migrated paths from Gaia
+   GAIA=~/Projects/Gaia
+   cp -r $GAIA/gaia/lkm/ gaia/lkm/
+   cp -r $GAIA/tests/gaia/lkm/ tests/gaia/lkm/
+   cp -r $GAIA/docs/foundations/lkm/ docs/foundations/lkm/
+   cp -r $GAIA/frontend/ frontend/
+   # Scripts (audited list)
+   mkdir -p scripts
+   for f in migrate_lance_to_bytehouse.py dump_lance_to_local.py \
+            run_full_discovery.py try_discovery.py build_lance_indexes.py \
+            dedupe-s3-lance.py; do
+     cp $GAIA/scripts/$f scripts/ 2>/dev/null
+   done
+   # docs/specs — LKM-related (audit individually)
    ```
-2. Run `git filter-repo` to keep only LKM-relevant paths:
-   ```bash
-   git filter-repo \
-     --path gaia/lkm/ \
-     --path tests/gaia/lkm/ \
-     --path docs/foundations/lkm/ \
-     --path docs/specs/2026-03-31-m8-api.md \
-     --path docs/plans/2026-04-03-import-pipeline-hardening.md \
-     --path frontend/ \
-     --path scripts/dedupe-s3-lance.py
-   ```
-3. **Verification checklist:**
-   - [ ] `git log --oneline | wc -l` — commit count reasonable (expect hundreds, not thousands)
-   - [ ] Random spot-check 5 commits — messages, authors, timestamps preserved
+2. **Verification checklist:**
    - [ ] `ls -la` — only intended files present, no stray leftovers
-   - [ ] No broken cross-references: `grep -r "gaia/lang" gaia/lkm/ docs/` (should be 0 results or only in docstrings)
-4. Craft new `pyproject.toml`:
+   - [ ] No broken cross-references: `grep -r "gaia/lang" gaia/lkm/ docs/` (should be 0 or only in docstrings/type annotations)
+   - [ ] No imports of `libs/` or `services/` from `gaia/lkm/`
+3. Craft new `pyproject.toml`:
    - Package name: `gaia-lkm`
-   - Dependencies: `lancedb`, `neo4j`, `fastapi`, `uvicorn`, `pydantic-settings`, `gaia-lang>=0.2.1`
-   - Remove: `typer`, `litellm`, `httpx` (unless LKM needs them)
+   - Dependencies: `lancedb`, `neo4j`, `fastapi`, `uvicorn`, `pydantic-settings`, `gaia-lang>=0.3.0`
+   - Remove: `typer` (unless LKM needs it; `litellm` and `httpx` likely still needed)
 5. Install and test:
    ```bash
    uv sync
@@ -197,23 +244,29 @@ Parallel to Phase 1 dry run verification.
 
 ### Phase 3 — Cutover (Week 2)
 
-Atomic switchover, minimize divergence window.
+Atomic switchover, minimize divergence window. No history preservation — clean initial commit.
 
 1. **Freeze window start**: Announce to team. No merges to `gaia/lkm/` in `Gaia` until switchover complete.
-2. **Re-run `git filter-repo`** on a fresh clone (not the dry-run copy — it's contaminated by manual fixes).
-3. **Push to new repo:**
+2. **Copy current files to new repo** (same process as Phase 1, but on the real repo):
    ```bash
-   git remote set-url origin git@github.com:SiliconEinstein/gaia-lkm.git
+   cd /path/to/gaia-lkm
+   # Copy files from Gaia (latest main) into the new repo structure
+   # Same file list as Phase 1 dry run
+   git add -A
+   git commit -m "feat: initial commit — LKM server split from SiliconEinstein/Gaia
+
+   Migrated from SiliconEinstein/Gaia as of commit $(git -C $GAIA rev-parse HEAD).
+   See docs/archive/gaia-pr-history.md for historical PR context."
    git push origin main
    ```
-4. **Apply the manual adjustments** from Phase 1 (`pyproject.toml`, `CLAUDE.md`, `.github/workflows/`, etc.) as the first commit on the new repo. Message: `chore: initial repo setup after split from SiliconEinstein/Gaia`.
-5. **Verify CI green** in new repo.
-6. **In `Gaia`**: delete `gaia/lkm/`, `tests/gaia/lkm/`, `docs/foundations/lkm/`, `frontend/` in a single PR titled `chore: remove LKM code — migrated to gaia-lkm`. Leave a `MIGRATION.md` at repo root pointing to the new location.
-7. **Update cross-refs:**
+3. **Apply infrastructure config** (`pyproject.toml`, `CLAUDE.md`, `.github/workflows/`, `.env.example`) as a follow-up commit.
+4. **Verify CI green** in new repo.
+5. **In `Gaia`**: delete `gaia/lkm/`, `tests/gaia/lkm/`, `docs/foundations/lkm/`, `frontend/`, migrated scripts in a single PR titled `chore: remove LKM code — migrated to gaia-lkm`. Leave a `MIGRATION.md` at repo root pointing to the new location.
+6. **Update cross-refs:**
    - `Gaia/README.md` — mention the split
    - `Gaia/docs/foundations/README.md` — remove LKM pointer or link to new repo
    - `gaia-lkm/README.md` — pointer back for historical context
-8. **Freeze window end**: merge both PRs (`Gaia` deletion + `gaia-lkm` setup). Unfreeze development.
+7. **Freeze window end**: merge both PRs (`Gaia` deletion + `gaia-lkm` setup). Unfreeze development.
 
 ### Phase 4 — History Archive (Week 3)
 
@@ -240,9 +293,9 @@ Alternative (heavier): use a tool like `github-migration-tool` to re-create issu
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| Hidden `gaia.lkm` → `gaia.lang/ir/bp` coupling breaks install | Dry run fails | Phase 0 step 3 — explicit grep audit before any migration |
-| `git filter-repo` mangles merge commits | Lose merge context | Accept — commit messages and authors preserved, merge structure is cosmetic |
-| `gaia-lang` package publish lag blocks new repo | New repo can't install | Phase 0 prerequisite — publish succeeds before Phase 1 |
+| ~~Hidden `gaia.lkm` → `gaia.lang/ir/bp` coupling breaks install~~ | ~~Dry run fails~~ | **✅ Mitigated.** Cross-import audit (2026-04-12) confirmed 0 reverse deps. Only 6 forward type-only imports in `lower.py`. |
+| ~~`git filter-repo` mangles merge commits~~ | ~~Lose merge context~~ | **✅ Eliminated.** Decision: no history preservation, clean initial commit. |
+| ~~`gaia-lang` package publish lag blocks new repo~~ | ~~New repo can't install~~ | **✅ Mitigated.** `gaia-lang` v0.3.0 already on PyPI. |
 | PR #297/#311/… references break in docs | Broken links | Phase 5 link audit, use fully qualified `SiliconEinstein/Gaia#297` format everywhere |
 | Team confusion about where to file new PRs | Fragmented work | Pinned issue + README callout in both repos for 1 month |
 | `.worktrees/` in-progress work lost | Developer friction | Announce freeze window 48h in advance, developers land or stash WIP |
@@ -251,18 +304,21 @@ Alternative (heavier): use a tool like `github-migration-tool` to re-create issu
 
 ## Open Questions
 
-1. **Package registry**: PyPI public, or internal? (Affects install URL and auth.)
-2. **Does `gaia-lkm` ever need to modify `gaia.ir/`?** If yes, contributor flow needs cross-repo PRs. If no, it's strictly a consumer.
+1. ~~**Package registry**: PyPI public, or internal?~~ **Resolved.** `gaia-lang` v0.3.0 already on public PyPI.
+2. ~~**Does `gaia-lkm` ever need to modify `gaia.ir/`?**~~ **Resolved: No.** Cross-import audit (2026-04-12) confirms LKM only imports `gaia.ir` type definitions (Pydantic models). LKM is strictly a consumer. If IR changes are needed, they go through a PR on Gaia → release new `gaia-lang` version → `gaia-lkm` bumps dependency.
 3. **Frontend hosting**: does it deploy from new repo, or separately? Confirm build/deploy pipeline ownership.
 4. **`docs/specs/`**: which specs belong to which repo? Need a full audit.
 5. **`docs/plans/`**: which plans belong to which? Same.
-6. **Shared `.claude/skills/`**: should there be a meta-repo that both pull from, or do we duplicate and accept drift?
+6. ~~**Shared `.claude/skills/`**~~ **Resolved: duplicate and accept drift.** Skills are config files, not code. Maintenance burden is negligible.
 
 ## Decision Log
 
-- [ ] Shared contract strategy: A / B / C (decided on ____ by ____)
-- [x] **Cross-repo doc references: Option B — pinned-tag GitHub URLs** (decided on 2026-04-09, defer docs site until volume justifies it)
-- [ ] Package registry: PyPI / internal / git+ URL (decided on ____ by ____)
+- [x] **Shared contract strategy: Option A — `gaia-lang` pip package** (decided 2026-04-12; `gaia-lang` v0.3.0 already on PyPI; cross-import audit confirms clean separation)
+- [x] **Cross-repo doc references: Option B — pinned-tag GitHub URLs** (decided 2026-04-09, defer docs site until volume justifies it)
+- [x] **Package registry: public PyPI** (decided 2026-04-12; `gaia-lang` already published there)
+- [x] **Commit history: not preserved** (decided 2026-04-12; clean initial commit, PR archive for context)
+- [x] **Cross-import audit: passed** (2026-04-12; 0 reverse deps, 6 forward deps all type-only in `lower.py`)
+- [x] **`.claude/skills/`: duplicate** (decided 2026-04-12; copy general-purpose skills, accept drift)
 - [ ] Freeze window dates: ____ to ____
 - [ ] New repo name: `gaia-lkm` / other: ____
 
