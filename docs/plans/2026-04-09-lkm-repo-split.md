@@ -139,9 +139,9 @@ Rationale: Sphinx's `intersphinx` is the only tool that gives true build-time ve
 | Phase 0 — Prep | ✅ Done | Cross-import audit passed (0 reverse deps, 6 forward type-only). `gaia-lang` v0.3.0 on PyPI. All decisions made. |
 | Phase 1 — Dry Run | ✅ Done | Files copied to `~/Projects/gaia-lkm`, `uv sync` + `pytest` 223 passed. |
 | Phase 2 — Infrastructure | ✅ Done | Repo: `SiliconEinstein/gaia-lkm`. CI green. CLAUDE.md + 17 skills + `.env.example`. |
-| Phase 3 — Cutover | ⏳ Pending | `gaia-lkm` initial commit pushed with 321 files. **Not yet done:** delete LKM code from Gaia, add MIGRATION.md. Waiting for ByteHouse Phase 4 validation first. |
-| Phase 4 — History Archive | ⏳ Pending | PR archive not yet exported. |
-| Phase 5 — Cleanup | ⏳ Pending | |
+| Phase 3 — Cutover | ⏳ Partial | `gaia-lkm` initial commit pushed with 321 files. **Not yet done:** delete LKM code from Gaia, add MIGRATION.md. Waiting for ByteHouse Phase 4 validation first. |
+| Phase 4 — History Archive | ✅ Done | 73 LKM-related PRs exported to `gaia-lkm/docs/archive/gaia-pr-history.md`. |
+| Phase 5 — Cleanup | ✅ Partial | Cross-repo doc links fixed (Gaia: 6 files dp-gaia→gaia-lkm; gaia-lkm: 9 files broken relative paths→GitHub URLs). Claude Code memory copied to gaia-lkm project. Old worktrees cleaned (50 removed). **Remaining:** pinned issue notification after Phase 3 cutover. |
 
 ### What's in `gaia-lkm` now
 
@@ -149,13 +149,13 @@ Rationale: Sphinx's `intersphinx` is the only tool that gives true build-time ve
 - **Files:** 321 (code + tests + fixtures + docs + skills)
 - **Tests:** 223 passed, 11 skipped (Neo4j-dependent)
 - **CI:** GitHub Actions green (lint + test + coverage)
-- **Commits:** 3 (initial commit, claude setup, ci workflow)
+- **Commits:** 6 (initial commit, claude setup, ci workflow, migration status doc, PR archive, cross-repo link fixes)
 
 ### What's blocking Phase 3 cutover (deleting from Gaia)
 
 ByteHouse migration Phase 3B (full backfill) is blocked on Volces team optimizing the table creation strategy. Until the LKM is verified end-to-end on ByteHouse (Phase 4: embedding pipeline), we keep the code in both repos to avoid breaking anything.
 
-**Sequence:** ByteHouse Phase 4 verified → delete LKM from Gaia → Phase 4 history archive → done.
+**Sequence:** ByteHouse Phase 4 verified → delete LKM from Gaia + add MIGRATION.md → pinned issue notification → done.
 
 See `gaia-lkm/docs/plans/2026-04-12-bytehouse-migration-status.md` for detailed ByteHouse migration status.
 
