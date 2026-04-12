@@ -514,7 +514,7 @@ IR 文档的结构在本 spec 之前是正确的；本 spec 是对它的**演进
 | **Reverse warrant** | 作用方向相反：高 π 反向支持某假说（entailment 的 reverse implication H） |
 | **Reasoning primitive** | Deduction（1 IMPLIES）或 Entailment（2 IMPLIES）——所有复合策略的构建块 |
 | **CompositeStrategy** | 二元组合：abduction（比较）或 induction（累积），由 entailment 构建 |
-| **Structural constraint** | 独立于策略的 graph operator（contradiction, disjunction, complement），作者按需添加 |
+| **Structural constraint** | 独立于策略的 graph operator（contradiction, disjunction, complement），作者按需添加。观测间共享因素通过普通 claim + entailment 建模 |
 
 ## 附录 C：策略全景
 
@@ -542,8 +542,7 @@ IR 文档的结构在本 spec 之前是正确的；本 spec 是对它的**演进
                     │  contradiction  (pairwise excl.)  │
                     │  disjunction    (exhaustiveness)  │
                     │  complement     (XOR)             │
-                    │  shared_cause   (dependence)      │
                     └──────────────────────────────────┘
 ```
 
-策略管推理（hypothesis ↔ observation），图结构管约束（hypothesis ↔ hypothesis, observation ↔ observation）。两者正交，BP 联合推理。
+策略管推理（hypothesis ↔ observation），图结构管约束（hypothesis ↔ hypothesis）。观测间的共享因素（如系统偏差）通过普通的 claim + entailment 建模，不需要新 operator。两者正交，BP 联合推理。
