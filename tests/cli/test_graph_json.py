@@ -26,16 +26,24 @@ def _make_ir(
 def test_knowledge_nodes_emitted():
     ir = _make_ir(
         knowledges=[
-            {"id": "github:test_pkg::a", "label": "a", "title": "Claim A",
-             "type": "claim", "content": "Claim A.", "module": "m1",
-             "metadata": {"figure": "fig.png"}},
+            {
+                "id": "github:test_pkg::a",
+                "label": "a",
+                "title": "Claim A",
+                "type": "claim",
+                "content": "Claim A.",
+                "module": "m1",
+                "metadata": {"figure": "fig.png"},
+            },
         ],
         module_order=["m1"],
     )
     beliefs = {"beliefs": [{"knowledge_id": "github:test_pkg::a", "belief": 0.9, "label": "a"}]}
     params = {"priors": [{"knowledge_id": "github:test_pkg::a", "value": 0.7}]}
     exported = {"github:test_pkg::a"}
-    data = json.loads(generate_graph_json(ir, beliefs_data=beliefs, param_data=params, exported_ids=exported))
+    data = json.loads(
+        generate_graph_json(ir, beliefs_data=beliefs, param_data=params, exported_ids=exported)
+    )
     nodes = [n for n in data["nodes"] if n["type"] != "strategy"]
     assert len(nodes) == 1
     n = nodes[0]
@@ -49,12 +57,29 @@ def test_knowledge_nodes_emitted():
 def test_strategy_becomes_node_with_role_edges():
     ir = _make_ir(
         knowledges=[
-            {"id": "github:test_pkg::a", "label": "a", "type": "claim", "content": "A.", "module": "m1"},
-            {"id": "github:test_pkg::b", "label": "b", "type": "claim", "content": "B.", "module": "m1"},
+            {
+                "id": "github:test_pkg::a",
+                "label": "a",
+                "type": "claim",
+                "content": "A.",
+                "module": "m1",
+            },
+            {
+                "id": "github:test_pkg::b",
+                "label": "b",
+                "type": "claim",
+                "content": "B.",
+                "module": "m1",
+            },
         ],
         strategies=[
-            {"type": "deduction", "premises": ["github:test_pkg::a"],
-             "background": [], "conclusion": "github:test_pkg::b", "reason": "A implies B."},
+            {
+                "type": "deduction",
+                "premises": ["github:test_pkg::a"],
+                "background": [],
+                "conclusion": "github:test_pkg::b",
+                "reason": "A implies B.",
+            },
         ],
         module_order=["m1"],
     )
@@ -77,14 +102,36 @@ def test_strategy_becomes_node_with_role_edges():
 def test_background_edges_have_background_role():
     ir = _make_ir(
         knowledges=[
-            {"id": "github:test_pkg::a", "label": "a", "type": "claim", "content": "A.", "module": "m1"},
-            {"id": "github:test_pkg::bg", "label": "bg", "type": "setting", "content": "BG.", "module": "m1"},
-            {"id": "github:test_pkg::b", "label": "b", "type": "claim", "content": "B.", "module": "m1"},
+            {
+                "id": "github:test_pkg::a",
+                "label": "a",
+                "type": "claim",
+                "content": "A.",
+                "module": "m1",
+            },
+            {
+                "id": "github:test_pkg::bg",
+                "label": "bg",
+                "type": "setting",
+                "content": "BG.",
+                "module": "m1",
+            },
+            {
+                "id": "github:test_pkg::b",
+                "label": "b",
+                "type": "claim",
+                "content": "B.",
+                "module": "m1",
+            },
         ],
         strategies=[
-            {"type": "deduction", "premises": ["github:test_pkg::a"],
-             "background": ["github:test_pkg::bg"],
-             "conclusion": "github:test_pkg::b", "reason": ""},
+            {
+                "type": "deduction",
+                "premises": ["github:test_pkg::a"],
+                "background": ["github:test_pkg::bg"],
+                "conclusion": "github:test_pkg::b",
+                "reason": "",
+            },
         ],
         module_order=["m1"],
     )
@@ -97,12 +144,28 @@ def test_background_edges_have_background_role():
 def test_operator_becomes_node():
     ir = _make_ir(
         knowledges=[
-            {"id": "github:test_pkg::x", "label": "x", "type": "claim", "content": "X.", "module": "m1"},
-            {"id": "github:test_pkg::not_x", "label": "not_x", "type": "claim", "content": "NOT X.", "module": "m1"},
+            {
+                "id": "github:test_pkg::x",
+                "label": "x",
+                "type": "claim",
+                "content": "X.",
+                "module": "m1",
+            },
+            {
+                "id": "github:test_pkg::not_x",
+                "label": "not_x",
+                "type": "claim",
+                "content": "NOT X.",
+                "module": "m1",
+            },
         ],
         operators=[
-            {"operator": "NOT", "variables": ["github:test_pkg::x"],
-             "conclusion": "github:test_pkg::not_x", "reason": "negation"},
+            {
+                "operator": "NOT",
+                "variables": ["github:test_pkg::x"],
+                "conclusion": "github:test_pkg::not_x",
+                "reason": "negation",
+            },
         ],
         module_order=["m1"],
     )
@@ -119,13 +182,36 @@ def test_operator_becomes_node():
 def test_modules_array():
     ir = _make_ir(
         knowledges=[
-            {"id": "github:test_pkg::a", "label": "a", "type": "claim", "content": "A.", "module": "m1"},
-            {"id": "github:test_pkg::b", "label": "b", "type": "claim", "content": "B.", "module": "m1"},
-            {"id": "github:test_pkg::c", "label": "c", "type": "claim", "content": "C.", "module": "m2"},
+            {
+                "id": "github:test_pkg::a",
+                "label": "a",
+                "type": "claim",
+                "content": "A.",
+                "module": "m1",
+            },
+            {
+                "id": "github:test_pkg::b",
+                "label": "b",
+                "type": "claim",
+                "content": "B.",
+                "module": "m1",
+            },
+            {
+                "id": "github:test_pkg::c",
+                "label": "c",
+                "type": "claim",
+                "content": "C.",
+                "module": "m2",
+            },
         ],
         strategies=[
-            {"type": "deduction", "premises": ["github:test_pkg::a"],
-             "background": [], "conclusion": "github:test_pkg::b", "reason": ""},
+            {
+                "type": "deduction",
+                "premises": ["github:test_pkg::a"],
+                "background": [],
+                "conclusion": "github:test_pkg::b",
+                "reason": "",
+            },
         ],
         module_order=["m1", "m2"],
     )
@@ -145,12 +231,29 @@ def test_modules_array():
 def test_cross_module_edges():
     ir = _make_ir(
         knowledges=[
-            {"id": "github:test_pkg::a", "label": "a", "type": "claim", "content": "A.", "module": "m1"},
-            {"id": "github:test_pkg::b", "label": "b", "type": "claim", "content": "B.", "module": "m2"},
+            {
+                "id": "github:test_pkg::a",
+                "label": "a",
+                "type": "claim",
+                "content": "A.",
+                "module": "m1",
+            },
+            {
+                "id": "github:test_pkg::b",
+                "label": "b",
+                "type": "claim",
+                "content": "B.",
+                "module": "m2",
+            },
         ],
         strategies=[
-            {"type": "deduction", "premises": ["github:test_pkg::a"],
-             "background": [], "conclusion": "github:test_pkg::b", "reason": ""},
+            {
+                "type": "deduction",
+                "premises": ["github:test_pkg::a"],
+                "background": [],
+                "conclusion": "github:test_pkg::b",
+                "reason": "",
+            },
         ],
         module_order=["m1", "m2"],
     )
@@ -165,9 +268,20 @@ def test_cross_module_edges():
 def test_helper_nodes_filtered():
     ir = _make_ir(
         knowledges=[
-            {"id": "github:test_pkg::a", "label": "a", "type": "claim", "content": "A.", "module": "m1"},
-            {"id": "github:test_pkg::__helper", "label": "__helper", "type": "claim",
-             "content": "Helper.", "module": "m1"},
+            {
+                "id": "github:test_pkg::a",
+                "label": "a",
+                "type": "claim",
+                "content": "A.",
+                "module": "m1",
+            },
+            {
+                "id": "github:test_pkg::__helper",
+                "label": "__helper",
+                "type": "claim",
+                "content": "Helper.",
+                "module": "m1",
+            },
         ],
         module_order=["m1"],
     )
@@ -180,7 +294,13 @@ def test_helper_nodes_filtered():
 def test_no_beliefs_or_params():
     ir = _make_ir(
         knowledges=[
-            {"id": "github:test_pkg::a", "label": "a", "type": "claim", "content": "A.", "module": "m1"},
+            {
+                "id": "github:test_pkg::a",
+                "label": "a",
+                "type": "claim",
+                "content": "A.",
+                "module": "m1",
+            },
         ],
         module_order=["m1"],
     )

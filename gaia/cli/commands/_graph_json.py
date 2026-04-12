@@ -39,18 +39,20 @@ def generate_graph_json(
         if label.startswith("__"):
             continue
         kid = k["id"]
-        nodes.append({
-            "id": kid,
-            "label": label,
-            "title": k.get("title"),
-            "type": k["type"],
-            "module": k.get("module"),
-            "content": k.get("content", ""),
-            "prior": priors.get(kid),
-            "belief": beliefs.get(kid),
-            "exported": kid in exported,
-            "metadata": k.get("metadata", {}),
-        })
+        nodes.append(
+            {
+                "id": kid,
+                "label": label,
+                "title": k.get("title"),
+                "type": k["type"],
+                "module": k.get("module"),
+                "content": k.get("content", ""),
+                "prior": priors.get(kid),
+                "belief": beliefs.get(kid),
+                "exported": kid in exported,
+                "metadata": k.get("metadata", {}),
+            }
+        )
 
     edges: list[dict] = []
     strategy_counts: Counter[str] = Counter()
@@ -63,13 +65,15 @@ def generate_graph_json(
         conc_mod = kid_module.get(conc, "")
         strat_id = f"strat_{i}"
 
-        nodes.append({
-            "id": strat_id,
-            "type": "strategy",
-            "strategy_type": s.get("type", ""),
-            "module": conc_mod,
-            "reason": s.get("reason", ""),
-        })
+        nodes.append(
+            {
+                "id": strat_id,
+                "type": "strategy",
+                "strategy_type": s.get("type", ""),
+                "module": conc_mod,
+                "reason": s.get("reason", ""),
+            }
+        )
         strategy_counts[conc_mod] += 1
 
         for p in s.get("premises", []):
@@ -86,12 +90,14 @@ def generate_graph_json(
         oper_id = f"oper_{i}"
         conc_mod = kid_module.get(conc, "") if conc else ""
 
-        nodes.append({
-            "id": oper_id,
-            "type": "operator",
-            "operator_type": o.get("operator", ""),
-            "module": conc_mod,
-        })
+        nodes.append(
+            {
+                "id": oper_id,
+                "type": "operator",
+                "operator_type": o.get("operator", ""),
+                "module": conc_mod,
+            }
+        )
 
         for v in o.get("variables", []):
             edges.append({"source": v, "target": oper_id, "role": "variable"})

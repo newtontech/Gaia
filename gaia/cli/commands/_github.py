@@ -138,19 +138,37 @@ def generate_github_output(
                 shutil.copy2(item, dest)
                 asset_names.append(str(rel))
 
-    # ── 6. Section placeholders (one per unique module) ──
+    # ── 6. Section content (one per unique module) ──
     modules: set[str] = set()
     for k in ir.get("knowledges", []):
         mod = k.get("module")
         if mod:
             modules.add(mod)
     for mod in sorted(modules):
-        placeholder = sections_dir / f"{mod}.md"
-        if not placeholder.exists():
-            placeholder.write_text(
-                f"# {mod}\n\n<!-- Section placeholder for module: {mod} -->\n",
-                encoding="utf-8",
-            )
+        section_path = sections_dir / f"{mod}.md"
+        # Use wiki module content if available, otherwise generate from IR
+        wiki_key = f"Module-{mod.replace('_', '-')}.md"
+        if wiki_key in wiki_pages:
+            section_content = wiki_pages[wiki_key]
+        else:
+            # Fallback: generate basic content from knowledges in this module
+            module_knowledges = [
+                k
+                for k in ir.get("knowledges", [])
+                if k.get("module") == mod and not k.get("label", "").startswith("__")
+            ]
+            lines = [f"# {mod}", ""]
+            for k in module_knowledges:
+                label = k.get("label", "")
+                content = k.get("content", "")
+                ktype = k.get("type", "")
+                if label and content:
+                    lines.append(f"### {label}")
+                    lines.append(f"**Type:** {ktype}")
+                    lines.append(f"{content}")
+                    lines.append("")
+            section_content = "\n".join(lines)
+        section_path.write_text(section_content, encoding="utf-8")
 
     # ── 7. manifest.json ──
     manifest_json = generate_manifest(
