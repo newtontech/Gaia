@@ -19,7 +19,7 @@ Start with the [Quick Start](for-users/quick-start.md), then read the [Hole And 
 
 Start with the [Gaia IR Overview](foundations/gaia-ir/01-overview.md), then explore:
 - [CLI surface](foundations/cli/) — local authoring, compilation, inference
-- [LKM surface](https://github.com/SiliconEinstein/dp-gaia) — server-side review, curation, global inference (maintained in dp-gaia repo)
+- [LKM surface](https://github.com/SiliconEinstein/gaia-lkm) — server-side review, curation, global inference (maintained in gaia-lkm repo)
 - [Gaia IR contract](foundations/gaia-ir/) — the shared intermediate representation
 
 ## Deep Reference
@@ -33,7 +33,7 @@ The [Foundations](foundations/README.md) directory contains Gaia's canonical ref
 | [Gaia IR](foundations/gaia-ir/) | What is the structural contract? | Sometimes |
 | [BP](foundations/bp/) | How does inference work? | Sometimes |
 | [CLI](foundations/cli/) | How does local authoring work? | Often |
-| LKM | How does the server work? | [dp-gaia repo](https://github.com/SiliconEinstein/dp-gaia) |
+| LKM | How does the server work? | [gaia-lkm repo](https://github.com/SiliconEinstein/gaia-lkm) |
 
 ## Other Resources
 

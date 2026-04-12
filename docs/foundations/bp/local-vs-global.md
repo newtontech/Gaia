@@ -28,7 +28,7 @@ Global 推理运行在 LKM 维护的 **persistent FactorGraph** 上，使用 **P
 - **输出**：BeliefSnapshot，包含所有 variable 的后验信念值。
 - **目的**：在所有包的全部可用证据基础上，产生系统对每个命题可信度的最佳估计。
 
-Global 推理的 FactorGraph 是持久化的——integrate 时写入存储，BP 直接从中读取。详见 [dp-gaia LKM 文档](https://github.com/SiliconEinstein/dp-gaia/tree/main/docs/foundations/lkm/)。
+Global 推理的 FactorGraph 是持久化的——integrate 时写入存储，BP 直接从中读取。详见 [gaia-lkm LKM 文档](https://github.com/SiliconEinstein/gaia-lkm/tree/main/docs/foundations/lkm/)。
 
 ## 共享部分
 
@@ -59,7 +59,7 @@ Global 推理的 FactorGraph 是持久化的——integrate 时写入存储，BP
 
 ### Global
 
-参数存储在独立的参数化层：PriorRecord（per variable）和 FactorParamRecord（per factor），各带 source_id 和 created_at。一个 variable/factor 可有多条参数记录（来自不同 reviewer/来源）。BP 运行时按 resolution_policy + prior_cutoff 从中选择具体值。结果写入 BeliefSnapshot（不覆盖参数记录）。详见 [dp-gaia 02-storage.md](https://github.com/SiliconEinstein/dp-gaia/blob/main/docs/foundations/lkm/02-storage.md)。
+参数存储在独立的参数化层：PriorRecord（per variable）和 FactorParamRecord（per factor），各带 source_id 和 created_at。一个 variable/factor 可有多条参数记录（来自不同 reviewer/来源）。BP 运行时按 resolution_policy + prior_cutoff 从中选择具体值。结果写入 BeliefSnapshot（不覆盖参数记录）。详见 [gaia-lkm 02-storage.md](https://github.com/SiliconEinstein/gaia-lkm/blob/main/docs/foundations/lkm/02-storage.md)。
 
 ## 相关文档
 
