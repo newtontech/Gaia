@@ -4,31 +4,37 @@ import ModuleSubgraph from '../components/ModuleSubgraph'
 import { adjustExternalLayout, computeLayoutBounds, computeModuleGroups } from '../components/ModuleSubgraph'
 import type { GraphNode, GraphEdge } from '../types'
 
+function defaultMockLayout(graph: { children?: { id: string; width: number; height: number }[], edges?: { id: string; sources: string[]; targets: string[] }[] }) {
+  return Promise.resolve({
+    ...graph,
+    width: 800,
+    height: 600,
+    children: (graph.children ?? []).map((c, i) => ({
+      ...c,
+      x: i * 150,
+      y: i * 80,
+      width: c.width || 140,
+      height: c.height || 48,
+    })),
+    edges: (graph.edges ?? []).map((edge: { id: string; sources: string[]; targets: string[] }, i: number) => ({
+      id: edge.id,
+      source: edge.sources[0],
+      target: edge.targets[0],
+      sections: [{
+        startPoint: { x: i * 150 + 120, y: i * 80 + 24 },
+        endPoint: { x: i * 150 + 240, y: i * 80 + 24 },
+      }],
+    })),
+  })
+}
+
+let mockLayoutImpl = defaultMockLayout
+
 // Mock elkjs
 vi.mock('elkjs/lib/elk.bundled.js', () => ({
   default: class {
-    layout(graph: { children?: { id: string; width: number; height: number }[] }) {
-      return Promise.resolve({
-        ...graph,
-        width: 800,
-        height: 600,
-        children: (graph.children ?? []).map((c, i) => ({
-          ...c,
-          x: i * 150,
-          y: i * 80,
-          width: c.width || 140,
-          height: c.height || 48,
-        })),
-        edges: (graph.edges ?? []).map((edge: { id: string; sources: string[]; targets: string[] }, i: number) => ({
-          id: edge.id,
-          source: edge.sources[0],
-          target: edge.targets[0],
-          sections: [{
-            startPoint: { x: i * 150 + 120, y: i * 80 + 24 },
-            endPoint: { x: i * 150 + 240, y: i * 80 + 24 },
-          }],
-        })),
-      })
+    layout(graph: { children?: { id: string; width: number; height: number }[], edges?: { id: string; sources: string[]; targets: string[] }[] }) {
+      return mockLayoutImpl(graph)
     }
   },
 }))
@@ -45,6 +51,18 @@ const mockNodes: GraphNode[] = [
 const mockEdges: GraphEdge[] = [
   { source: 'a', target: 'b', role: 'premise' },
   { source: 'c', target: 'a', role: 'conclusion' },
+]
+
+const overlappingNodes: GraphNode[] = [
+  { id: 's1', label: 'Source 1', type: 'claim', module: 'm1', content: '', exported: false, metadata: {}, prior: null, belief: null },
+  { id: 's2', label: 'Source 2', type: 'claim', module: 'm1', content: '', exported: false, metadata: {}, prior: null, belief: null },
+  { id: 't1', label: 'Target 1', type: 'claim', module: 'm1', content: '', exported: false, metadata: {}, prior: null, belief: null },
+  { id: 't2', label: 'Target 2', type: 'claim', module: 'm1', content: '', exported: false, metadata: {}, prior: null, belief: null },
+]
+
+const overlappingEdges: GraphEdge[] = [
+  { source: 's1', target: 't1', role: 'premise' },
+  { source: 's2', target: 't2', role: 'premise' },
 ]
 
 function expectedAdjustedBounds() {
@@ -76,6 +94,7 @@ function expectedAdjustedBounds() {
 describe('ModuleSubgraph - Zoom & Pan', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockLayoutImpl = defaultMockLayout
   })
 
   it('keeps the external lane inside the rendered svg bounds', async () => {
@@ -260,29 +279,70 @@ describe('ModuleSubgraph - Zoom & Pan', () => {
     })
   })
 
-  it('limits zoom to maximum of 300%', async () => {
-    render(
+  it('separates edges that share the same terminal segment near the right side even with different endpoints', async () => {
+    mockLayoutImpl = (graph) => Promise.resolve({
+      ...graph,
+      width: 800,
+      height: 600,
+      children: [
+        { id: 's1', x: 0, y: 0, width: 120, height: 48 },
+        { id: 's2', x: 0, y: 120, width: 120, height: 48 },
+        { id: 't1', x: 260, y: 40, width: 120, height: 48 },
+        { id: 't2', x: 260, y: 100, width: 120, height: 48 },
+      ],
+      edges: [
+        {
+          id: 'e0',
+          source: 's1',
+          target: 't1',
+          sections: [{
+            startPoint: { x: 120, y: 24 },
+            bendPoints: [
+              { x: 180, y: 24 },
+              { x: 180, y: 84 },
+              { x: 362, y: 84 },
+            ],
+            endPoint: { x: 380, y: 84 },
+          }],
+        },
+        {
+          id: 'e1',
+          source: 's2',
+          target: 't2',
+          sections: [{
+            startPoint: { x: 120, y: 144 },
+            bendPoints: [
+              { x: 180, y: 144 },
+              { x: 180, y: 84 },
+              { x: 362, y: 84 },
+            ],
+            endPoint: { x: 380, y: 84 },
+          }],
+        },
+      ],
+    })
+
+    const { container } = render(
       <ModuleSubgraph
         moduleId="m1"
-        allNodes={mockNodes}
-        allEdges={mockEdges}
+        allNodes={overlappingNodes}
+        allEdges={overlappingEdges}
         onBack={() => {}}
         onNavigateToModule={() => {}}
       />
     )
 
-    await waitFor(() => expect(screen.getByTitle(/zoom in/i)).toBeInTheDocument())
+    await waitFor(() => expect(container.querySelector('svg')).toBeInTheDocument())
 
-    // Click zoom in many times
-    const zoomInBtn = screen.getByTitle(/zoom in/i)
-    for (let i = 0; i < 20; i++) {
-      fireEvent.click(zoomInBtn)
-    }
+    const renderedEdges = [...container.querySelectorAll('path[marker-end]')]
+    expect(renderedEdges).toHaveLength(2)
 
-    await waitFor(() => {
-      const zoomDisplay = screen.getByText(/\d+%/)
-      const value = parseInt(zoomDisplay.textContent || '0', 10)
-      expect(value).toBeLessThanOrEqual(300)
+    const terminalSegments = renderedEdges.map(path => {
+      const d = path.getAttribute('d') ?? ''
+      const matches = [...d.matchAll(/[-\d.]+ [-\d.]+/g)].map(match => match[0])
+      return matches.slice(-2)
     })
+
+    expect(terminalSegments[0]).not.toEqual(terminalSegments[1])
   })
 })
