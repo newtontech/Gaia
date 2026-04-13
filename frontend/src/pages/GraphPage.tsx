@@ -137,6 +137,8 @@ export default function GraphPage() {
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as Element)?.closest(".graph-node")) return;
+    // Clicked on background: close detail panel
+    setSelectedNode(null);
     e.preventDefault();
     dragRef.current = {
       active: true,

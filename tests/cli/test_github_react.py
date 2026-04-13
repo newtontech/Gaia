@@ -46,7 +46,7 @@ def test_react_template_copied(tmp_path: Path):
     # React template files should be present
     assert (docs_dir / "package.json").exists()
     assert (docs_dir / "src" / "App.tsx").exists()
-    assert (docs_dir / "src" / "components" / "KnowledgeGraph.tsx").exists()
+    assert (docs_dir / "src" / "components" / "ModuleOverview.tsx").exists()
     assert (docs_dir / "index.html").exists()
     assert (docs_dir / "vite.config.ts").exists()
     assert (docs_dir / "tsconfig.json").exists()
