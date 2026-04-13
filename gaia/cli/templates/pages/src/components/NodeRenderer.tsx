@@ -58,7 +58,7 @@ export default function NodeRenderer({ node, x, y, width, height, highlighted, o
     const truncated = label.length > 28 ? label.slice(0, 25) + '...' : label
 
     return (
-      <g opacity={opacity} cursor="pointer" onClick={() => onSelect(node.id)}>
+      <g className="graph-node" opacity={opacity} cursor="pointer" onClick={() => onSelect(node.id)}>
         <rect x={x} y={y} width={width} height={height} rx={rx} ry={rx}
           fill={fill} stroke={stroke} strokeWidth={node.exported ? 3 : 1.5}
           strokeDasharray={dashArray} />
@@ -98,7 +98,7 @@ export default function NodeRenderer({ node, x, y, width, height, highlighted, o
     ].join(' ')
 
     return (
-      <g opacity={opacity} cursor="pointer" onClick={() => onSelect(node.id)}>
+      <g className="graph-node" opacity={opacity} cursor="pointer" onClick={() => onSelect(node.id)}>
         <polygon points={points} fill={fill} stroke={stroke} strokeWidth={1.5}
           strokeDasharray={dashArray} />
         <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle"
@@ -118,7 +118,7 @@ export default function NodeRenderer({ node, x, y, width, height, highlighted, o
     const symbol = OP_SYMBOLS[node.operator_type] ?? node.operator_type
 
     return (
-      <g opacity={opacity} cursor="pointer" onClick={() => onSelect(node.id)}>
+      <g className="graph-node" opacity={opacity} cursor="pointer" onClick={() => onSelect(node.id)}>
         <circle cx={cx} cy={cy} r={r} fill={isContra ? '#ffebee' : '#fff'}
           stroke={isContra ? '#c62828' : '#999'} strokeWidth={1.5} />
         <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle"

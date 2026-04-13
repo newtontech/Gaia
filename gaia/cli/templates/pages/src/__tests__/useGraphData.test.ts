@@ -6,6 +6,8 @@ const nodes: GraphNode[] = [
   { id: 'a', label: 'a', type: 'claim', module: 'm1', content: '', exported: false, metadata: {} },
   { id: 'b', label: 'b', type: 'claim', module: 'm1', content: '', exported: false, metadata: {} },
   { id: 'c', label: 'c', type: 'claim', module: 'm2', content: '', exported: false, metadata: {} },
+  { id: 'd', label: 'd', type: 'claim', module: '', content: '', exported: false, metadata: {} },
+  { id: 'e', label: 'e', type: 'claim', module: 'm3', content: '', exported: false, metadata: {} },
   { id: 'strat_0', type: 'strategy', strategy_type: 'deduction', module: 'm1' },
 ]
 
@@ -30,5 +32,26 @@ describe('getExternalRefs', () => {
     expect(refs).toHaveLength(1)
     expect(refs[0].id).toBe('c')
     expect(refs[0].sourceModule).toBe('m2')
+  })
+
+  it('preserves first-seen external discovery order across modules and keeps empty module names empty', () => {
+    const moduleNodes = filterNodesByModule(nodes, 'm1')
+    const moduleNodeIds = new Set(moduleNodes.map(n => n.id))
+    const refs = getExternalRefs(
+      [
+        { source: 'e', target: 'strat_0', role: 'premise' },
+        { source: 'strat_0', target: 'd', role: 'conclusion' },
+        { source: 'c', target: 'strat_0', role: 'premise' },
+        { source: 'e', target: 'b', role: 'background' },
+      ],
+      moduleNodeIds,
+      nodes,
+    )
+
+    expect(refs).toEqual([
+      { id: 'e', label: 'e', sourceModule: 'm3' },
+      { id: 'd', label: 'd', sourceModule: '' },
+      { id: 'c', label: 'c', sourceModule: 'm2' },
+    ])
   })
 })

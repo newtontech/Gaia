@@ -16,7 +16,11 @@ export interface ElkEdge {
   id: string
   source: string
   target: string
-  sections?: Array<{ startPoint: { x: number; y: number }; endPoint: { x: number; y: number } }>
+  sections?: Array<{
+    startPoint: { x: number; y: number }
+    bendPoints?: Array<{ x: number; y: number }>
+    endPoint: { x: number; y: number }
+  }>
 }
 
 export interface LayoutResult {
@@ -64,21 +68,39 @@ export function useElkLayout(nodes: GraphNode[], edges: GraphEdge[]): LayoutResu
   const [layout, setLayout] = useState<LayoutResult | null>(null)
 
   useEffect(() => {
+    let isStale = false
+
     if (nodes.length === 0) {
       setLayout(null)
-      return
+      return () => {
+        isStale = true
+      }
     }
     const graph = buildElkGraph(nodes, edges)
-    elk.layout(graph).then(result => {
-      const layoutNodes: ElkNode[] = (result.children ?? []).map(c => ({
-        id: c.id, x: c.x ?? 0, y: c.y ?? 0, width: c.width ?? 100, height: c.height ?? 40,
-      }))
-      const layoutEdges: ElkEdge[] = (result.edges ?? []).map(e => ({
-        id: e.id, source: (e.sources ?? [])[0] ?? '', target: (e.targets ?? [])[0] ?? '',
-        sections: e.sections,
-      }))
-      setLayout({ nodes: layoutNodes, edges: layoutEdges, width: result.width ?? 800, height: result.height ?? 600 })
-    })
+    elk.layout(graph)
+      .then(result => {
+        if (isStale) {
+          return
+        }
+        const layoutNodes: ElkNode[] = (result.children ?? []).map(c => ({
+          id: c.id, x: c.x ?? 0, y: c.y ?? 0, width: c.width ?? 100, height: c.height ?? 40,
+        }))
+        const layoutEdges: ElkEdge[] = (result.edges ?? []).map(e => ({
+          id: e.id, source: (e.sources ?? [])[0] ?? '', target: (e.targets ?? [])[0] ?? '',
+          sections: e.sections,
+        }))
+        setLayout({ nodes: layoutNodes, edges: layoutEdges, width: result.width ?? 800, height: result.height ?? 600 })
+      })
+      .catch(() => {
+        if (isStale) {
+          return
+        }
+        setLayout(null)
+      })
+
+    return () => {
+      isStale = true
+    }
   }, [nodes, edges])
 
   return layout
