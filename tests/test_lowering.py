@@ -1098,3 +1098,23 @@ def test_lowering_default_prior_for_relation_helper_without_author():
     ]
     assert len(helper_vars) == 1
     assert fg.variables[helper_vars[0]] == pytest.approx(1.0 - CROMWELL_EPS)
+
+
+def test_claim_metadata_prior_used_in_lowering():
+    """Claims with metadata['prior'] use that value instead of default 0.5."""
+    from gaia.ir import Knowledge
+
+    g = _lg(
+        knowledges=[
+            Knowledge(
+                id="github:lowertest::a",
+                type="claim",
+                content="A",
+                metadata={"prior": 0.85},
+            ),
+            Knowledge(id="github:lowertest::b", type="claim", content="B"),
+        ],
+    )
+    fg = lower_local_graph(g)
+    assert fg.variables["github:lowertest::a"] == pytest.approx(0.85)
+    assert fg.variables["github:lowertest::b"] == pytest.approx(0.5)  # default

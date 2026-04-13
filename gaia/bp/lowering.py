@@ -101,10 +101,16 @@ def lower_local_graph(
     for k in canonical.knowledges:
         if k.type != KnowledgeType.CLAIM or not k.id:
             continue
+        # Priority: node_priors > metadata["prior"] > structural default
+        metadata_prior = (k.metadata or {}).get("prior") if k.metadata else None
         if k.id in relation_concl_ids and k.id not in priors:
             fg.add_variable(k.id, 1.0 - CROMWELL_EPS)
+        elif k.id in priors:
+            fg.add_variable(k.id, priors[k.id])
+        elif metadata_prior is not None:
+            fg.add_variable(k.id, float(metadata_prior))
         else:
-            fg.add_variable(k.id, priors.get(k.id, 0.5))
+            fg.add_variable(k.id, 0.5)
 
     strat_by_id = {s.strategy_id: s for s in canonical.strategies if s.strategy_id}
 
