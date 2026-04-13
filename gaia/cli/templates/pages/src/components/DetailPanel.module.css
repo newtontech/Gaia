@@ -60,9 +60,40 @@
 .content {
   margin-bottom: 16px;
   line-height: 1.6;
+
+.contentBody {
+  margin: 0 0 8px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1f2937;
 }
 
-.reasoning {
+.contentMeta {
+  margin: 0;
+  font-size: 11px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.contentMetaRow {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 3px;
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+.contentMetaRow dt {
+  margin: 0;
+  color: #d1d5db;
+  font-weight: 500;
+  text-transform: lowercase;
+}
+
+.contentMetaRow dd {
+  margin: 0;
+  color: #9ca3af;
+}
   margin-bottom: 16px;
 }
 

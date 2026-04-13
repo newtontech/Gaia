@@ -474,6 +474,9 @@ export default function ModuleSubgraph({
   const layout = useElkLayout(moduleNodes, moduleEdges)
   const { highlightedIds, selectedNodeId, selectNode, clearSelection } = useChainHighlight(allEdges)
 
+  const [hoverGroupKey, setHoverGroupKey] = useState<string | null>(null)
+const scrimDraggedRef = useRef(false)
+
   const nodesById = useMemo(() => {
     const m = new Map<string, GraphNode>()
     for (const n of allNodes) m.set(n.id, n)
@@ -547,6 +550,15 @@ export default function ModuleSubgraph({
   const edgeByKey = new Map<string, GraphEdge>()
   for (const e of moduleEdges) {
     edgeByKey.set(`${e.source}->${e.target}`, e)
+  }
+
+  // Build layout edge groups by source-target key
+  const edgeGroups = new Map<string, ElkEdge[]>()
+  for (const le of adjustedLayout.edges) {
+    const key = `${le.source}->${le.target}`
+    const arr = edgeGroups.get(key)
+    if (arr) arr.push(le)
+    else edgeGroups.set(key, [le])
   }
 
   return (
@@ -683,18 +695,29 @@ export default function ModuleSubgraph({
                   </text>
                 </g>
               ))}
-              {adjustedLayout.edges.map(le => {
-                const ge = edgeByKey.get(`${le.source}->${le.target}`)
-                const inChain = highlightedIds
-                  ? highlightedIds.has(le.source) && highlightedIds.has(le.target)
-                  : null
+              {[...edgeGroups.entries()].map(([groupKey, groupEdges]) => {
+                const ge = edgeByKey.get(`${groupEdges[0].source}->${groupEdges[0].target}`)
+                const inChainGroup = (id: string) => highlightedIds ? highlightedIds.has(id) : null
+                const expanded = hoverGroupKey === groupKey
                 return (
-                  <EdgeRenderer
-                    key={le.id}
-                    layoutEdge={le}
-                    graphEdge={ge}
-                    highlighted={inChain}
-                  />
+                  <g key={groupKey} onMouseEnter={() => setHoverGroupKey(groupKey)} onMouseLeave={() => setHoverGroupKey(null)}>
+                    {groupEdges.map((le, idx) => {
+                      const inChain = highlightedIds
+                        ? highlightedIds.has(le.source) && highlightedIds.has(le.target)
+                        : null
+                      return (
+                        <EdgeRenderer
+                          key={le.id}
+                          layoutEdge={le}
+                          graphEdge={ge}
+                          highlighted={inChain}
+                          groupIndex={idx}
+                          groupCount={groupEdges.length}
+                          expanded={expanded}
+                        />
+                      )
+                    })}
+                  </g>
                 )
               })}
               {adjustedLayout.nodes.map(ln => {
@@ -717,6 +740,16 @@ export default function ModuleSubgraph({
               </g>
             </svg>
           </div>
+
+          {selectedNode && (
+            <div
+              aria-label="graph-scrim"
+              onMouseDown={() => { scrimDraggedRef.current = false }}
+              onMouseMove={() => { scrimDraggedRef.current = true }}
+              onClick={() => { if (!isDragging && !scrimDraggedRef.current) clearSelection() }}
+              style={{ position: 'absolute', inset: 0, background: 'transparent', zIndex: 10 }}
+            />
+          )}
         </div>
       </div>
 

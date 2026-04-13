@@ -9,13 +9,66 @@ interface Props {
   onClose: () => void
 }
 
+interface ParsedKnowledgeContent {
+  body: string
+  metadata: Array<{ label: string; value: string }>
+}
+
 function formatProb(v: number | null | undefined): string {
   return v != null ? v.toFixed(2) : '\u2014'
+}
+
+function parseStructuredKnowledgeContent(content: string): ParsedKnowledgeContent | null {
+  const lines = content
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+
+  if (lines.length < 2) return null
+
+  const knownLabels = new Map<string, string>([
+    ['qid', 'QID'],
+    ['type', 'Type'],
+    ['role', 'Role'],
+    ['content', 'Content'],
+    ['source_ref', 'source_ref'],
+  ])
+
+  const metadata: Array<{ label: string; value: string }> = []
+  let body: string | null = null
+
+  for (const line of lines) {
+    const match = line.match(/^([A-Za-z_]+):\s*(.*)$/)
+    if (!match) return null
+
+    const [, rawKey, rawValue] = match
+    const key = rawKey.toLowerCase()
+    const value = rawValue.trim()
+
+    if (!value) return null
+
+    if (key === 'content') {
+      if (body != null) return null
+      body = value
+      continue
+    }
+
+    const label = knownLabels.get(key)
+    if (!label) return null
+    metadata.push({ label, value })
+  }
+
+  if (!body) return null
+
+  return { body, metadata }
 }
 
 export default function DetailPanel({ node, edges, nodesById, onClose }: Props) {
   const incomingEdges = node ? edges.filter(e => e.target === node.id) : []
   const outgoingEdges = node ? edges.filter(e => e.source === node.id) : []
+  const parsedKnowledgeContent = node && isKnowledgeNode(node)
+    ? parseStructuredKnowledgeContent(node.content)
+    : null
 
   return (
     <div className={`${styles.panel} ${node ? '' : styles.hidden}`}>
@@ -43,7 +96,19 @@ export default function DetailPanel({ node, edges, nodesById, onClose }: Props) 
                 <span className={styles.probValue}>{formatProb(node.belief)}</span>
               </div>
               <div className={styles.content}>
-                <p>{node.content}</p>
+                {parsedKnowledgeContent ? (
+                  <>
+                    <p className={styles.contentBody}>{parsedKnowledgeContent.body}</p>
+                    <p className={styles.contentMeta}>
+                      {parsedKnowledgeContent.metadata
+                        .filter(m => m.label !== 'Content')
+                        .map(m => `${m.label}: ${m.value}`)
+                        .join(' · ')}
+                    </p>
+                  </>
+                ) : (
+                  <p>{node.content}</p>
+                )}
               </div>
             </>
           )}
