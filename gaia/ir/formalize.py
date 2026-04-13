@@ -225,6 +225,14 @@ def _implies_name(antecedent: str, consequent: str) -> str:
     return f"implies({antecedent},{consequent})"
 
 
+def _propagate_prior(builder: _TemplateBuilder, helper: Knowledge, key: str = "prior") -> None:
+    """Copy author-set prior from strategy metadata to the helper claim's metadata."""
+    author_prior = (builder.metadata or {}).get(key)
+    if author_prior is not None:
+        helper.metadata = dict(helper.metadata or {})
+        helper.metadata["prior"] = author_prior
+
+
 def _build_deduction(builder: _TemplateBuilder) -> list[Operator]:
     if len(builder.premises) < 1:
         raise ValueError("deduction formalization requires at least 1 premise")
@@ -234,6 +242,7 @@ def _build_deduction(builder: _TemplateBuilder) -> list[Operator]:
         impl_helper = builder.add_helper(
             "implication", _implies_name(antecedent, builder.conclusion)
         )
+        _propagate_prior(builder, impl_helper)
         return [
             Operator(
                 operator="implication",
@@ -245,6 +254,7 @@ def _build_deduction(builder: _TemplateBuilder) -> list[Operator]:
     impl_helper = builder.add_helper(
         "implication", _implies_name(conjunction.id, builder.conclusion)
     )
+    _propagate_prior(builder, impl_helper)
     return [
         Operator(operator="conjunction", variables=builder.premises, conclusion=conjunction.id),
         Operator(
@@ -501,6 +511,8 @@ def _build_support(builder: _TemplateBuilder) -> list[Operator]:
 
     h_fwd = builder.add_helper("implication", _implies_name(antecedent, builder.conclusion))
     h_rev = builder.add_helper("implication", _implies_name(builder.conclusion, antecedent))
+    _propagate_prior(builder, h_fwd, key="prior")
+    _propagate_prior(builder, h_rev, key="reverse_prior")
 
     ops.extend(
         [

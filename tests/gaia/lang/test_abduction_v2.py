@@ -14,9 +14,9 @@ def _make_abduction_triple():
     pred_h = claim("Prediction from H.")
     pred_alt = claim("Prediction from Alt.")
 
-    sup_h = support(premises=[theory_h], conclusion=obs, reason="H explains obs.")
-    sup_alt = support(premises=[theory_alt], conclusion=obs, reason="Alt explains obs.")
-    comp = compare(pred_h, pred_alt, obs, reason="H matches obs better.")
+    sup_h = support(premises=[theory_h], conclusion=obs, reason="H explains obs.", prior=0.9)
+    sup_alt = support(premises=[theory_alt], conclusion=obs, reason="Alt explains obs.", prior=0.5)
+    comp = compare(pred_h, pred_alt, obs, reason="H matches obs better.", prior=0.9)
     return sup_h, sup_alt, comp, theory_h, theory_alt, obs, pred_h, pred_alt
 
 

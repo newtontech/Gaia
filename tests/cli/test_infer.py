@@ -129,7 +129,7 @@ def test_infer_supports_generated_interface_claim_review(tmp_path):
         "from gaia.lang import deduction, claim\n\n"
         'law = claim("forall x. P(x)")\n'
         'instance = claim("P(a)")\n'
-        "proof = deduction(premises=[law], conclusion=instance, reason='instantiate')\n"
+        "proof = deduction(premises=[law], conclusion=instance, reason='instantiate', prior=0.9)\n"
         '__all__ = ["law", "instance", "proof"]\n'
     )
     _write_review(

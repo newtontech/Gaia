@@ -93,6 +93,7 @@ def test_deduction():
         conclusion=instance,
         background=[binding],
         reason=[Step(reason="Instantiate the universal law.", premises=[law, premise])],
+        prior=0.95,
     )
     assert s.type == "deduction"
     assert s.formal_expr is None
@@ -285,3 +286,25 @@ def test_composite_requires_sub_strategies():
     conclusion = claim("Conclusion.")
     with pytest.raises(ValueError, match="at least one sub-strategy"):
         composite(premises=[evidence], conclusion=conclusion, sub_strategies=[])
+
+
+# ---------------------------------------------------------------------------
+# deduction reason + prior pairing
+# ---------------------------------------------------------------------------
+
+
+def test_deduction_prior_stored():
+    a = claim("A.")
+    b = claim("B.")
+    s = deduction([a], b, reason="derivation", prior=0.99)
+    assert s.metadata["prior"] == 0.99
+
+
+def test_deduction_reason_without_prior_raises():
+    with pytest.raises(ValueError, match="reason.*prior.*paired"):
+        deduction([claim("A")], claim("B"), reason="no prior")
+
+
+def test_deduction_no_reason_no_prior_ok():
+    s = deduction([claim("A")], claim("B"))
+    assert "prior" not in s.metadata

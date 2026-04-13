@@ -9,6 +9,7 @@ from typing import Literal
 from gaia.lang.runtime import Knowledge, Step, Strategy
 from gaia.lang.runtime.nodes import ReasonInput
 from gaia.lang.runtime.nodes import _current_package
+from gaia.lang.dsl.operators import _validate_reason_prior
 from gaia.lang.runtime.package import infer_package_from_callstack
 
 
@@ -134,18 +135,23 @@ def noisy_and(
     background: list[Knowledge] | None = None,
     reason: ReasonInput = "",
 ) -> Strategy:
-    """Deprecated: use support() instead. Delegates to support() with reverse_reason=""."""
+    """Deprecated: use support() instead. Bypasses reason+prior validation."""
     warnings.warn(
         "noisy_and() is deprecated, use support() instead",
         DeprecationWarning,
         stacklevel=2,
     )
-    return support(
+    # noisy_and is deprecated and doesn't support the prior parameter.
+    # Bypass support() to avoid reason+prior pairing validation.
+    if len(premises) < 1:
+        raise ValueError("support() requires at least 1 premise")
+    return _named_strategy(
+        "support",
         premises=premises,
         conclusion=conclusion,
         background=background,
         reason=reason,
-        reverse_reason="",
+        metadata={"reverse_reason": ""},
     )
 
 
@@ -155,22 +161,33 @@ def support(
     *,
     background: list[Knowledge] | None = None,
     reason: ReasonInput = "",
+    prior: float | None = None,
     reverse_reason: ReasonInput = "",
+    reverse_prior: float | None = None,
 ) -> Strategy:
     """Bidirectional support (sufficiency + necessity). Compiles to two IMPLIES.
 
     reason -> forward implication warrant (sufficiency: premises -> conclusion).
     reverse_reason -> reverse implication warrant (necessity: conclusion -> premises).
+    prior -> confidence for forward implication warrant.
+    reverse_prior -> confidence for reverse implication warrant.
     """
     if len(premises) < 1:
         raise ValueError("support() requires at least 1 premise")
+    _validate_reason_prior(reason, prior)
+    _validate_reason_prior(reverse_reason, reverse_prior)
+    metadata: dict = {"reverse_reason": reverse_reason}
+    if prior is not None:
+        metadata["prior"] = prior
+    if reverse_prior is not None:
+        metadata["reverse_prior"] = reverse_prior
     return _named_strategy(
         "support",
         premises=premises,
         conclusion=conclusion,
         background=background,
         reason=reason,
-        metadata={"reverse_reason": reverse_reason},
+        metadata=metadata,
     )
 
 
@@ -181,6 +198,7 @@ def compare(
     *,
     background: list[Knowledge] | None = None,
     reason: ReasonInput = "",
+    prior: float | None = None,
 ) -> Strategy:
     """Compare two predictions against observation via matching + inferential ordering.
 
@@ -191,7 +209,12 @@ def compare(
 
     3 warrants. First arg is claimed-better. Also usable as standalone A/B test.
     The auto-generated comparison_claim becomes the strategy's conclusion.
+    prior -> confidence for the comparison implication warrant.
     """
+    _validate_reason_prior(reason, prior)
+    metadata: dict = {}
+    if prior is not None:
+        metadata["prior"] = prior
     comparison_claim = Knowledge(
         content=f"compare({pred_h.content}, {pred_alt.content}, {observation.content})",
         type="claim",
@@ -203,6 +226,7 @@ def compare(
         conclusion=comparison_claim,
         background=background,
         reason=reason,
+        metadata=metadata,
     )
 
 
@@ -281,16 +305,25 @@ def deduction(
     *,
     background: list[Knowledge] | None = None,
     reason: ReasonInput = "",
+    prior: float | None = None,
 ) -> Strategy:
-    """Deduction lowered via the canonical IR formalizer at compile time."""
+    """Deduction lowered via the canonical IR formalizer at compile time.
+
+    prior -> confidence for the implication warrant.
+    """
     if len(premises) < 1:
         raise ValueError("deduction() requires at least 1 premise")
+    _validate_reason_prior(reason, prior)
+    metadata: dict | None = None
+    if prior is not None:
+        metadata = {"prior": prior}
     return _named_strategy(
         "deduction",
         premises=premises,
         conclusion=conclusion,
         background=background,
         reason=reason,
+        metadata=metadata,
     )
 
 

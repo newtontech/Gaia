@@ -131,7 +131,7 @@ def test_compile_scans_sub_strategy_reasons(tmp_path: Path) -> None:
             'law = claim("A general law.")\n'
             # Create sub-strategies manually to test recursion
             "sub1 = support(premises=[obs1], conclusion=law)\n"
-            "sub2 = support(premises=[obs2], conclusion=law, reason='Justification [@missing_key]')\n"
+            "sub2 = support(premises=[obs2], conclusion=law, reason='Justification [@missing_key]', prior=0.9)\n"
             "induction(sub1, sub2, law)\n"
             '__all__ = ["law", "obs1", "obs2"]\n'
         ),
@@ -288,6 +288,7 @@ def test_imported_foreign_label_resolves_in_opportunistic_form(
         "    premises=[foreign_lemma],\n"
         "    conclusion=main_result,\n"
         '    reason="Follows directly from @foreign_lemma.",\n'
+        "    prior=0.9,\n"
         ")\n"
         '__all__ = ["main_result"]\n'
     )

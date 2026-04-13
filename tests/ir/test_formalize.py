@@ -489,3 +489,110 @@ class TestFormalizeNamedStrategy:
                 premises=["gcn_a", "gcn_b"],
                 conclusion="gcn_c",
             )
+
+
+class TestPriorPropagation:
+    """Verify that strategy metadata['prior'] propagates to helper claims."""
+
+    def test_deduction_single_premise_propagates_prior(self):
+        """Deduction with 1 premise: implication helper gets the prior."""
+        result = formalize_named_strategy(
+            scope="local",
+            type_="deduction",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
+            namespace="github",
+            package_name="test",
+            metadata={"prior": 0.95},
+        )
+        impl_helpers = [
+            k
+            for k in result.knowledges
+            if (k.metadata or {}).get("helper_kind") == "implication_result"
+        ]
+        assert len(impl_helpers) == 1
+        assert impl_helpers[0].metadata["prior"] == 0.95
+
+    def test_deduction_multi_premise_propagates_prior(self):
+        """Deduction with 2+ premises: implication helper gets the prior."""
+        result = formalize_named_strategy(
+            scope="local",
+            type_="deduction",
+            premises=["github:test::a", "github:test::b"],
+            conclusion="github:test::c",
+            namespace="github",
+            package_name="test",
+            metadata={"prior": 0.9},
+        )
+        impl_helpers = [
+            k
+            for k in result.knowledges
+            if (k.metadata or {}).get("helper_kind") == "implication_result"
+        ]
+        assert len(impl_helpers) == 1
+        assert impl_helpers[0].metadata["prior"] == 0.9
+
+    def test_deduction_no_prior_no_metadata_key(self):
+        """Without metadata['prior'], helper claim has no 'prior' key."""
+        result = formalize_named_strategy(
+            scope="local",
+            type_="deduction",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
+            namespace="github",
+            package_name="test",
+        )
+        impl_helpers = [
+            k
+            for k in result.knowledges
+            if (k.metadata or {}).get("helper_kind") == "implication_result"
+        ]
+        assert len(impl_helpers) == 1
+        assert "prior" not in impl_helpers[0].metadata
+
+    def test_support_propagates_forward_and_reverse_prior(self):
+        """Support: forward helper gets prior, reverse helper gets reverse_prior."""
+        result = formalize_named_strategy(
+            scope="local",
+            type_="support",
+            premises=["github:test::a"],
+            conclusion="github:test::b",
+            namespace="github",
+            package_name="test",
+            metadata={"prior": 0.9, "reverse_prior": 0.7, "reverse_reason": "..."},
+        )
+        impl_helpers = [
+            k
+            for k in result.knowledges
+            if (k.metadata or {}).get("helper_kind") == "implication_result"
+        ]
+        # Support generates 2 implication helpers: forward + reverse
+        assert len(impl_helpers) == 2
+        # Forward helper (first) gets prior
+        assert impl_helpers[0].metadata["prior"] == 0.9
+        # Reverse helper (second) gets reverse_prior
+        assert impl_helpers[1].metadata["prior"] == 0.7
+
+    def test_compare_propagates_prior_to_comparison_implication(self):
+        """Compare: only the comparison implication helper gets prior, not equivalences."""
+        result = formalize_named_strategy(
+            scope="local",
+            type_="compare",
+            premises=["github:test::pred_h", "github:test::pred_alt", "github:test::obs"],
+            conclusion="github:test::comparison",
+            namespace="github",
+            package_name="test",
+            metadata={"prior": 0.85},
+        )
+        equiv_helpers = [
+            k
+            for k in result.knowledges
+            if (k.metadata or {}).get("helper_kind") == "equivalence_result"
+        ]
+        # Equivalence helpers should NOT get author prior
+        for h in equiv_helpers:
+            assert "prior" not in h.metadata
+
+        # The conclusion of compare is the comparison itself (not a generated helper),
+        # so we verify that the strategy metadata carries it
+        assert result.strategy.metadata.get("prior") == 0.85

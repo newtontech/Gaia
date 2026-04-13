@@ -12,8 +12,8 @@ def test_induction_binary_composite():
     obs2 = claim("Copper expands when heated.")
     law = claim("All metals expand when heated.")
 
-    sup1 = support(premises=[obs1], conclusion=law, reason="Iron supports the law.")
-    sup2 = support(premises=[obs2], conclusion=law, reason="Copper supports the law.")
+    sup1 = support(premises=[obs1], conclusion=law, reason="Iron supports the law.", prior=0.9)
+    sup2 = support(premises=[obs2], conclusion=law, reason="Copper supports the law.", prior=0.9)
 
     s = induction(sup1, sup2, law)
 
