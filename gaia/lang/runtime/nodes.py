@@ -41,6 +41,9 @@ class Knowledge:
             self._package = pkg
             pkg._register_knowledge(self)
 
+    def __hash__(self) -> int:
+        return id(self)
+
 
 @dataclass
 class Step:

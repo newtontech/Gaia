@@ -75,19 +75,34 @@ def test_infer_writes_parameterization_and_beliefs(tmp_path):
     assert belief_by_label["hypothesis"] > 0.4
 
 
-def test_infer_requires_review_sidecar(tmp_path):
-    pkg_dir = tmp_path / "infer_demo"
-    _write_base_package(pkg_dir, name="infer_demo")
-    (pkg_dir / "infer_demo" / "__init__.py").write_text(
-        'from gaia.lang import claim\n\nmain_claim = claim("A claim.")\n__all__ = ["main_claim"]\n'
+def test_infer_without_review_uses_metadata_priors(tmp_path):
+    """Package with priors.py but no review sidecar — infer reads metadata priors."""
+    pkg_dir = tmp_path / "priors_infer"
+    _write_base_package(pkg_dir, name="priors_infer")
+    (pkg_dir / "priors_infer" / "__init__.py").write_text(
+        "from gaia.lang import claim, deduction\n\n"
+        'evidence = claim("Evidence.")\n'
+        'hypothesis = claim("Hypothesis.")\n'
+        "s = deduction(premises=[evidence], conclusion=hypothesis, reason='deduction', prior=0.9)\n"
+        '__all__ = ["evidence", "hypothesis", "s"]\n'
+    )
+    (pkg_dir / "priors_infer" / "priors.py").write_text(
+        "from . import evidence, hypothesis\n\n"
+        "PRIORS = {\n"
+        '    evidence: (0.9, "Direct observation."),\n'
+        '    hypothesis: (0.4, "Base rate."),\n'
+        "}\n"
     )
 
     compile_result = runner.invoke(app, ["compile", str(pkg_dir)])
     assert compile_result.exit_code == 0, compile_result.output
 
     result = runner.invoke(app, ["infer", str(pkg_dir)])
-    assert result.exit_code != 0
-    assert "missing review sidecar" in result.output.lower()
+    assert result.exit_code == 0, result.output
+
+    beliefs = json.loads((pkg_dir / ".gaia" / "beliefs.json").read_text())
+    belief_by_label = {item["label"]: item["belief"] for item in beliefs["beliefs"]}
+    assert belief_by_label["hypothesis"] > 0.4
 
 
 def test_infer_fails_when_compiled_artifacts_are_stale(tmp_path):

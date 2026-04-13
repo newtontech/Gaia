@@ -1064,3 +1064,120 @@ def test_compile_nested_composite_strategy_collects_recursive_knowledge(tmp_path
     assert "github:nested_composite_pkg::hypothesis" in knowledge_ids
     result = validate_local_graph(LocalCanonicalGraph(**ir))
     assert result.valid, result.errors
+
+
+# ── priors.py discovery and injection ──
+
+
+def test_compile_priors_py_injects_metadata_prior(tmp_path):
+    """priors.py PRIORS dict injects prior+justification into claim metadata."""
+    pkg_dir = tmp_path / "priors_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "priors-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "priors_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        "from gaia.lang import claim, support\n\n"
+        'premise_a = claim("Premise A.")\n'
+        'premise_b = claim("Premise B.")\n'
+        'conclusion = claim("Conclusion.")\n'
+        'support(premises=[premise_a, premise_b], conclusion=conclusion, reason="test", prior=0.9)\n'
+        '__all__ = ["premise_a", "premise_b", "conclusion"]\n'
+    )
+    (pkg_src / "priors.py").write_text(
+        "from . import premise_a, premise_b\n\n"
+        "PRIORS = {\n"
+        '    premise_a: (0.95, "Well-established premise A."),\n'
+        '    premise_b: (0.80, "Moderate confidence in B."),\n'
+        "}\n"
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code == 0, f"Failed: {result.output}"
+
+    ir = json.loads((pkg_dir / ".gaia" / "ir.json").read_text())
+    knowledges_by_label = {k["label"]: k for k in ir["knowledges"] if k.get("label")}
+
+    # premise_a should have prior=0.95 in metadata
+    a_meta = knowledges_by_label["premise_a"].get("metadata", {})
+    assert a_meta.get("prior") == 0.95
+    assert a_meta.get("prior_justification") == "Well-established premise A."
+
+    # premise_b should have prior=0.80 in metadata
+    b_meta = knowledges_by_label["premise_b"].get("metadata", {})
+    assert b_meta.get("prior") == 0.80
+    assert b_meta.get("prior_justification") == "Moderate confidence in B."
+
+    # conclusion should NOT have a prior in metadata (it's derived, not in PRIORS)
+    c_meta = knowledges_by_label["conclusion"].get("metadata") or {}
+    assert "prior" not in c_meta
+
+
+def test_compile_no_priors_py_is_noop(tmp_path):
+    """Packages without priors.py compile normally — no error."""
+    pkg_dir = tmp_path / "no_priors_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "no-priors-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "no_priors_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        'from gaia.lang import claim\n\nmy_claim = claim("A claim.")\n__all__ = ["my_claim"]\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code == 0, f"Failed: {result.output}"
+
+
+def test_compile_priors_py_invalid_key_raises(tmp_path):
+    """PRIORS dict with non-Knowledge key should error."""
+    pkg_dir = tmp_path / "bad_priors_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "bad-priors-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "bad_priors_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        'from gaia.lang import claim\n\nmy_claim = claim("A claim.")\n__all__ = ["my_claim"]\n'
+    )
+    (pkg_src / "priors.py").write_text(
+        'PRIORS = {\n    "not_a_knowledge": (0.5, "invalid"),\n}\n'
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code != 0
+    assert "Knowledge" in result.output or "PRIORS" in result.output
+
+
+def test_compile_priors_py_reason_prior_pairing(tmp_path):
+    """PRIORS values must be (float, str) tuples."""
+    pkg_dir = tmp_path / "malformed_priors_pkg"
+    pkg_dir.mkdir()
+    (pkg_dir / "pyproject.toml").write_text(
+        '[project]\nname = "malformed-priors-pkg-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\nnamespace = "github"\ntype = "knowledge-package"\n'
+    )
+    pkg_src = pkg_dir / "malformed_priors_pkg"
+    pkg_src.mkdir()
+    (pkg_src / "__init__.py").write_text(
+        "from gaia.lang import claim\n\n"
+        'my_claim = claim("A claim.")\n'
+        '__all__ = ["my_claim"]\n'
+    )
+    (pkg_src / "priors.py").write_text(
+        "from . import my_claim\n\n"
+        "PRIORS = {\n"
+        "    my_claim: 0.5,  # missing justification\n"
+        "}\n"
+    )
+
+    result = runner.invoke(app, ["compile", str(pkg_dir)])
+    assert result.exit_code != 0
+    assert "tuple" in result.output.lower() or "justification" in result.output.lower()
