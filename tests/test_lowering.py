@@ -874,3 +874,124 @@ def test_noisy_and_deprecated():
         assert "noisy_and" in str(w[0].message)
     # The returned strategy should be a support strategy
     assert s.type == "support"
+
+
+# ---------------------------------------------------------------------------
+# E2E: abduction full pipeline (DSL → structure verification)
+# ---------------------------------------------------------------------------
+
+
+def test_e2e_abduction_full_pipeline():
+    """E2E: support + support + compare -> abduction -> CompositeStrategy (3 sub-strategies).
+
+    Verifies the full DSL pipeline: abduction creates a well-formed
+    CompositeStrategy with 2 supports + 1 compare, composition warrant,
+    and comparison.conclusion as conclusion.
+    """
+    from gaia.lang import claim as dsl_claim
+    from gaia.lang import compare as dsl_compare
+    from gaia.lang import support as dsl_support
+    from gaia.lang.dsl.strategies import abduction as dsl_abduction
+
+    h = dsl_claim("Theory H")
+    alt = dsl_claim("Theory Alt")
+    obs = dsl_claim("Observed X")
+    pred_h = dsl_claim("Pred from H")
+    pred_alt = dsl_claim("Pred from Alt")
+
+    s_h = dsl_support([h], obs, reason="H explains obs", reverse_reason="obs validates H")
+    s_alt = dsl_support([alt], obs, reason="Alt explains obs", reverse_reason="obs validates Alt")
+    comp = dsl_compare(pred_h, pred_alt, obs, reason="H matches obs better")
+    abd = dsl_abduction(s_h, s_alt, comp, reason="both explain same observation")
+
+    # Structure checks
+    assert abd.type == "abduction"
+    assert len(abd.sub_strategies) == 3  # support_h, support_alt, compare
+    assert abd.sub_strategies[0] is s_h
+    assert abd.sub_strategies[1] is s_alt
+    assert abd.sub_strategies[2] is comp
+
+    # Composition warrant
+    assert abd.composition_warrant is not None
+    assert abd.composition_warrant.type == "claim"
+    assert abd.composition_warrant.metadata.get("helper_kind") == "composition_validity"
+
+    # Conclusion is the comparison_claim from compare
+    assert abd.conclusion is not None
+    assert abd.conclusion is comp.conclusion
+
+
+def test_e2e_induction_chain():
+    """E2E: support + support → induction chain → law accumulated."""
+    from gaia.lang import claim as dsl_claim
+    from gaia.lang import support as dsl_support
+    from gaia.lang.dsl.strategies import induction as dsl_induction
+
+    law = dsl_claim("Mendel's law")
+    obs1 = dsl_claim("Seed shape 2.96:1")
+    obs2 = dsl_claim("Seed color 3.01:1")
+    obs3 = dsl_claim("Flower color 3.15:1")
+
+    s1 = dsl_support([law], obs1, reason="law predicts 3:1", reverse_reason="2.96 matches")
+    s2 = dsl_support([law], obs2, reason="law predicts 3:1", reverse_reason="3.01 matches")
+    s3 = dsl_support([law], obs3, reason="law predicts 3:1", reverse_reason="3.15 matches")
+
+    # Binary induction
+    ind_12 = dsl_induction(s1, s2, law=law, reason="shape and color are independent traits")
+    assert ind_12.type == "induction"
+    assert ind_12.conclusion is law
+    assert len(ind_12.sub_strategies) == 2
+    assert ind_12.composition_warrant is not None
+    assert ind_12.composition_warrant.metadata.get("helper_kind") == "composition_validity"
+
+    # Chain: induction(prev_induction, new_support, law)
+    ind_123 = dsl_induction(ind_12, s3, law=law, reason="flower color independent of seed traits")
+    assert ind_123.type == "induction"
+    assert ind_123.conclusion is law
+    assert len(ind_123.sub_strategies) == 2  # prev_induction + s3
+    assert ind_123.sub_strategies[0] is ind_12
+    assert ind_123.sub_strategies[1] is s3
+
+
+def test_e2e_mendel_peirce_cycle():
+    """E2E: Full Peirce cycle -- deduction + support + compare + abduction + induction."""
+    from gaia.lang import claim as dsl_claim
+    from gaia.lang import compare as dsl_compare
+    from gaia.lang import deduction as dsl_deduction
+    from gaia.lang import support as dsl_support
+    from gaia.lang.dsl.strategies import abduction as dsl_abduction
+    from gaia.lang.dsl.strategies import induction as dsl_induction
+
+    # Knowledge
+    H = dsl_claim("Discrete heritable factors")
+    alt = dsl_claim("Blending inheritance")
+    obs = dsl_claim("F2 ratio 2.96:1")
+
+    # 1. Deduction: H -> prediction (standalone reasoning step)
+    pred_h = dsl_claim("H predicts 3:1")
+    pred_alt = dsl_claim("Blending predicts continuous")
+    dsl_deduction([H], pred_h, reason="Punnett square derivation")
+
+    # 2. Supports: theory -> observation directly
+    s_h = dsl_support([H], obs, reason="H explains 3:1 ratio", reverse_reason="ratio validates H")
+    s_alt = dsl_support(
+        [alt],
+        obs,
+        reason="blending explains ratio",
+        reverse_reason="ratio indicates blending",
+    )
+
+    # 3. Compare: H vs Alt predictions against observation
+    comp = dsl_compare(pred_h, pred_alt, obs, reason="H matches 3:1 better")
+
+    # 4. Abduction: two supports + compare, conclusion is comparison_claim
+    abd = dsl_abduction(s_h, s_alt, comp, reason="both explain F2 pattern")
+    assert abd.conclusion is comp.conclusion
+    assert len(abd.sub_strategies) == 3
+
+    # 5. Induction: multiple traits
+    obs2 = dsl_claim("Seed color 3.01:1")
+    s_shape = dsl_support([H], obs, reason="H predicts", reverse_reason="matches")
+    s_color = dsl_support([H], obs2, reason="H predicts", reverse_reason="matches")
+    ind = dsl_induction(s_shape, s_color, law=H, reason="traits independent")
+    assert ind.conclusion is H
