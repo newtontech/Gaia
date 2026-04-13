@@ -253,8 +253,7 @@ def _lower_strategy(
             fid = _next_fid(f"fs_{s.strategy_id}_{i}", ctr)
             ft = _OPERATOR_MAP[op.operator]
             is_directed = (
-                s.type in _DIRECTED_DEDUCTION_TYPES
-                and op.operator == OperatorType.IMPLICATION
+                s.type in _DIRECTED_DEDUCTION_TYPES and op.operator == OperatorType.IMPLICATION
             )
             fg.add_factor(fid, ft, op.variables, op.conclusion, directed=is_directed)
             for vid in op.variables:

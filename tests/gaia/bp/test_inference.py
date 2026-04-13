@@ -523,7 +523,10 @@ def _deduction_fanout_graph(*, directed: bool) -> FactorGraph:
         fg.add_variable(f"B{i}", 0.5)
         fg.add_variable(f"H{i}", 1.0 - CROMWELL_EPS)
         fg.add_factor(
-            f"f{i}", FactorType.IMPLICATION, ["A", f"B{i}"], f"H{i}",
+            f"f{i}",
+            FactorType.IMPLICATION,
+            ["A", f"B{i}"],
+            f"H{i}",
             directed=directed,
         )
     return fg
@@ -568,7 +571,10 @@ class TestDirectedFactorFanout:
             fg.add_variable(f"B{i}", 0.5)
             fg.add_variable(f"H{i}", 1.0 - CROMWELL_EPS)
             fg.add_factor(
-                f"f{i}", FactorType.IMPLICATION, ["A", f"B{i}"], f"H{i}",
+                f"f{i}",
+                FactorType.IMPLICATION,
+                ["A", f"B{i}"],
+                f"H{i}",
                 directed=True,
             )
         result = BeliefPropagation().run(fg)
