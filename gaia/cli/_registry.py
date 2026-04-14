@@ -53,6 +53,25 @@ def _fetch_file(registry: str, path: str) -> str:
     return base64.b64decode(content).decode()
 
 
+def fetch_file_optional(registry: str, path: str) -> str | None:
+    """Like ``_fetch_file`` but returns *None* on 404 or network error.
+
+    Used by ``gaia add`` to download optional release artifacts (e.g.
+    ``beliefs.json``) without failing when the artifact hasn't been
+    published yet (older packages, or registry versions that predate the
+    beliefs manifest).
+    """
+    url = f"https://api.github.com/repos/{registry}/contents/{path}"
+    try:
+        resp = httpx.get(url, headers=_github_headers(), timeout=15)
+    except httpx.HTTPError:
+        return None
+    if resp.status_code != 200:
+        return None
+    content = resp.json().get("content", "")
+    return base64.b64decode(content).decode()
+
+
 def resolve_package(
     package: str,
     *,

@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
+from pathlib import Path
 
 import typer
 
 from gaia.cli._packages import GaiaCliError
-from gaia.cli._registry import DEFAULT_REGISTRY, resolve_package
+from gaia.cli._registry import DEFAULT_REGISTRY, fetch_file_optional, resolve_package
 
 
 def _run_uv(args: list[str], **kwargs) -> subprocess.CompletedProcess[str]:
@@ -47,3 +49,66 @@ def add_command(
         raise typer.Exit(1)
 
     typer.echo(f"Added {package} v{resolved.version}")
+
+    # Download upstream beliefs manifest for foreign-node prior injection.
+    # This is best-effort: older registry entries may not have beliefs.json.
+    _fetch_dep_beliefs(
+        package_name=canonical_name.removesuffix("-gaia"),
+        version=resolved.version,
+        registry=registry,
+    )
+
+
+def _find_gaia_package_root() -> Path | None:
+    """Walk up from cwd to find the nearest Gaia package root (pyproject.toml with [tool.gaia])."""
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib  # type: ignore[no-redef]
+
+    current = Path.cwd().resolve()
+    for directory in [current, *current.parents]:
+        pyproject = directory / "pyproject.toml"
+        if pyproject.exists():
+            try:
+                config = tomllib.loads(pyproject.read_text())
+            except Exception:
+                continue
+            if config.get("tool", {}).get("gaia", {}).get("type") == "knowledge-package":
+                return directory
+    return None
+
+
+def _fetch_dep_beliefs(
+    *,
+    package_name: str,
+    version: str,
+    registry: str,
+) -> None:
+    """Download beliefs.json from the registry into ``.gaia/dep_beliefs/``."""
+    registry_path = f"packages/{package_name}/releases/{version}/beliefs.json"
+    content = fetch_file_optional(registry, registry_path)
+    if content is None:
+        typer.echo(f"Note: no beliefs manifest for {package_name} v{version} (optional)")
+        return
+
+    # Validate it's valid JSON before writing
+    try:
+        json.loads(content)
+    except json.JSONDecodeError:
+        typer.echo(f"Warning: beliefs manifest for {package_name} is not valid JSON; skipping")
+        return
+
+    # Find the Gaia package root (may differ from cwd if invoked from subdirectory)
+    pkg_root = _find_gaia_package_root()
+    if pkg_root is None:
+        typer.echo("Note: not inside a Gaia package; skipping dep_beliefs download")
+        return
+
+    dep_beliefs_dir = pkg_root / ".gaia" / "dep_beliefs"
+    dep_beliefs_dir.mkdir(parents=True, exist_ok=True)
+
+    import_name = package_name.replace("-", "_")
+    dest = dep_beliefs_dir / f"{import_name}.json"
+    dest.write_text(content)
+    typer.echo(f"Saved upstream beliefs: {dest}")
