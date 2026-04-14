@@ -148,13 +148,34 @@ def test_init_uv_add_failure_warns_but_succeeds(tmp_path, monkeypatch):
 
 
 def test_init_gitignore_not_duplicated(tmp_path, monkeypatch):
-    """If .gaia/ is already in .gitignore, don't add it again."""
+    """If .gaia patterns are already in .gitignore, don't add them again."""
     monkeypatch.chdir(tmp_path)
     with patch("gaia.cli.commands.init.subprocess.run", side_effect=_fake_subprocess_run):
         result = runner.invoke(app, ["init", "dedup-gaia"])
 
     assert result.exit_code == 0
     gitignore = (tmp_path / "dedup-gaia" / ".gitignore").read_text()
+    assert gitignore.count(".gaia/reviews/") == 1
+    assert gitignore.count(".gaia/beliefs.json") == 1
+    assert gitignore.count(".gaia/dep_beliefs/") == 1
+
+
+def test_init_gitignore_adds_missing_patterns_to_existing(tmp_path, monkeypatch):
+    """Re-running init on a project with old .gitignore adds new patterns."""
+    monkeypatch.chdir(tmp_path)
+    pkg_dir = tmp_path / "migrate-gaia"
+    pkg_dir.mkdir()
+    # Simulate old .gitignore that only has .gaia/reviews/
+    (pkg_dir / ".gitignore").write_text("# old patterns\n.gaia/reviews/\n")
+    with patch("gaia.cli.commands.init.subprocess.run", side_effect=_fake_subprocess_run):
+        result = runner.invoke(app, ["init", "migrate-gaia"])
+
+    assert result.exit_code == 0
+    gitignore = (pkg_dir / ".gitignore").read_text()
+    assert ".gaia/reviews/" in gitignore
+    assert ".gaia/beliefs.json" in gitignore
+    assert ".gaia/dep_beliefs/" in gitignore
+    # Old pattern not duplicated
     assert gitignore.count(".gaia/reviews/") == 1
 
 

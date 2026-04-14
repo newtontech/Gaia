@@ -59,6 +59,26 @@ def add_command(
     )
 
 
+def _find_gaia_package_root() -> Path | None:
+    """Walk up from cwd to find the nearest Gaia package root (pyproject.toml with [tool.gaia])."""
+    try:
+        import tomllib
+    except ImportError:
+        import tomli as tomllib  # type: ignore[no-redef]
+
+    current = Path.cwd().resolve()
+    for directory in [current, *current.parents]:
+        pyproject = directory / "pyproject.toml"
+        if pyproject.exists():
+            try:
+                config = tomllib.loads(pyproject.read_text())
+            except Exception:
+                continue
+            if config.get("tool", {}).get("gaia", {}).get("type") == "knowledge-package":
+                return directory
+    return None
+
+
 def _fetch_dep_beliefs(
     *,
     package_name: str,
@@ -79,8 +99,13 @@ def _fetch_dep_beliefs(
         typer.echo(f"Warning: beliefs manifest for {package_name} is not valid JSON; skipping")
         return
 
-    # Find the project root (cwd should be in a gaia package)
-    dep_beliefs_dir = Path.cwd() / ".gaia" / "dep_beliefs"
+    # Find the Gaia package root (may differ from cwd if invoked from subdirectory)
+    pkg_root = _find_gaia_package_root()
+    if pkg_root is None:
+        typer.echo("Note: not inside a Gaia package; skipping dep_beliefs download")
+        return
+
+    dep_beliefs_dir = pkg_root / ".gaia" / "dep_beliefs"
     dep_beliefs_dir.mkdir(parents=True, exist_ok=True)
 
     import_name = package_name.replace("-", "_")

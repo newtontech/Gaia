@@ -179,6 +179,11 @@ def test_fetch_file_optional_returns_none_on_network_error(mock_get):
 @patch("gaia.cli.commands.add.fetch_file_optional")
 def test_add_downloads_dep_beliefs(mock_fetch, mock_uv, mock_resolve, tmp_path, monkeypatch):
     """gaia add downloads beliefs.json into .gaia/dep_beliefs/."""
+    # Create a minimal Gaia package root so _find_gaia_package_root works
+    (tmp_path / "pyproject.toml").write_text(
+        '[project]\nname = "test-gaia"\nversion = "1.0.0"\n\n'
+        '[tool.gaia]\ntype = "knowledge-package"\n'
+    )
     monkeypatch.chdir(tmp_path)
     mock_uv.return_value = MagicMock(returncode=0)
     mock_fetch.return_value = '{"beliefs": [{"knowledge_id": "a", "belief": 0.8}]}'
