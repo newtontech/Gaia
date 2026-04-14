@@ -12,6 +12,7 @@ from gaia.bp.engine import InferenceEngine
 from gaia.cli._packages import (
     GaiaCliError,
     apply_package_priors,
+    collect_foreign_node_priors,
     compile_loaded_package_artifact,
     gaia_lang_version,
     load_gaia_package,
@@ -66,7 +67,10 @@ def infer_command(
         typer.echo("Error: compiled artifacts are stale; run `gaia compile` again.", err=True)
         raise typer.Exit(1)
 
-    factor_graph = lower_local_graph(compiled.graph)
+    foreign_priors = collect_foreign_node_priors(compiled.graph, loaded.pkg_path)
+    if foreign_priors:
+        typer.echo(f"Loaded {len(foreign_priors)} upstream belief(s) for foreign nodes")
+    factor_graph = lower_local_graph(compiled.graph, node_priors=foreign_priors or None)
     fg_errors = factor_graph.validate()
     if fg_errors:
         for error in fg_errors:

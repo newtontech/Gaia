@@ -7,7 +7,7 @@ import pytest
 from typer.testing import CliRunner
 
 from gaia.cli._packages import GaiaCliError
-from gaia.cli._registry import RegistryVersion, _fetch_file, resolve_package
+from gaia.cli._registry import RegistryVersion, _fetch_file, fetch_file_optional, resolve_package
 from gaia.cli.main import app
 
 runner = CliRunner()
@@ -135,3 +135,70 @@ def test_add_missing_uv_shows_install_hint(mock_run, mock_resolve):
     result = runner.invoke(app, ["add", "some-gaia"])
     assert result.exit_code != 0
     assert "uv is not installed" in result.output
+
+
+# --- fetch_file_optional ---
+
+
+@patch("gaia.cli._registry.httpx.get")
+def test_fetch_file_optional_returns_content_on_200(mock_get):
+    """fetch_file_optional returns decoded content on 200."""
+    import base64
+
+    mock_resp = MagicMock()
+    mock_resp.status_code = 200
+    mock_resp.json.return_value = {"content": base64.b64encode(b'{"beliefs": []}').decode()}
+    mock_get.return_value = mock_resp
+    result = fetch_file_optional("owner/repo", "some/path.json")
+    assert result == '{"beliefs": []}'
+
+
+@patch("gaia.cli._registry.httpx.get")
+def test_fetch_file_optional_returns_none_on_404(mock_get):
+    """fetch_file_optional returns None on 404."""
+    mock_resp = MagicMock()
+    mock_resp.status_code = 404
+    mock_get.return_value = mock_resp
+    result = fetch_file_optional("owner/repo", "nonexistent/path.json")
+    assert result is None
+
+
+@patch("gaia.cli._registry.httpx.get")
+def test_fetch_file_optional_returns_none_on_network_error(mock_get):
+    """fetch_file_optional returns None on network error."""
+    mock_get.side_effect = httpx.ConnectTimeout("timed out")
+    result = fetch_file_optional("owner/repo", "some/path.json")
+    assert result is None
+
+
+# --- dep_beliefs download in gaia add ---
+
+
+@patch("gaia.cli.commands.add.resolve_package", return_value=MOCK_VERSION)
+@patch("gaia.cli.commands.add._run_uv")
+@patch("gaia.cli.commands.add.fetch_file_optional")
+def test_add_downloads_dep_beliefs(mock_fetch, mock_uv, mock_resolve, tmp_path, monkeypatch):
+    """gaia add downloads beliefs.json into .gaia/dep_beliefs/."""
+    monkeypatch.chdir(tmp_path)
+    mock_uv.return_value = MagicMock(returncode=0)
+    mock_fetch.return_value = '{"beliefs": [{"knowledge_id": "a", "belief": 0.8}]}'
+    result = runner.invoke(app, ["add", "galileo-falling-bodies-gaia"])
+    assert result.exit_code == 0, f"Failed: {result.output}"
+    assert "Saved upstream beliefs" in result.output
+    dep_file = tmp_path / ".gaia" / "dep_beliefs" / "galileo_falling_bodies.json"
+    assert dep_file.exists()
+    import json
+
+    data = json.loads(dep_file.read_text())
+    assert data["beliefs"][0]["belief"] == 0.8
+
+
+@patch("gaia.cli.commands.add.resolve_package", return_value=MOCK_VERSION)
+@patch("gaia.cli.commands.add._run_uv")
+@patch("gaia.cli.commands.add.fetch_file_optional", return_value=None)
+def test_add_succeeds_without_beliefs_manifest(mock_fetch, mock_uv, mock_resolve):
+    """gaia add succeeds even when beliefs.json is not available."""
+    mock_uv.return_value = MagicMock(returncode=0)
+    result = runner.invoke(app, ["add", "galileo-falling-bodies-gaia"])
+    assert result.exit_code == 0
+    assert "no beliefs manifest" in result.output.lower()

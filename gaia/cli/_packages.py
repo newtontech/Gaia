@@ -822,6 +822,61 @@ def build_package_manifests(loaded: LoadedGaiaPackage, compiled) -> dict[str, di
     return manifests
 
 
+def collect_foreign_node_priors(
+    graph,
+    pkg_path: Path,
+) -> dict[str, float]:
+    """Collect upstream beliefs for foreign knowledge nodes.
+
+    Scans ``.gaia/dep_beliefs/*.json`` for belief manifests downloaded by
+    ``gaia add``.  For each foreign knowledge node in *graph* (i.e. a node
+    whose QID does **not** start with the local ``{namespace}:{package}::``
+    prefix), if the upstream manifest contains a matching ``knowledge_id``,
+    the upstream belief is included in the returned dict.
+
+    The returned dict is suitable for passing as ``node_priors`` to
+    ``lower_local_graph()``, which gives these values highest explicit-
+    override priority (above ``metadata["prior"]``).
+    """
+    dep_beliefs_dir = pkg_path / ".gaia" / "dep_beliefs"
+    if not dep_beliefs_dir.is_dir():
+        return {}
+
+    # Build upstream beliefs mapping from all dep_beliefs files
+    upstream_beliefs: dict[str, float] = {}
+    for beliefs_file in sorted(dep_beliefs_dir.glob("*.json")):
+        try:
+            data = json.loads(beliefs_file.read_text())
+        except (OSError, json.JSONDecodeError):
+            continue
+        beliefs_list = data.get("beliefs")
+        if not isinstance(beliefs_list, list):
+            continue
+        for entry in beliefs_list:
+            if not isinstance(entry, dict):
+                continue
+            kid = entry.get("knowledge_id")
+            belief = entry.get("belief")
+            if isinstance(kid, str) and isinstance(belief, (int, float)):
+                upstream_beliefs[kid] = float(belief)
+
+    if not upstream_beliefs:
+        return {}
+
+    # Determine local prefix to identify foreign nodes
+    local_prefix = f"{graph.namespace}:{graph.package_name}::"
+
+    foreign_priors: dict[str, float] = {}
+    for knowledge in graph.knowledges:
+        kid = knowledge.id
+        if kid is None or kid.startswith(local_prefix):
+            continue
+        if kid in upstream_beliefs:
+            foreign_priors[kid] = upstream_beliefs[kid]
+
+    return foreign_priors
+
+
 def gaia_lang_version() -> str:
     """Return the installed gaia-lang version, or 'unknown' for dev checkouts.
 

@@ -18,6 +18,8 @@ from gaia.cli._packages import (
 )
 from gaia.cli._packages import compile_loaded_package_artifact
 from gaia.cli._packages import render_manifest_json
+from gaia.bp import lower_local_graph
+from gaia.bp.engine import InferenceEngine
 from gaia.ir import LocalCanonicalGraph
 from gaia.ir.validator import validate_local_graph
 
@@ -381,6 +383,40 @@ def register_command(
         for filename, payload in manifests.items()
     }
 
+    # ── Run inference to produce beliefs manifest ──
+    # The beliefs.json manifest records the package's inferred beliefs for
+    # exported claims, so downstream packages can use them as priors for
+    # foreign nodes instead of falling back to 0.5.
+    factor_graph = lower_local_graph(compiled.graph)
+    fg_errors = factor_graph.validate()
+    if fg_errors:
+        for error in fg_errors:
+            typer.echo(f"Error (factor graph): {error}", err=True)
+        raise typer.Exit(1)
+
+    engine = InferenceEngine()
+    inference_result = engine.run(factor_graph)
+    bp_result = inference_result.bp_result
+
+    exported_qids = {k.id for k in compiled.graph.knowledges if k.id is not None and k.exported}
+    knowledge_by_id = {k.id: k for k in compiled.graph.knowledges}
+    beliefs_manifest = {
+        "manifest_schema_version": 1,
+        "package": package_name,
+        "version": version,
+        "ir_hash": ir["ir_hash"],
+        "beliefs": [
+            {
+                "knowledge_id": kid,
+                "label": knowledge_by_id[kid].label,
+                "belief": belief,
+            }
+            for kid, belief in sorted(bp_result.beliefs.items())
+            if kid in exported_qids and kid in knowledge_by_id
+        ],
+    }
+    release_files[f"{release_dir}/beliefs.json"] = render_manifest_json(beliefs_manifest)
+
     plan = {
         "package": {
             "uuid": gaia_uuid,
@@ -481,6 +517,7 @@ def register_command(
 
     for filename, payload in manifests.items():
         (release_path / filename).write_text(render_manifest_json(payload))
+    (release_path / "beliefs.json").write_text(render_manifest_json(beliefs_manifest))
 
     try:
         _run(["git", "add", str(package_dir.relative_to(registry_path))], cwd=registry_path)

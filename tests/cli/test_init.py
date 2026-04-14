@@ -155,7 +155,7 @@ def test_init_gitignore_not_duplicated(tmp_path, monkeypatch):
 
     assert result.exit_code == 0
     gitignore = (tmp_path / "dedup-gaia" / ".gitignore").read_text()
-    assert gitignore.count(".gaia/") == 1
+    assert gitignore.count(".gaia/reviews/") == 1
 
 
 def test_init_missing_uv_shows_install_hint(tmp_path, monkeypatch):

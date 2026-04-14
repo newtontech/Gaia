@@ -157,11 +157,21 @@ def test_register_dry_run_emits_registration_plan(tmp_path):
     assert f"{release_dir}/premises.json" in plan["files"]
     assert f"{release_dir}/holes.json" in plan["files"]
     assert f"{release_dir}/bridges.json" in plan["files"]
+    assert f"{release_dir}/beliefs.json" in plan["files"]
     exports_manifest = json.loads(plan["files"][f"{release_dir}/exports.json"])
     premises_manifest = json.loads(plan["files"][f"{release_dir}/premises.json"])
+    beliefs_manifest = json.loads(plan["files"][f"{release_dir}/beliefs.json"])
     assert exports_manifest["manifest_schema_version"] == 1
     assert exports_manifest["exports"][0]["label"] == "exported_claim"
     assert premises_manifest["premises"] == []
+    # beliefs.json must contain only exported claims
+    assert beliefs_manifest["manifest_schema_version"] == 1
+    assert beliefs_manifest["package"] == "register-demo"
+    assert beliefs_manifest["version"] == "1.2.0"
+    assert beliefs_manifest["ir_hash"].startswith("sha256:")
+    assert len(beliefs_manifest["beliefs"]) >= 1
+    exported_labels = {b["label"] for b in beliefs_manifest["beliefs"]}
+    assert "exported_claim" in exported_labels
 
 
 def test_register_writes_registry_metadata_to_local_checkout(tmp_path):
@@ -201,6 +211,7 @@ def test_register_writes_registry_metadata_to_local_checkout(tmp_path):
     assert (release_dir / "premises.json").exists()
     assert (release_dir / "holes.json").exists()
     assert (release_dir / "bridges.json").exists()
+    assert (release_dir / "beliefs.json").exists()
     assert (release_dir / "exports.json").read_text().endswith("\n")
     assert 'name = "register-demo"' in (package_dir / "Package.toml").read_text()
     versions_text = (package_dir / "Versions.toml").read_text()
