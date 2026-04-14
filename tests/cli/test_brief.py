@@ -390,3 +390,399 @@ def test_brief_and_show_combined(tmp_path):
     # Both overview and expanded module should be present
     assert "Module: background" in result.output  # from overview
     assert "expanded" in result.output  # from --show
+
+
+# ── Coverage tests for edge-case paths ──
+
+
+def test_truncate_long_text():
+    from gaia.cli.commands._brief import _truncate
+
+    short = "hello"
+    assert _truncate(short, 80) == "hello"
+    long_text = "x" * 200
+    result = _truncate(long_text, 80)
+    assert len(result) == 80
+    assert result.endswith("\u2026")
+
+
+def test_is_helper_none_and_dunder():
+    from gaia.cli.commands._brief import _is_helper
+
+    assert _is_helper(None) is True
+    assert _is_helper("") is True
+    assert _is_helper("__warrant_xyz") is True
+    assert _is_helper("hypothesis") is False
+
+
+def test_prior_str_variants():
+    from gaia.cli.commands._brief import _prior_str
+
+    assert _prior_str(None) == ""
+    assert _prior_str({}) == ""
+    assert _prior_str({"prior": 0.8}) == ", prior=0.8"
+
+
+def _write_question_package(pkg_dir):
+    """Package with a question node to exercise question rendering paths."""
+    name = "question_demo"
+    _write_base_package(pkg_dir, name=name)
+    (pkg_dir / name / "__init__.py").write_text("from .content import *\n")
+    (pkg_dir / name / "content.py").write_text(
+        "from gaia.lang import claim, question, setting\n\n"
+        'env = setting("Test environment.")\n'
+        'q = question("What is the mechanism?")\n'
+        'obs = claim("Observation recorded.")\n'
+    )
+    (pkg_dir / name / "priors.py").write_text(
+        'from . import obs\n\nPRIORS = {\n    obs: (0.9, "Measured."),\n}\n'
+    )
+
+
+def test_brief_overview_shows_questions(tmp_path):
+    """Exercise the Questions section in overview."""
+    pkg_dir = tmp_path / "question_demo"
+    _write_question_package(pkg_dir)
+    _compile(pkg_dir)
+
+    from gaia.cli._packages import apply_package_priors, load_gaia_package
+    from gaia.cli._packages import compile_loaded_package_artifact
+    from gaia.cli.commands._brief import generate_brief_overview
+
+    loaded = load_gaia_package(str(pkg_dir))
+    apply_package_priors(loaded)
+    compiled = compile_loaded_package_artifact(loaded)
+    ir = compiled.to_json()
+
+    lines = generate_brief_overview(ir)
+    text = "\n".join(lines)
+
+    assert "Questions:" in text
+    assert "What is the mechanism?" in text
+
+
+def test_brief_module_shows_settings_and_questions(tmp_path):
+    """Exercise settings and questions sections in module expansion."""
+    pkg_dir = tmp_path / "question_demo"
+    _write_question_package(pkg_dir)
+    _compile(pkg_dir)
+
+    from gaia.cli._packages import apply_package_priors, load_gaia_package
+    from gaia.cli._packages import compile_loaded_package_artifact
+    from gaia.cli.commands._brief import generate_brief_module
+
+    loaded = load_gaia_package(str(pkg_dir))
+    apply_package_priors(loaded)
+    compiled = compile_loaded_package_artifact(loaded)
+    ir = compiled.to_json()
+
+    lines = generate_brief_module(ir, "content")
+    text = "\n".join(lines)
+
+    assert "Settings:" in text
+    assert "Test environment." in text
+    assert "Questions:" in text
+    assert "What is the mechanism?" in text
+
+
+def test_brief_detail_independent_premise(tmp_path):
+    """Claim with no strategy shows 'independent premise'."""
+    pkg_dir = tmp_path / "brief_demo"
+    _write_two_module_package(pkg_dir)
+    _compile(pkg_dir)
+
+    from gaia.cli._packages import apply_package_priors, load_gaia_package
+    from gaia.cli._packages import compile_loaded_package_artifact
+    from gaia.cli.commands._brief import generate_brief_detail
+
+    loaded = load_gaia_package(str(pkg_dir))
+    apply_package_priors(loaded)
+    compiled = compile_loaded_package_artifact(loaded)
+    ir = compiled.to_json()
+
+    lines = generate_brief_detail(ir, "obs_a")
+    text = "\n".join(lines)
+
+    assert "independent premise" in text
+
+
+def _write_abduction_package(pkg_dir):
+    """Package with abduction to exercise composite + review notes."""
+    name = "abduction_demo"
+    _write_base_package(pkg_dir, name=name)
+    (pkg_dir / name / "__init__.py").write_text("from .reasoning import *\n")
+    (pkg_dir / name / "reasoning.py").write_text(
+        "from gaia.lang import claim, support, compare, abduction\n\n"
+        'obs = claim("Observed data.")\n'
+        'hyp = claim("Hypothesis H predicts obs.")\n'
+        'alt_pred = claim("Alternative predicts obs.")\n'
+        'alt = claim("Alternative hypothesis.")\n'
+        "s_h = support([hyp], obs, reason='H explains obs', prior=0.9)\n"
+        "s_alt = support([alt], obs, reason='Alt explains obs', prior=0.5)\n"
+        "cmp = compare(hyp, alt_pred, obs, reason='compare H vs Alt', prior=0.85)\n"
+        "abd = abduction(s_h, s_alt, cmp, reason='IBE comparison')\n"
+    )
+    (pkg_dir / name / "priors.py").write_text(
+        "from . import obs, hyp, alt_pred, alt\n\n"
+        "PRIORS = {\n"
+        '    obs: (0.95, "Measured."),\n'
+        '    hyp: (0.6, "Prior hypothesis."),\n'
+        '    alt_pred: (0.4, "Alt prediction."),\n'
+        '    alt: (0.3, "Prior alternative."),\n'
+        "}\n"
+    )
+
+
+def test_brief_detail_abduction_composite_with_review_notes(tmp_path):
+    """Exercise composite tree + abduction review notes."""
+    pkg_dir = tmp_path / "abduction_demo"
+    _write_abduction_package(pkg_dir)
+    _compile(pkg_dir)
+
+    from gaia.cli._packages import apply_package_priors, load_gaia_package
+    from gaia.cli._packages import compile_loaded_package_artifact
+    from gaia.cli.commands._brief import (
+        _format_warrant_tree,
+        _review_notes,
+        _strategy_by_id,
+    )
+
+    loaded = load_gaia_package(str(pkg_dir))
+    apply_package_priors(loaded)
+    compiled = compile_loaded_package_artifact(loaded)
+    ir = compiled.to_json()
+
+    knowledge_by_id = {k["id"]: k for k in ir["knowledges"]}
+    sid_map = _strategy_by_id(ir)
+
+    abduction_strats = [
+        s for s in ir["strategies"] if s.get("sub_strategies") and s.get("type") == "abduction"
+    ]
+    assert abduction_strats
+
+    # Exercise _format_warrant_tree on composite
+    tree_lines = _format_warrant_tree(abduction_strats[0], knowledge_by_id, sid_map, indent=4)
+    tree_text = "\n".join(tree_lines)
+    assert "composite" in tree_text or "sub-strategies" in tree_text
+
+    # Exercise _review_notes on abduction with wide priors (0.9 vs 0.5)
+    notes = _review_notes(abduction_strats[0], sid_map)
+    notes_text = "\n".join(notes)
+    assert "gap=" in notes_text
+
+
+def _write_abduction_close_priors_package(pkg_dir):
+    """Abduction where support priors are close — triggers warning note."""
+    name = "abd_close"
+    _write_base_package(pkg_dir, name=name)
+    (pkg_dir / name / "__init__.py").write_text("from .reasoning import *\n")
+    (pkg_dir / name / "reasoning.py").write_text(
+        "from gaia.lang import claim, support, compare, abduction\n\n"
+        'obs = claim("Observed data.")\n'
+        'hyp = claim("Hypothesis H predicts obs.")\n'
+        'alt_pred = claim("Alternative predicts obs.")\n'
+        'alt = claim("Alternative hypothesis.")\n'
+        "s_h = support([hyp], obs, reason='H explains obs', prior=0.75)\n"
+        "s_alt = support([alt], obs, reason='Alt explains obs', prior=0.7)\n"
+        "cmp = compare(hyp, alt_pred, obs, reason='compare', prior=0.8)\n"
+        "abd = abduction(s_h, s_alt, cmp, reason='IBE')\n"
+    )
+    (pkg_dir / name / "priors.py").write_text(
+        "from . import obs, hyp, alt_pred, alt\n\n"
+        "PRIORS = {\n"
+        '    obs: (0.95, "Measured."),\n'
+        '    hyp: (0.6, "Prior."),\n'
+        '    alt_pred: (0.5, "Prior."),\n'
+        '    alt: (0.55, "Prior."),\n'
+        "}\n"
+    )
+
+
+def test_review_notes_abduction_close_priors(tmp_path):
+    """Abduction with close priors triggers warning."""
+    pkg_dir = tmp_path / "abd_close"
+    _write_abduction_close_priors_package(pkg_dir)
+    _compile(pkg_dir)
+
+    from gaia.cli._packages import apply_package_priors, load_gaia_package
+    from gaia.cli._packages import compile_loaded_package_artifact
+    from gaia.cli.commands._brief import _review_notes, _strategy_by_id
+
+    loaded = load_gaia_package(str(pkg_dir))
+    apply_package_priors(loaded)
+    compiled = compile_loaded_package_artifact(loaded)
+    ir = compiled.to_json()
+
+    sid_map = _strategy_by_id(ir)
+    abduction_strats = [
+        s for s in ir["strategies"] if s.get("sub_strategies") and s.get("type") == "abduction"
+    ]
+    assert abduction_strats
+    notes = _review_notes(abduction_strats[0], sid_map)
+    notes_text = "\n".join(notes)
+    assert "weak" in notes_text.lower() or "\u26a0" in notes_text
+
+
+def test_review_notes_induction_consistent(tmp_path):
+    """Induction with consistent priors shows consistent message."""
+    pkg_dir = tmp_path / "induction_demo"
+    _write_induction_package(pkg_dir)
+    _compile(pkg_dir)
+
+    from gaia.cli._packages import apply_package_priors, load_gaia_package
+    from gaia.cli._packages import compile_loaded_package_artifact
+    from gaia.cli.commands._brief import _review_notes, _strategy_by_id
+
+    loaded = load_gaia_package(str(pkg_dir))
+    apply_package_priors(loaded)
+    compiled = compile_loaded_package_artifact(loaded)
+    ir = compiled.to_json()
+
+    sid_map = _strategy_by_id(ir)
+    induction_strats = [
+        s for s in ir["strategies"] if s.get("sub_strategies") and s.get("type") == "induction"
+    ]
+    assert induction_strats
+
+    found_note = False
+    for ind in induction_strats:
+        notes = _review_notes(ind, sid_map)
+        if notes:
+            found_note = True
+    assert found_note
+
+
+def _write_infer_package(pkg_dir):
+    """Package with an infer strategy to exercise the leaf 'infer' path."""
+    name = "infer_demo"
+    _write_base_package(pkg_dir, name=name)
+    (pkg_dir / name / "__init__.py").write_text("from .reasoning import *\n")
+    (pkg_dir / name / "reasoning.py").write_text(
+        "from gaia.lang import claim, infer\n\n"
+        'premise_a = claim("Premise A.")\n'
+        'premise_b = claim("Premise B.")\n'
+        'conclusion = claim("Conclusion.")\n'
+        "strat = infer([premise_a, premise_b], conclusion, reason='custom CPT')\n"
+    )
+    (pkg_dir / name / "priors.py").write_text(
+        "from . import premise_a, premise_b, conclusion\n\n"
+        "PRIORS = {\n"
+        '    premise_a: (0.8, "Known."),\n'
+        '    premise_b: (0.7, "Known."),\n'
+        '    conclusion: (0.5, "To determine."),\n'
+        "}\n"
+    )
+
+
+def test_brief_detail_infer_strategy(tmp_path):
+    """Exercise the infer leaf strategy path."""
+    pkg_dir = tmp_path / "infer_demo"
+    _write_infer_package(pkg_dir)
+    _compile(pkg_dir)
+
+    from gaia.cli._packages import apply_package_priors, load_gaia_package
+    from gaia.cli._packages import compile_loaded_package_artifact
+    from gaia.cli.commands._brief import generate_brief_detail
+
+    loaded = load_gaia_package(str(pkg_dir))
+    apply_package_priors(loaded)
+    compiled = compile_loaded_package_artifact(loaded)
+    ir = compiled.to_json()
+
+    lines = generate_brief_detail(ir, "conclusion")
+    text = "\n".join(lines)
+
+    assert "infer" in text
+    assert "CPT" in text or "2^" in text
+
+
+def _write_deduction_package(pkg_dir):
+    """Package with a deduction (FormalStrategy) for warrant tree coverage."""
+    name = "deduction_demo"
+    _write_base_package(pkg_dir, name=name)
+    (pkg_dir / name / "__init__.py").write_text("from .reasoning import *\n")
+    (pkg_dir / name / "reasoning.py").write_text(
+        "from gaia.lang import claim, deduction\n\n"
+        'axiom = claim("All men are mortal.")\n'
+        'socrates = claim("Socrates is a man.")\n'
+        'mortal = claim("Socrates is mortal.")\n'
+        "strat = deduction([axiom, socrates], mortal,\n"
+        "    reason='syllogism', prior=0.99)\n"
+    )
+    (pkg_dir / name / "priors.py").write_text(
+        "from . import axiom, socrates\n\n"
+        "PRIORS = {\n"
+        '    axiom: (0.99, "Universal truth."),\n'
+        '    socrates: (0.99, "Known fact."),\n'
+        "}\n"
+    )
+
+
+def test_brief_detail_formal_strategy_warrant_tree(tmp_path):
+    """Exercise FormalStrategy branch in warrant tree."""
+    pkg_dir = tmp_path / "deduction_demo"
+    _write_deduction_package(pkg_dir)
+    _compile(pkg_dir)
+
+    from gaia.cli._packages import apply_package_priors, load_gaia_package
+    from gaia.cli._packages import compile_loaded_package_artifact
+    from gaia.cli.commands._brief import generate_brief_detail
+
+    loaded = load_gaia_package(str(pkg_dir))
+    apply_package_priors(loaded)
+    compiled = compile_loaded_package_artifact(loaded)
+    ir = compiled.to_json()
+
+    lines = generate_brief_detail(ir, "mortal")
+    text = "\n".join(lines)
+
+    assert "deduction" in text
+    assert "syllogism" in text
+    assert "0.99" in text
+
+    formal_strats = [s for s in ir["strategies"] if s.get("formal_expr")]
+    assert formal_strats
+
+
+def test_dispatch_show_module_not_in_order(tmp_path):
+    """dispatch_show falls back to modules_in_ir when module not in module_order."""
+    pkg_dir = tmp_path / "brief_demo"
+    _write_two_module_package(pkg_dir)
+    _compile(pkg_dir)
+
+    from gaia.cli._packages import apply_package_priors, load_gaia_package
+    from gaia.cli._packages import compile_loaded_package_artifact
+    from gaia.cli.commands._brief import dispatch_show
+
+    loaded = load_gaia_package(str(pkg_dir))
+    apply_package_priors(loaded)
+    compiled = compile_loaded_package_artifact(loaded)
+    ir = compiled.to_json()
+
+    # Clear module_order to force fallback path
+    ir["module_order"] = []
+    lines = dispatch_show(ir, "reasoning")
+    text = "\n".join(lines)
+    assert "expanded" in text
+
+
+def test_overview_filters_sub_strategies_and_prefers_composite(tmp_path):
+    """Overview deduplicates strategies — composites preferred over leaves."""
+    pkg_dir = tmp_path / "induction_demo"
+    _write_induction_package(pkg_dir)
+    _compile(pkg_dir)
+
+    from gaia.cli._packages import apply_package_priors, load_gaia_package
+    from gaia.cli._packages import compile_loaded_package_artifact
+    from gaia.cli.commands._brief import generate_brief_overview
+
+    loaded = load_gaia_package(str(pkg_dir))
+    apply_package_priors(loaded)
+    compiled = compile_loaded_package_artifact(loaded)
+    ir = compiled.to_json()
+
+    lines = generate_brief_overview(ir)
+    text = "\n".join(lines)
+
+    assert "induction" in text.lower()
+    assert "law" in text
