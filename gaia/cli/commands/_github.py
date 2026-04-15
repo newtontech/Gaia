@@ -318,7 +318,27 @@ def _render_coarse_mermaid(
         try:
             from gaia.ir.coarsen import compute_coarse_cpts
 
-            node_priors_for_cpt = {kid: priors.get(kid, 0.5) for kid in beliefs}
+            # Build priors for ALL variables (including helper claims) so
+            # compute_coarse_cpts can do tensor contraction.  Mirrors the
+            # narrative-outline prior-building at the top of this module.
+            _CROMWELL_EPS_CPT = 1e-3
+            node_priors_for_cpt: dict[str, float] = {}
+            for k in ir["knowledges"]:
+                kid = k["id"]
+                meta = k.get("metadata") or {}
+                helper_kind = meta.get("helper_kind", "")
+                if helper_kind in (
+                    "implication_result",
+                    "equivalence_result",
+                    "contradiction_result",
+                    "complement_result",
+                ):
+                    node_priors_for_cpt[kid] = 1.0 - _CROMWELL_EPS_CPT
+                else:
+                    node_priors_for_cpt[kid] = 0.5
+            # Overlay review priors
+            for kid, p in priors.items():
+                node_priors_for_cpt[kid] = p
             strat_params: dict[str, list[float]] = {}
             if param_data:
                 for sp in param_data.get("strategy_params", []):
