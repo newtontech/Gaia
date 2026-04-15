@@ -523,6 +523,14 @@ def induction(
         raise TypeError(f"induction() support_1 must be a Strategy, got {type(support_1).__name__}")
     if not isinstance(support_2, Strategy):
         raise TypeError(f"induction() support_2 must be a Strategy, got {type(support_2).__name__}")
+    if support_1.type not in {"support", "induction"}:
+        raise TypeError("induction() support_1 must be a support strategy or previous induction")
+    if support_2.type != "support":
+        raise TypeError("induction() support_2 must be a support strategy")
+    if not any(p is law for p in support_1.premises):
+        raise ValueError("induction() support_1 must include the law as a premise")
+    if not any(p is law for p in support_2.premises):
+        raise ValueError("induction() support_2 must include the law as a premise")
 
     # Auto-create composition warrant
     warrant_metadata: dict = {"helper_kind": "composition_validity", "generated": True}
