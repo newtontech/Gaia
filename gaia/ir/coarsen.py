@@ -90,6 +90,88 @@ def coarsen_ir(ir: dict, exported_ids: set[str]) -> dict:
                 if neighbor not in visited:
                     queue.append(neighbor)
 
+    # 4c. Handle unreachable exported conclusions.
+    # Some exported conclusions have no path from leaf premises — e.g. when
+    # induction patterns create cycles (law → obs and obs₁+obs₂ → law) making
+    # every node "concluded".  For unreachable exports, reverse-BFS to find the
+    # deepest non-helper claims and promote them to surrogate leaf premises.
+    connected_exports_so_far = {e[1] for e in edges}
+    orphaned_exports = exported_ids - connected_exports_so_far
+    if orphaned_exports:
+        # Build reverse adjacency: conclusion → premises
+        reverse_adj: dict[str, set[str]] = {}
+        for s in ir["strategies"]:
+            conc = s.get("conclusion")
+            if not conc:
+                continue
+            for p in s.get("premises", []):
+                reverse_adj.setdefault(conc, set()).add(p)
+        for o in ir["operators"]:
+            conc = o.get("conclusion")
+            if not conc:
+                continue
+            for v in o.get("variables", []):
+                reverse_adj.setdefault(conc, set()).add(v)
+
+        # For each orphaned export, reverse-BFS to find claims with no further
+        # non-helper predecessors — these are "cycle-breaking" leaves.
+        kid_labels = {k["id"]: k.get("label", "") for k in ir["knowledges"]}
+        kid_types = {k["id"]: k.get("type", "") for k in ir["knowledges"]}
+        surrogate_leaves: set[str] = set()
+
+        for orphan in orphaned_exports:
+            visited: set[str] = set()
+            queue = list(reverse_adj.get(orphan, []))
+            while queue:
+                node = queue.pop(0)
+                if node in visited:
+                    continue
+                visited.add(node)
+                lbl = kid_labels.get(node, "")
+                if lbl.startswith("__") or lbl.startswith("_anon"):
+                    # Skip helpers, keep searching
+                    for pred in reverse_adj.get(node, []):
+                        if pred not in visited:
+                            queue.append(pred)
+                    continue
+                if kid_types.get(node) != "claim":
+                    continue
+                # If this node has no non-helper predecessors, it's a surrogate leaf
+                preds = reverse_adj.get(node, set())
+                non_helper_preds = {
+                    p for p in preds
+                    if not kid_labels.get(p, "").startswith("__")
+                    and not kid_labels.get(p, "").startswith("_anon")
+                    and kid_types.get(p) == "claim"
+                }
+                if not non_helper_preds:
+                    surrogate_leaves.add(node)
+                else:
+                    # Check if all predecessors are already visited (cycle)
+                    if non_helper_preds <= visited:
+                        surrogate_leaves.add(node)
+                    else:
+                        for pred in preds:
+                            if pred not in visited:
+                                queue.append(pred)
+
+        # Run forward BFS from surrogate leaves
+        leaf_ids |= surrogate_leaves
+        for leaf in surrogate_leaves:
+            visited_fwd: set[str] = set()
+            queue_fwd = [leaf]
+            while queue_fwd:
+                node = queue_fwd.pop(0)
+                if node in visited_fwd:
+                    continue
+                visited_fwd.add(node)
+                if node != leaf and node in exported_ids:
+                    edges.append((leaf, node))
+                    continue
+                for neighbor in forward.get(node, []):
+                    if neighbor not in visited_fwd:
+                        queue_fwd.append(neighbor)
+
     # 5. Deduplicate edges
     unique_edges = sorted(set(edges))
 
