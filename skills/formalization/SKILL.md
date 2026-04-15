@@ -82,30 +82,20 @@ Note: `gaia init` does not create the `artifacts/` directory or `references.json
 
 ### references.json
 
-Create `references.json` at the package root with the source paper's bibliography in CSL-JSON format (dict-by-key). Include the source paper itself and all references cited in claims or strategy reasons:
+Create `references.json` at the package root. This file holds bibliographic citations in CSL-JSON format (dict-by-key), shared across the entire package. Start with a minimal skeleton — you will fill it incrementally as citations are needed during Passes 1-4:
 
 ```json
 {
   "Dias2020": {
     "type": "article-journal",
-    "title": "Room-temperature superconductivity in a carbonaceous sulfur hydride",
-    "author": [{"family": "Snider", "given": "Elliot"}, {"family": "Dias", "given": "Ranga P."}],
-    "issued": {"date-parts": [[2020]]},
-    "container-title": "Nature",
-    "volume": "586",
-    "page": "373-377",
-    "DOI": "10.1038/s41586-020-2801-z"
-  },
-  "Hirsch2021": {
-    "type": "article-journal",
-    "title": "Nonstandard superconductivity or no superconductivity in hydrides under high pressure",
-    "author": [{"family": "Hirsch", "given": "J. E."}],
-    "issued": {"date-parts": [[2021]]}
+    "title": "Room-temperature superconductivity in a carbonaceous sulfur hydride"
   }
 }
 ```
 
-Keys must follow Pandoc citation key grammar (letters, digits, `_`, `-`, `.`, `:`, `/`). Each entry must have `type` (CSL 1.0.2) and `title` at minimum. This file is optional — if absent, `[@...]` citations are not available.
+Keys must follow Pandoc citation key grammar (letters, digits, `_`, `-`, `.`, `:`, `/`). Each entry requires `type` (CSL 1.0.2) and `title` at minimum. Add new entries as you encounter citations during formalization — do not try to enumerate all references upfront. Complete metadata (authors, DOI, volume, pages) is filled in during Pass 6 (Polish).
+
+This file is optional — if absent, `[@...]` citations are not available.
 
 Both PDF and markdown formats are supported for artifacts. Throughout the formalization process, always refer back to the originals in `artifacts/` to ensure that numbers, formulas, and reasoning steps are consistent with the source material.
 
@@ -739,7 +729,18 @@ Add `metadata={"figure": "...", "caption": "..."}` to every claim whose content 
 3. **Caption accuracy**: Copy the figure caption from the source (abbreviated OK, but figure number and key content must be correct)
 4. **Strategy metadata**: Strategies whose `reason` references figure data should also carry `metadata`
 
-### 6e. Format Consistency
+### 6e. Complete Citation Metadata
+
+During Passes 1-4, `references.json` entries were kept minimal (key + type + title). Now fill in complete metadata for all cited references:
+
+- **author**: full author list (`[{"family": "...", "given": "..."}]`)
+- **issued**: publication date (`{"date-parts": [[2020]]}`)
+- **container-title**: journal/conference name
+- **volume**, **page**, **DOI**: where applicable
+
+Also verify: every `[@key]` used in claims and reasons has a corresponding entry in `references.json`. Run `gaia compile .` to catch any missing keys (strict `[@key]` form raises a compile error if the key is not found).
+
+### 6f. Format Consistency
 
 - Metadata format should be consistent across all claims (same key names, same path conventions)
 - Titles should follow a consistent naming style
