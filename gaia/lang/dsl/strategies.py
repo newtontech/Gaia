@@ -542,10 +542,19 @@ def induction(
         raise TypeError("induction() support_1 must be a support strategy or previous induction")
     if support_2.type != "support":
         raise TypeError("induction() support_2 must be a support strategy")
-    if not any(p is law for p in support_1.premises):
-        raise ValueError("induction() support_1 must include the law as a premise")
-    if not any(p is law for p in support_2.premises):
-        raise ValueError("induction() support_2 must include the law as a premise")
+
+    # Validate law participation: each support must reference the law as
+    # either a premise (law predicts obs) or a conclusion (obs supports law).
+    # A chained induction must have law as its conclusion.
+    def _support_references_law(s: Strategy) -> bool:
+        return any(p is law for p in s.premises) or s.conclusion is law
+
+    if support_1.type == "support" and not _support_references_law(support_1):
+        raise ValueError("induction() support_1 must reference the law as a premise or conclusion")
+    if support_1.type == "induction" and support_1.conclusion is not law:
+        raise ValueError("induction() support_1 (previous induction) must conclude the same law")
+    if not _support_references_law(support_2):
+        raise ValueError("induction() support_2 must reference the law as a premise or conclusion")
 
     # Auto-create composition warrant
     warrant_metadata: dict = {"helper_kind": "composition_validity", "generated": True}

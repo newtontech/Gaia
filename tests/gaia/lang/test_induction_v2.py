@@ -134,18 +134,18 @@ def test_induction_requires_support_for_second_input():
         induction(previous, not_support, law)
 
 
-def test_induction_requires_sub_strategies_to_include_law_premise():
-    """Reject supports that are not predictions from the law."""
+def test_induction_requires_sub_strategies_to_include_law():
+    """Reject supports that don't reference the law as premise or conclusion."""
     obs1 = claim("Obs 1.")
     obs2 = claim("Obs 2.")
     law = claim("Law.")
     missing_law = support(premises=[obs1], conclusion=obs2)
     valid_support = support(premises=[law], conclusion=obs2)
 
-    with pytest.raises(ValueError, match="support_1 must include the law as a premise"):
+    with pytest.raises(ValueError, match="support_1 must reference the law"):
         induction(missing_law, valid_support, law)
 
-    with pytest.raises(ValueError, match="support_2 must include the law as a premise"):
+    with pytest.raises(ValueError, match="support_2 must reference the law"):
         induction(valid_support, missing_law, law)
 
 
