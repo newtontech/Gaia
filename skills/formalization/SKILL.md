@@ -5,7 +5,7 @@ description: Use when formalizing a knowledge source (scientific paper, textbook
 
 # Knowledge Formalization
 
-Extract the knowledge structure from a source (scientific paper, textbook, technical report, etc.) into a Gaia knowledge package with claims, reasoning strategies, and review sidecars.
+Extract the knowledge structure from a source (scientific paper, textbook, technical report, etc.) into a Gaia knowledge package with claims, reasoning strategies, and priors (`priors.py`).
 
 **REQUIRED:** Use **gaia-cli** skill for CLI commands (compile, check, infer, register) and **gaia-lang** skill for DSL syntax (claim, setting, strategies, operators).
 
@@ -286,7 +286,7 @@ Pass 1 only extracts atomic, self-contained knowledge nodes. **Do not prejudge w
 
 `infer` is the **most general** strategy type in Gaia -- it does not presume any specific reasoning pattern (such as deduction, abduction), and merely expresses "from premises, derive conclusion." Pass 2 uses `infer` as the draft form for all reasoning connections; specific strategy types are refined in Pass 4.
 
-In Pass 4, most `infer` calls should be refined to specific strategy types (`support`, `deduction`, `abduction`, etc.). If no specific type fits, `infer` can remain as the final type -- but note that `infer` requires a full CPT (2^N conditional probabilities) in the review sidecar, which is more work than `support` (author-specified prior). Prefer `support` when all premises jointly support the conclusion.
+In Pass 4, most `infer` calls should be refined to specific strategy types (`support`, `deduction`, `abduction`, etc.). If no specific type fits, `infer` can remain as the final type -- but note that `infer` strategies without an explicit CPT default to uniform 0.5, and specifying a full CPT (2^N conditional probabilities) is more work than `support` (author-specified prior). Prefer `support` with `prior=` when all premises jointly support the conclusion.
 
 For each claim "supported by other claims," write an `infer` strategy (which claims need a strategy is determined case-by-case in Pass 2 -- if the source provides an argument for it, it needs one):
 
@@ -474,7 +474,7 @@ Common misjudgments:
 - Conclusion read directly from a definition (e.g., "A is defined as B, therefore A=B") → use `deduction`
 - Numerical DFT/MD computation yields a result → use `support` (the computational method itself has uncertainty)
 
-**Strategy variable naming:** Every strategy **must** be assigned to a named public variable (no `_` prefix). This is required so that strategies appear in `gaia check --brief` output and can be referenced by the review sidecar. Use descriptive names like `strat_tc_al = support(...)`, `composite_workflow = composite(...)`, `abduction_al = abduction(...)`.
+**Strategy variable naming:** Every strategy **must** be assigned to a named public variable (no `_` prefix). This is required so that strategies appear in `gaia check --brief` output and can be referenced by `priors.py`. Use descriptive names like `strat_tc_al = support(...)`, `composite_workflow = composite(...)`, `abduction_al = abduction(...)`.
 
 **Claim variable naming:** Every claim **must** be assigned to a named variable (no `_` prefix for claims that need to be visible). Anonymous `claim()` calls or `_` prefixed claims will not get labels and become invisible in CLI output. The only exception: `__` double-underscore prefix is reserved for compiler-generated helper claims.
 
@@ -493,7 +493,7 @@ Common misjudgments:
 After refining all strategies, verify:
 
 - **Every abduction has a meaningful alternative?** The alternative should be a real competing explanation, not a placeholder. If there's no natural alternative, consider whether abduction is the right pattern.
-- **Abduction alternatives will be reviewed — are they set up correctly?** Each abduction's alternative will need a prior in the review sidecar. Remember: π(Alt) = "Can Alt alone explain Obs?" (explanatory power), NOT "Is Alt correct?". Flag any abduction where this distinction might be tricky for the reviewer.
+- **Abduction alternatives will be reviewed — are they set up correctly?** Each abduction's alternative will need a prior (set via `prior=` on the `support()` call or in `priors.py`). Remember: π(Alt) = "Can Alt alone explain Obs?" (explanatory power), NOT "Is Alt correct?". Flag any abduction where this distinction might be tricky for the reviewer.
 - **Each induction's support sub-strategies independent?** For `induction(s1, s2, law=law)`, each observation should provide independent evidence. If the observations are dependent, consider whether a single support with stronger evidence is more appropriate.
 
 ### Post-Refinement Check
@@ -722,15 +722,15 @@ gaia check --show label .  # Detail view of a specific claim's warrant tree
 - Composite strategies should show their sub-strategy tree.
 - Use `--show <module>` to inspect full claim content and warrant trees for review readiness.
 
-## Write Review Sidecar
+## Write priors.py
 
-The review sidecar assigns priors to claims and conditional probabilities to strategies.
+`priors.py` assigns priors to leaf claims. Strategy/operator warrant priors are set via `prior=` in the DSL.
 
-For how to write review sidecars, assign priors, and evaluate strategy parameters, see the **review** skill.
+For how to write `priors.py`, assign priors, and evaluate strategy parameters, see the **review** skill.
 
 **Do NOT set priors for derived claims.** The inference engine automatically assigns uninformative priors (0.5) to derived claims. Their beliefs are determined entirely by BP propagation from leaf premises. Setting an explicit prior on a derived claim double-counts evidence: the reviewer's judgment and the reasoning chain both reflect the same underlying data. Only set priors for independent (leaf) claims that are not the conclusion of any strategy.
 
-**Abduction review deserves special attention.** The most common and consequential mistake in review is setting π(Alt) based on whether the alternative's calculation is correct, rather than whether it explains the observation. Before finalizing the review sidecar, go through every abduction and ask: "Does this alternative's prediction actually match the observation?" If not, π(Alt) should be low regardless of the alternative's theoretical validity.
+**Abduction review deserves special attention.** The most common and consequential mistake in review is setting π(Alt) based on whether the alternative's calculation is correct, rather than whether it explains the observation. Before finalizing `priors.py`, go through every abduction and ask: "Does this alternative's prediction actually match the observation?" If not, π(Alt) should be low regardless of the alternative's theoretical validity.
 
 ## Generate GitHub Presentation
 
@@ -753,7 +753,7 @@ After compiling and running inference, check:
 If results are clearly wrong (e.g., a well-supported conclusion has belief < 0.3, or a contradiction doesn't pick a side), go back and check:
 
 1. **Structural issue?** (→ revisit Pass 1-5) Missing premises, wrong strategy type, missing abduction alternative, evidence double-counting
-2. **Parameter issue?** (→ revisit review sidecar) Priors too low/high, conditional_probability miscalibrated, π(Alt) reflecting correctness instead of explanatory power
+2. **Parameter issue?** (→ revisit `priors.py`) Priors too low/high, conditional_probability miscalibrated, π(Alt) reflecting correctness instead of explanatory power
 
 For detailed BP troubleshooting, see the **review** skill.
 
@@ -824,4 +824,4 @@ The critical analysis is the analytical payoff of formalization — it transform
 ## Reference
 
 - **gaia-lang** skill -- DSL syntax, knowledge types, operators, and API reference
-- **gaia-cli** skill -- CLI commands (compile, check, infer, register) and review sidecar API
+- **gaia-cli** skill -- CLI commands (compile, check, infer, register) and `priors.py` API

@@ -49,18 +49,31 @@ separate parameterization or review sidecar step.
 
 ### Priority order
 
-The lowering layer (`gaia/bp/lowering.py`) resolves each claim's prior with the
-following precedence:
+The lowering layer (`gaia/bp/lowering.py`) resolves each claim's prior with
+two branches depending on whether the claim is a **relation conclusion**
+(conclusion of EQUIVALENCE, CONTRADICTION, COMPLEMENT, or IMPLICATION):
+
+**Relation conclusions:**
 
 ```
-node_priors (foreign dep beliefs) > metadata["prior"] > structural default
+node_priors > structural default (1 - CROMWELL_EPS)
+```
+
+If `node_priors` has an explicit override, use it. Otherwise, the structural
+default `1 - CROMWELL_EPS` applies unconditionally — `metadata["prior"]` is
+**not consulted**. Relation conclusions are asserted true by construction; any
+author-supplied prior on them is ignored unless injected via `node_priors`.
+
+**Regular claims:**
+
+```
+node_priors > metadata["prior"] > 0.5
 ```
 
 1. **`node_priors`** — explicit overrides passed into `lower_local_graph()`,
    used for foreign node flat prior injection from `dep_beliefs/` (see below).
 2. **`metadata["prior"]`** — set by `priors.py` or `reason+prior` DSL pairing.
-3. **Structural default** — relation-conclusion helper claims default to
-   `1 - CROMWELL_EPS` (asserted true); all others default to `0.5` (neutral).
+3. **Structural default** — `0.5` (neutral).
 
 ### priors.py
 

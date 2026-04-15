@@ -8,11 +8,11 @@
 
 **范围**：单个包。
 
-Local 推理运行在 **LocalCanonicalGraph** 上，使用 **LocalParameterization** 覆盖层作为概率来源。
+Local 推理运行在 **LocalCanonicalGraph** 上，使用 Knowledge metadata 中的 `prior` 字段作为概率来源（由 `priors.py` 和 DSL `reason+prior` 对设定）。
 
-- **图**：来自 `gaia build` 的 `graph_ir/local_canonical_graph.json`。
-- **参数化**：作者生成的 `LocalParameterization` 覆盖层，包含节点先验概率和 factor 条件概率。
-- **输出**：信念预览，位于 `.gaia/infer/` 下。这些仅供预览，不在发布时提交。
+- **图**：来自 `gaia compile` 的 `.gaia/ir.json`。
+- **参数化**：Knowledge metadata 中的 `prior` 字段（由 `priors.py` 和 DSL `reason+prior` 对设定），包含节点先验概率和 factor 条件概率。
+- **输出**：信念预览，位于 `.gaia/beliefs.json`。这些仅供预览，不在发布时提交。
 - **目的**：让作者在发布前查看 BP 如何评估其推理结构。结论的低信念值可能表示前提缺失或推理薄弱。
 
 当 `--depth 0`（默认）时，local 推理不查询或修改全局图。外部节点的先验来自 `dep_beliefs/` 中的扁平信念值（由 `gaia add` 下载），不包含依赖包的推理结构。
@@ -102,9 +102,7 @@ Global 推理的 FactorGraph 是持久化的——integrate 时写入存储，BP
 
 ## 源代码
 
-- `libs/inference/bp.py` -- `BeliefPropagation`（共享类）
-- `libs/graph_ir/adapter.py` -- 从 local 或 global graph 构建 `FactorGraph`
-- `libs/graph_ir/models.py` -- `LocalParameterization`
-- `gaia/bp/lowering.py` -- `lower_local_graph()`、`merge_factor_graphs()`（联合跨包合并）
+- `gaia/bp/bp.py` -- `BeliefPropagation`（共享类）
+- `gaia/bp/lowering.py` -- `lower_local_graph()`、`merge_factor_graphs()`（从 local 或 global graph 构建 `FactorGraph`，联合跨包合并）
 - `gaia/cli/commands/infer.py` -- `gaia infer` 命令（`--depth` 参数）
 - `gaia/cli/_packages.py` -- `load_dependency_compiled_graphs()`、`collect_foreign_node_priors()`

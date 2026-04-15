@@ -13,8 +13,11 @@ pipeline that takes a Python DSL package from scaffolding to registry registrati
 
 ```
 gaia init --> gaia add --> write package --> gaia compile --> gaia infer --> gaia render --> git tag --> gaia register
-(scaffold)   (add deps)    (DSL code)      (DSL -> IR)     (BP preview)    (present)              (registry PR)
+(scaffold)   (add deps)    (DSL code)      (DSL -> IR)     (optional*)     (present)              (registry PR)
 ```
+
+`*` `gaia infer` is required before `gaia render --target github`; `--target docs`
+works without it (beliefs enrich the output when available but are not required).
 
 Entry point: installed as the `gaia` CLI command via `pyproject.toml`
 `[project.scripts]`, backed by a Typer app at `gaia.cli.main:app`.
@@ -155,7 +158,10 @@ gaia infer [PATH] [--depth N]
 6. At `--depth 0` (default): injects flat priors from `dep_beliefs/` for
    dependency claims. At `--depth N>0`: merges dependency factor graphs for
    joint cross-package inference.
-7. Runs `BeliefPropagation(damping=0.5, max_iterations=100)`.
+7. Runs `InferenceEngine()` (from `gaia/bp/engine.py`), which auto-selects the
+   algorithm based on factor-graph treewidth: JT (exact) for treewidth <= 15,
+   GBP for treewidth <= 30, or loopy BP otherwise. Defaults:
+   `bp_max_iter=200, bp_threshold=1e-8`.
 8. Writes results to `.gaia/beliefs.json` — per-knowledge beliefs and
    convergence diagnostics.
 
@@ -167,19 +173,18 @@ fresh).
 Reference: [Inference](inference.md) for internals.
 
 
-### `gaia render [PATH] [--review NAME] [--target TARGET]`
+### `gaia render [PATH] [--target TARGET]`
 
 Render presentation outputs (detailed-reasoning docs and/or a GitHub presentation
 site) from a compiled package.
 
 ```
-gaia render [PATH] [--review NAME] [--target docs|github|all]
+gaia render [PATH] [--target docs|github|all]
 ```
 
 | Argument / Option | Default | Description |
 |-------------------|---------|-------------|
 | `PATH`            | `.`     | Path to knowledge package directory |
-| `--review NAME`   | `None`  | Review sidecar name (as with `gaia infer`). Auto-selected when only one review exists. |
 | `--target TARGET` | `all`   | `docs` writes `docs/detailed-reasoning.md`; `github` writes `.github-output/`; `all` (default) writes both when possible. |
 
 **Strictness by target:**
@@ -188,35 +193,22 @@ gaia render [PATH] [--review NAME] [--target docs|github|all]
   `beliefs.json` and `parameterization.json` are available they are loaded and
   used to enrich the output; otherwise a warning is emitted and the docs are
   written without belief values. This is the author-facing workflow — useful
-  during iteration on DSL code before a review sidecar exists, or when the
-  package has accumulated alternate/broken review sidecars.
-- `--target github`: strictly requires a review sidecar plus a matching
-  `beliefs.json`. Missing or stale inference results are hard errors. This is
-  the external-presentation workflow — a published site without belief values
-  would be misleading.
+  during iteration on DSL code before inference has been run.
+- `--target github`: strictly requires a matching `beliefs.json`. Missing or
+  stale inference results are hard errors. This is the external-presentation
+  workflow — a published site without belief values would be misleading.
 - `--target all` (default): always renders docs, and adds the GitHub target
   when inference results are available. When beliefs are missing, it degrades
   to docs-only with a warning rather than failing.
-
-**Review sidecar load failures** (ambiguous candidates with no `--review`,
-unknown `--review NAME`, broken review module imports) propagate as follows:
-
-- Explicit `--review NAME` → always a hard error. An explicit request deserves
-  an explicit failure.
-- `--target github` → always a hard error, even in auto-select mode.
-- `--target docs` / `--target all` in auto-select mode → warn and fall back to
-  no-beliefs rendering. Accumulated experimental sidecars or a temporarily
-  broken review module must not block the IR-only authoring workflow.
 
 **What it does:**
 
 1. Loads and compiles the package (same gate as `gaia compile`).
 2. Verifies `.gaia/ir_hash` and `.gaia/ir.json` are present and not stale.
-3. Discovers the review sidecar (optional for `--target docs`).
-4. If `beliefs.json` is present, verifies its `ir_hash` matches the current
+3. If `beliefs.json` is present, verifies its `ir_hash` matches the current
    compiled graph; same check applied to `parameterization.json` if present.
    Any stale artifact is a hard error.
-5. Dispatches to the selected targets, emitting warnings when `--target all`
+4. Dispatches to the selected targets, emitting warnings when `--target all`
    or `--target docs` runs without inference results.
 
 **Prerequisites:** `gaia compile` must have been run. `gaia infer` must have

@@ -1,6 +1,6 @@
 ---
 name: gaia-cli
-description: "Gaia CLI toolchain reference — install, scaffold, compile, validate, review, infer, and publish Gaia knowledge packages."
+description: "Gaia CLI toolchain reference — init, compile, check, add, infer, render, register Gaia knowledge packages."
 ---
 
 # Gaia CLI Toolchain Reference
@@ -92,7 +92,7 @@ gaia render . --target docs
 
 Generates `docs/detailed-reasoning.md` with per-module Mermaid reasoning graphs and full claim details.
 
-Note: run `gaia infer` before `gaia render` — render requires beliefs on disk.
+Note: `--target docs` works without beliefs (enriches with posteriors when available). `--target github` requires beliefs on disk — run `gaia infer` first.
 
 ### Generate GitHub presentation skeleton
 
@@ -169,8 +169,10 @@ For leaf claims (independent premises) without a concluding strategy, assign pri
 ```python
 from . import some_claim, another_claim
 
-some_claim.prior = 0.9
-another_claim.prior = 0.3
+PRIORS = {
+    some_claim: (0.9, "Justification for high prior."),
+    another_claim: (0.3, "Justification for low prior."),
+}
 ```
 
 These are applied at load time before compilation. `gaia check --brief` shows which claims are independent (need priors) vs derived (get beliefs from BP).
