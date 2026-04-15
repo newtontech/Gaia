@@ -20,12 +20,13 @@ from gaia.ir.strategy import (
     StrategyType,
 )
 
-# Deduction produces forward-only implication operators.  In the BN
-# interpretation these are CPT edges (A, H → B) where the antecedent A
-# should not receive backward messages from unobserved children — this
-# eliminates the fan-out penalty on the premise.  Support and compare
-# produce relation-type implications that remain undirected.
-_DIRECTED_DEDUCTION_TYPES = frozenset({StrategyType.DEDUCTION})
+# Deduction and support produce forward-only implication operators.
+# In the BN interpretation these are CPT edges (A, H → B) where the
+# antecedent A should not receive backward messages from unobserved
+# children — this eliminates the fan-out penalty on the premise.
+# Support is a soft (probabilistic) version of deduction with the same
+# directed semantics: premises imply conclusion, not the reverse.
+_DIRECTED_DEDUCTION_TYPES = frozenset({StrategyType.DEDUCTION, StrategyType.SUPPORT})
 
 # Operators whose conclusion is a "relation assertion" (the operator
 # DECLARES that the relation holds) — their helper claim should be
