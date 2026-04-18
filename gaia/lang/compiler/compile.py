@@ -89,6 +89,11 @@ def _is_local(k: Knowledge, pkg: CollectedPackage) -> bool:
     return k in pkg.knowledge
 
 
+def _is_composition_warrant(k: Knowledge) -> bool:
+    """Composition warrants are strategy metadata, not IR knowledge nodes."""
+    return k.metadata.get("helper_kind") == "composition_validity"
+
+
 def _knowledge_id(
     k: Knowledge,
     pkg: CollectedPackage,
@@ -302,6 +307,8 @@ def compile_package_artifact(
             register_strategy_knowledge(sub_strategy)
 
     for k in pkg.knowledge:
+        if _is_composition_warrant(k):
+            continue
         register_knowledge(k)
     for s in pkg.strategies:
         register_strategy_knowledge(s)

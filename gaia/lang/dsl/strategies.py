@@ -543,18 +543,26 @@ def induction(
     if support_2.type != "support":
         raise TypeError("induction() support_2 must be a support strategy")
 
-    # Validate law participation: each support must reference the law as
-    # either a premise (law predicts obs) or a conclusion (obs supports law).
+    # Validate law participation: each support must have law as a *premise*
+    # (generative direction: law predicts observation).  Putting law as the
+    # conclusion (obs → law) is the wrong direction for induction — the
+    # observation is the evidence, not the conclusion of the sub-strategy.
     # A chained induction must have law as its conclusion.
-    def _support_references_law(s: Strategy) -> bool:
-        return any(p is law for p in s.premises) or s.conclusion is law
+    def _support_has_law_as_premise(s: Strategy) -> bool:
+        return any(p is law for p in s.premises)
 
-    if support_1.type == "support" and not _support_references_law(support_1):
-        raise ValueError("induction() support_1 must reference the law as a premise or conclusion")
+    if support_1.type == "support" and not _support_has_law_as_premise(support_1):
+        raise ValueError(
+            "induction() support_1 must have the law as a premise "
+            "(generative direction: support([law, ...], obs))"
+        )
     if support_1.type == "induction" and support_1.conclusion is not law:
         raise ValueError("induction() support_1 (previous induction) must conclude the same law")
-    if not _support_references_law(support_2):
-        raise ValueError("induction() support_2 must reference the law as a premise or conclusion")
+    if not _support_has_law_as_premise(support_2):
+        raise ValueError(
+            "induction() support_2 must have the law as a premise "
+            "(generative direction: support([law, ...], obs))"
+        )
 
     # Auto-create composition warrant
     warrant_metadata: dict = {"helper_kind": "composition_validity", "generated": True}
@@ -566,8 +574,10 @@ def induction(
         metadata=warrant_metadata,
     )
 
-    # Collect all premises from sub-strategies, excluding the law itself
-    # (law is the conclusion; including it would create a self-loop)
+    # Collect all variables from sub-strategies (excluding law) as composite
+    # premises.  In the generative model (law → obs), observations are the
+    # sub-strategy *conclusions*, not premises.  We must gather both to
+    # correctly expose all evidence nodes at the composite level.
     all_premises: list[Knowledge] = []
     seen: set[int] = set()
     for s in [support_1, support_2]:
@@ -575,6 +585,10 @@ def induction(
             if id(p) not in seen and p is not law:
                 all_premises.append(p)
                 seen.add(id(p))
+        # Sub-strategy conclusions (observations in generative mode)
+        if s.conclusion is not None and s.conclusion is not law and id(s.conclusion) not in seen:
+            all_premises.append(s.conclusion)
+            seen.add(id(s.conclusion))
 
     strategy = Strategy(
         type="induction",

@@ -61,9 +61,9 @@ def _write_induction_package(pkg_dir):
         'obs1 = claim("Sample 1 confirms law.")\n'
         'obs2 = claim("Sample 2 confirms law.")\n'
         'obs3 = claim("Sample 3 confirms law.")\n'
-        "s1 = support([obs1], law, reason='obs1 supports law', prior=0.9)\n"
-        "s2 = support([obs2], law, reason='obs2 supports law', prior=0.9)\n"
-        "s3 = support([obs3], law, reason='obs3 supports law', prior=0.85)\n"
+        "s1 = support([law], obs1, reason='law predicts obs1', prior=0.9)\n"
+        "s2 = support([law], obs2, reason='law predicts obs2', prior=0.9)\n"
+        "s3 = support([law], obs3, reason='law predicts obs3', prior=0.85)\n"
         "ind_12 = induction(s1, s2, law=law, reason='independent samples')\n"
         "ind_123 = induction(ind_12, s3, law=law, reason='third sample')\n"
     )

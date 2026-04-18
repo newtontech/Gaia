@@ -34,11 +34,32 @@ def coarsen_ir(ir: dict, exported_ids: set[str]) -> dict:
     leaf_ids: set[str] = set()
     for k in ir["knowledges"]:
         kid = k["id"]
-        label = k.get("label", "")
+        label = k.get("label") or ""
         if label.startswith("__") or label.startswith("_anon"):
             continue
         if kid not in all_concluded and k["type"] == "claim":
             leaf_ids.add(kid)
+
+    # Induction intentionally forms a fine-grained confirmation cycle:
+    # law -> observations via support, and observations -> law via the
+    # induction composite.  The observations are therefore concluded nodes,
+    # but they are still the coarse evidence interface for the law.  Seed them
+    # as surrogate leaves so coarse BFS exposes obs -> law instead of guessing
+    # a cycle-breaking leaf later.
+    helper_labels = {k["id"]: k.get("label") or "" for k in ir["knowledges"]}
+    for s in ir["strategies"]:
+        if s.get("type") != "induction":
+            continue
+        conc = s.get("conclusion")
+        if not conc:
+            continue
+        for premise in s.get("premises", []):
+            if premise == conc:
+                continue
+            label = helper_labels.get(premise, "")
+            if label.startswith("__") or label.startswith("_anon"):
+                continue
+            leaf_ids.add(premise)
 
     # 3. Build forward adjacency: for each node, which conclusions does it
     #    support (as a premise of a strategy or variable of an operator)?
@@ -115,7 +136,7 @@ def coarsen_ir(ir: dict, exported_ids: set[str]) -> dict:
 
         # For each orphaned export, reverse-BFS to find claims with no further
         # non-helper predecessors — these are "cycle-breaking" leaves.
-        kid_labels = {k["id"]: k.get("label", "") for k in ir["knowledges"]}
+        kid_labels = {k["id"]: k.get("label") or "" for k in ir["knowledges"]}
         kid_types = {k["id"]: k.get("type", "") for k in ir["knowledges"]}
         surrogate_leaves: set[str] = set()
 
@@ -191,6 +212,8 @@ def coarsen_ir(ir: dict, exported_ids: set[str]) -> dict:
     coarse_strategies = []
     by_conclusion: dict[str, list[str]] = {}
     for src, dst in unique_edges:
+        if src == dst:
+            continue
         by_conclusion.setdefault(dst, []).append(src)
 
     for conc, premises in by_conclusion.items():
@@ -383,6 +406,11 @@ def compute_coarse_cpts(
         coarse_premises = list(s["premises"])
         coarse_conclusion = s["conclusion"]
         free = [*coarse_premises, coarse_conclusion]
+        if len(free) != len(set(free)):
+            raise ValueError(
+                f"coarse strategy {i}: conclusion {coarse_conclusion!r} must not also "
+                "appear in premises"
+            )
         free_set = set(free)
 
         # Unary priors for every variable that:
