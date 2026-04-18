@@ -1038,7 +1038,7 @@ def test_coarsen_ir_induction_cycle_promotes_surrogate_leaves():
                 "reason": "",
             },
             {
-                "type": "infer",
+                "type": "induction",
                 "premises": ["ns::obs1", "ns::obs2"],
                 "conclusion": "ns::law",
                 "reason": "",
@@ -1055,15 +1055,61 @@ def test_coarsen_ir_induction_cycle_promotes_surrogate_leaves():
     coarse_ids = {k["id"] for k in coarse["knowledges"]}
     assert "ns::law" in coarse_ids
 
-    # At least one surrogate leaf should connect to law
+    # The surrogate leaves should be the observations, not law itself.
     assert len(coarse["strategies"]) >= 1
     for s in coarse["strategies"]:
         if s["conclusion"] == "ns::law":
             # Premises should be the cycle-broken observations
-            assert len(s["premises"]) > 0
+            assert set(s["premises"]) == {"ns::obs1", "ns::obs2"}
             break
     else:
         pytest.fail("No coarse strategy concluding to ns::law found")
+
+
+def test_compiled_induction_coarsens_to_observations_and_cpt():
+    """Compiled DSL induction should expose observations, not law -> law."""
+    from gaia.ir.coarsen import coarsen_ir, compute_coarse_cpts
+    from gaia.lang import claim, support
+    from gaia.lang.compiler.compile import compile_package_artifact
+    from gaia.lang.dsl.strategies import induction
+    from gaia.lang.runtime.package import CollectedPackage
+
+    pkg = CollectedPackage("induction_demo", namespace="github", version="1.0.0")
+    with pkg:
+        law = claim("Law.", prior=0.5)
+        law.label = "law"
+        obs1 = claim("Observation 1.", prior=0.9)
+        obs1.label = "obs1"
+        obs2 = claim("Observation 2.", prior=0.9)
+        obs2.label = "obs2"
+        sup1 = support([law], obs1, reason="law predicts obs1", prior=0.9)
+        sup2 = support([law], obs2, reason="law predicts obs2", prior=0.9)
+        induction(sup1, sup2, law=law, reason="independent observations")
+
+    compiled = compile_package_artifact(pkg)
+    ir = compiled.to_json()
+
+    assert all(
+        (k.get("metadata") or {}).get("helper_kind") != "composition_validity"
+        for k in ir["knowledges"]
+    )
+
+    law_id = "github:induction_demo::law"
+    obs_ids = {"github:induction_demo::obs1", "github:induction_demo::obs2"}
+    coarse = coarsen_ir(ir, {law_id})
+    law_strategies = [s for s in coarse["strategies"] if s["conclusion"] == law_id]
+
+    assert len(law_strategies) == 1
+    assert set(law_strategies[0]["premises"]) == obs_ids
+
+    node_priors = {
+        k["id"]: (k.get("metadata") or {}).get("prior", 0.5) for k in ir["knowledges"]
+    }
+    cpts = compute_coarse_cpts(ir, coarse, node_priors=node_priors)
+    strategy_index = coarse["strategies"].index(law_strategies[0])
+
+    assert len(cpts[strategy_index]) == 4
+    assert cpts[strategy_index][3] > cpts[strategy_index][0]
 
 
 def test_coarsen_ir_induction_to_downstream_export():
@@ -1085,7 +1131,7 @@ def test_coarsen_ir_induction_to_downstream_export():
             {"type": "support", "premises": ["ns::law"], "conclusion": "ns::obs1", "reason": ""},
             {"type": "support", "premises": ["ns::law"], "conclusion": "ns::obs2", "reason": ""},
             {
-                "type": "infer",
+                "type": "induction",
                 "premises": ["ns::obs1", "ns::obs2"],
                 "conclusion": "ns::law",
                 "reason": "",
@@ -1124,7 +1170,7 @@ def test_coarsen_ir_mixed_leaf_and_cycle():
             {"type": "support", "premises": ["ns::leaf"], "conclusion": "ns::core", "reason": ""},
             # Induction cycle: law ↔ obs
             {"type": "support", "premises": ["ns::law"], "conclusion": "ns::obs", "reason": ""},
-            {"type": "infer", "premises": ["ns::obs"], "conclusion": "ns::law", "reason": ""},
+            {"type": "induction", "premises": ["ns::obs"], "conclusion": "ns::law", "reason": ""},
             # law also feeds into derived (exported)
             {"type": "support", "premises": ["ns::law"], "conclusion": "ns::derived", "reason": ""},
         ],
