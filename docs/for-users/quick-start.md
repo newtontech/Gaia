@@ -1,6 +1,6 @@
 # Quick Start
 
-> **Status:** Needs upgrade to v5 — this guide still references the Typst v4 workflow
+> **Status:** Current canonical
 
 Create, build, and publish your first Gaia knowledge package in 10 minutes.
 
@@ -10,163 +10,186 @@ Create, build, and publish your first Gaia knowledge package in 10 minutes.
 |------|---------|---------|
 | Python | 3.12+ | [python.org](https://www.python.org/downloads/) |
 | uv | latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
-| Typst | latest | `brew install typst` or [typst.app](https://github.com/typst/typst/releases) |
 
-Verify all three are available:
+Verify both are available:
 
 ```bash
 python3 --version   # 3.12+
 uv --version
-typst --version
 ```
 
 ## Install Gaia
 
 ```bash
-git clone <your-gaia-repo-url>
-cd Gaia
-uv sync
+pip install gaia-lang
 ```
 
-That's it. All dependencies are managed by `uv`.
+Verify:
+
+```bash
+gaia --help
+```
 
 ## Create a Package
 
 ```bash
-python cli/main.py init my_first_package
+gaia init my-first-gaia
 ```
 
-This creates the following structure:
+The name **must** end with `-gaia`. This creates:
 
 ```
-my_first_package/
-  typst.toml            # package manifest (name, version, entrypoint)
-  lib.typ               # entrypoint — includes all modules
-  gaia.typ              # imports the Gaia runtime
-  _gaia/                # vendored Gaia runtime (do not edit)
-    lib.typ
-    declarations.typ
-    bibliography.typ
-    style.typ
-  motivation.typ        # starter module with a question
-  reasoning.typ         # starter module with a setting and a claim
+my-first-gaia/
+  pyproject.toml              # [tool.gaia] metadata
+  src/my_first/
+    __init__.py               # DSL declarations
+  .gitignore
 ```
 
 ## Edit Your Package
 
-Open `motivation.typ` and replace the placeholder with a real research question:
+Open `src/my_first/__init__.py` and replace the template:
 
-```typst
-#import "gaia.typ": *
+```python
+"""Galileo's argument against Aristotle's theory of falling bodies."""
 
-= Motivation
+from gaia.lang import claim, setting, support, contradiction
 
-#setting[
-  Consider two objects of different mass dropped from the same height
-  in a controlled environment with minimal air resistance.
-] <motivation.experimental_setup>
+# Background: Aristotle's law
+aristotle_law = setting(
+    "Aristotle claims heavier objects fall faster in proportion to their weight."
+)
 
-#question[
-  Does the rate of free fall depend on an object's mass?
-] <motivation.main_question>
+# Thought experiment setup
+thought_experiment = setting(
+    "Consider a heavy ball (H) and a light ball (L). "
+    "Now tie them together into a composite body (H+L)."
+)
+
+# Two contradictory predictions from Aristotle's law
+composite_slower = claim(
+    "Under Aristotle's law, H+L falls slower than H alone, "
+    "because L acts as a drag on H.",
+    title="Composite slower prediction",
+    background=[aristotle_law, thought_experiment],
+)
+
+composite_faster = claim(
+    "Under Aristotle's law, H+L falls faster than H alone, "
+    "because H+L is heavier than H.",
+    title="Composite faster prediction",
+    background=[aristotle_law, thought_experiment],
+)
+
+# These two predictions contradict each other
+tied_balls = contradiction(
+    composite_slower, composite_faster,
+    reason="The same law predicts both slower and faster — a logical contradiction.",
+    prior=0.99,
+)
+
+# Galileo's conclusion
+equal_fall = claim(
+    "In the absence of air resistance, all objects fall at the same rate "
+    "regardless of mass.",
+    title="Equal fall rate",
+)
+
+support(
+    [tied_balls],
+    equal_fall,
+    reason="Aristotle's law is self-contradictory, so fall rate cannot depend on mass.",
+    prior=0.9,
+)
+
+__all__ = ["equal_fall"]
 ```
 
-Open `reasoning.typ` and add a claim with reasoning:
+Key points:
 
-```typst
-#import "gaia.typ": *
+- `setting()` declares background context (no probability, not debatable)
+- `claim()` declares propositions that carry probability in inference
+- `contradiction()` declares two claims are mutually exclusive
+- `support()` connects premises to a conclusion with a strength prior
+- `__all__` lists exported conclusions (the package's external interface)
 
-= Reasoning
-
-#claim(kind: "observation", from: (<motivation.experimental_setup>,))[
-  When air resistance is minimized, objects of different mass
-  hit the ground at approximately the same time.
-][
-  Given the experimental setup @motivation.experimental_setup,
-  repeated trials show no measurable difference in fall time
-  across a range of masses from 1 kg to 50 kg.
-] <reasoning.equal_fall_time>
-```
-
-Key syntax points:
-- Each declaration ends with a label: `<filename.label_name>`
-- `from:` lists premise labels as a tuple (single-element tuples need a trailing comma: `(<label>,)`)
-- The second `[...]` block is the proof/justification, where you use `@label` to reference premises
-
-## Build
+## Compile
 
 ```bash
-python cli/main.py build my_first_package
+cd my-first-gaia
+gaia compile .
 ```
 
-Expected output:
+This produces `.gaia/ir.json` (the compiled knowledge graph) and `.gaia/ir_hash` (integrity hash).
 
-```
-Markdown: my_first_package/.gaia/build/package.md
-Built my_first_package: 3 nodes, 1 factors
-Artifacts: my_first_package/.gaia/graph/
-Build complete.
+## Validate
+
+```bash
+gaia check .
 ```
 
-Build artifacts go into `my_first_package/.gaia/`:
-- `graph/raw_graph.json` — extracted knowledge graph
-- `graph/local_canonical_graph.json` — canonicalized graph
-- `build/graph_data.json` — full graph data
-- `build/package.md` — human-readable Markdown rendering
+Check reports structural errors, independent premises, derived conclusions, and prior coverage. Fix any errors before proceeding.
+
+Use `gaia check --brief .` for a per-module overview, or `gaia check --hole .` for a detailed prior coverage report.
+
+## Assign Priors
+
+Independent premises (leaf claims not derived by any strategy) need probability priors. Create `src/my_first/priors.py`:
+
+```python
+"""Priors for independent premises."""
+
+from . import composite_slower, composite_faster
+
+PRIORS: dict = {
+    composite_slower: (0.85, "Follows directly from Aristotle's assumption about drag."),
+    composite_faster: (0.85, "Follows directly from Aristotle's weight-speed relation."),
+}
+```
+
+Each entry maps a claim to `(prior_probability, justification)`. Priors range from 0 to 1.
+
+Re-compile to pick up the priors:
+
+```bash
+gaia compile .
+gaia check --hole .    # Should show "All independent claims have priors assigned"
+```
 
 ## Infer
 
-Run local belief propagation to compute belief values:
+Run belief propagation to compute posterior beliefs:
 
 ```bash
-python cli/main.py infer my_first_package
+gaia infer .
 ```
 
 Sample output:
 
 ```
-Beliefs after BP:
-  motivation.experimental_setup: prior=0.9 -> belief=0.9000
-  reasoning.equal_fall_time: prior=0.7 -> belief=0.7842
+Algorithm: junction_tree (exact, treewidth=2)
+Converged after 2 iterations
 
-Results: my_first_package/.gaia/infer/infer_result.json
+Beliefs:
+  composite_slower:  prior=0.85  →  belief=0.42
+  composite_faster:  prior=0.85  →  belief=0.42
+  equal_fall:        prior=0.50  →  belief=0.72
 ```
 
-Beliefs are probabilities in (0, 1). Claims supported by strong premises receive higher beliefs; unsupported or contradicted claims receive lower beliefs.
+The contradiction forces one side down; `equal_fall` is pulled up by the supporting evidence.
 
-## Publish to Local Database
+## Render
+
+Generate documentation from the compiled package:
 
 ```bash
-python cli/main.py publish my_first_package --local
+gaia render . --target docs
 ```
 
-This runs the full pipeline (build, review, infer, publish) and writes the package to your local LanceDB database:
-
-```
-Published my_first_package to v2 storage:
-  Knowledge items: 3
-  Chains: 1
-  Factors: 1
-```
-
-By default, data is stored at `./data/lancedb/gaia`. Override with `--db-path` or the `GAIA_LANCEDB_PATH` environment variable.
-
-## Search
-
-Verify your package is in the database:
-
-```bash
-python cli/main.py search "free fall mass"
-```
-
-Look up a specific knowledge item by ID:
-
-```bash
-python cli/main.py search --id "reasoning.equal_fall_time"
-```
+This produces `docs/detailed-reasoning.md` with per-module Mermaid reasoning graphs.
 
 ## Next Steps
 
-- [Language Reference](language-reference.md) — full cheat sheet for all declaration types, labels, cross-package references
-- [CLI Commands](cli-commands.md) — complete reference for all `gaia` commands and options
-- [Hole And Bridge Tutorial](hole-bridge-tutorial.md) — minimal end-to-end example for automatic `local_hole` discovery and downstream `fills`
+- [Language Reference](language-reference.md) — full cheat sheet for all knowledge types, operators, and strategies
+- [CLI Commands](cli-commands.md) — complete reference for all `gaia` commands
+- [Hole And Bridge Tutorial](hole-bridge-tutorial.md) — cross-package dependency resolution with `fills()`

@@ -2,17 +2,40 @@
 
 > **Status:** Current canonical
 
-Reference for the active Gaia Lang v5 CLI. The installed entrypoint is `gaia`.
+Reference for the Gaia Lang v5 CLI. The installed entrypoint is `gaia`.
 
 ## Command Set
 
 ```text
-gaia compile
-gaia check [--brief] [--show <module|label>]
-gaia register
+gaia init       Create a new knowledge package
+gaia compile    Compile to .gaia/ir.json
+gaia check      Validate structure and prior coverage
+gaia infer      Run belief propagation inference
+gaia render     Generate documentation and presentation outputs
+gaia add        Install a registered package from the registry
+gaia register   Submit a package to the official registry
 ```
 
-`gaia build`, `gaia infer`, and `gaia publish` are not part of the current Gaia Lang v5 author workflow.
+## `gaia init`
+
+Create a new Gaia knowledge package.
+
+```bash
+gaia init <name>
+```
+
+The name **must** end with `-gaia` (e.g., `galileo-falling-bodies-gaia`).
+
+Creates:
+- `pyproject.toml` with `[tool.gaia]` section (auto-generated `type` and `uuid`)
+- `src/<import_name>/__init__.py` with a starter template
+- `.gitignore`
+- Auto-runs `uv add gaia-lang` to pin the dependency
+
+| Naming | Convention | Example |
+|--------|-----------|---------|
+| Git repo / PyPI | `kebab-case-gaia` | `galileo-falling-bodies-gaia` |
+| Python import | `snake_case` (no `-gaia` suffix) | `galileo_falling_bodies` |
 
 ## `gaia compile`
 
@@ -22,8 +45,6 @@ Compile a Gaia Python package into `.gaia/ir.json` and `.gaia/ir_hash`.
 gaia compile [path]
 ```
 
-Arguments:
-
 | Argument | Default | Description |
 |----------|---------|-------------|
 | `path` | `.` | Path to the package repository |
@@ -31,124 +52,121 @@ Arguments:
 What it does:
 
 - loads `pyproject.toml`
-- resolves the Python import package from either `<repo>/<import_name>/` or `<repo>/src/<import_name>/`
-- executes the Gaia DSL declarations
+- resolves the Python import package from `<repo>/src/<import_name>/`
+- executes the Gaia DSL declarations (including `priors.py` if present)
 - emits a `LocalCanonicalGraph` to `.gaia/ir.json`
 - writes the deterministic graph hash to `.gaia/ir_hash`
 
-What it does not do:
-
-- does not push to GitHub
-- does not register the package
-- does not run belief propagation or local database ingest
-
-Example:
-
-```bash
-gaia compile .
-```
-
 ## `gaia check`
 
-Validate that a package is structurally sound and ready for registration. Optionally display the warrant structure for review.
+Validate structure and artifact consistency. Optionally display warrant structure for review.
 
 ```bash
 gaia check [path]
 gaia check --brief [path]
 gaia check --show <module|label> [path]
-gaia check --brief --show <module|label> [path]
 gaia check --hole [path]
 ```
 
-Arguments:
-
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `path` | `.` | Path to the package repository |
-
-Options:
-
 | Option | Description |
 |--------|-------------|
-| `--brief`, `-b` | Show per-module warrant structure overview after validation |
+| `--brief`, `-b` | Per-module overview: claims (with roles), strategies, operators |
 | `--show`, `-s` | Expand a specific module or claim/strategy label with full warrant trees |
-| `--hole` | Show detailed prior review report for all independent claims (holes without priors + covered with priors) |
+| `--hole` | Detailed prior coverage report: holes (missing prior) + covered (with prior) |
 
 What it checks:
 
 - `pyproject.toml` and `[tool.gaia]` metadata exist
-- `.gaia/ir.json` matches the current source
-- `.gaia/ir_hash` has the expected `sha256:` format
-- the compiled IR is accepted by the current schema and validator
-- package identity fields such as `name`, `version`, `namespace`, and `uuid` are present and consistent
+- `.gaia/ir.json` matches the current source (`ir_hash` check)
+- compiled IR validates against the current schema
+- package identity fields (`name`, `version`, `uuid`) are present and consistent
 
-### `--brief` output
+The default output annotates each independent premise with `prior=X` or `no prior`, and shows a "Holes (no prior set): N" summary.
 
-Displays a per-module overview after validation passes:
+### Claim roles in output
 
-- **Settings** with label and truncated content
-- **Claims** with role (independent/derived/structural/background/orphaned) and prior if set
-- **Strategies** with type, premise labels, conclusion, prior, and reason
-- **Operators** with type, variables, and reason
+| Role | Meaning | Needs prior? |
+|------|---------|-------------|
+| Independent | Leaf premise, not derived by any strategy | Yes |
+| Derived | Concluded by a strategy — belief comes from BP | No (auto 0.5) |
+| Background-only | Only used in `background=`, not as premise | Yes (typically 0.90-0.95) |
+| Orphaned | Not referenced by any strategy | Yes |
 
-### `--show` output
+## `gaia infer`
 
-When given a **module name**, expands all claims with full content and strategies with recursive warrant trees (including composite sub-strategies).
-
-When given a **claim or strategy label**, shows that node's full content and all strategies that conclude to it, with premises listed.
-
-When `--brief` and `--show` are combined, both the overview and the expanded detail are shown.
-
-### `--hole` output
-
-Detailed report for prior review. Splits all independent claims into two groups:
-
-- **Holes**: claims without priors — shows QID, content preview, and `NOT SET (defaults to 0.5)` status
-- **Covered**: claims with priors — shows prior value and justification reason
-
-The default `gaia check` output also annotates each independent premise with `prior=X` or `⚠ no prior`, and shows a "Holes (no prior set): N" count in the summary when any holes remain.
-
-Example:
+Run belief propagation inference on a compiled knowledge package.
 
 ```bash
-gaia compile .
-gaia check .                          # validate + prior annotations on independent claims
-gaia check --hole .                   # validate + detailed hole/covered report
-gaia check --brief .                  # validate + overview
-gaia check --show motivation .        # validate + expand module
-gaia check --show hypothesis .        # validate + expand claim
-gaia check --brief --show s3_xxx .    # validate + overview + expand module
+gaia infer [path]
+gaia infer --depth 1 [path]
 ```
 
-## `gaia register`
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--depth` | `0` | Dependency depth for joint inference. `0` = flat priors, `1` = merge direct deps, `-1` = all transitive deps |
 
-Prepare or submit a metadata PR against the official registry for a pushed GitHub-tagged source release.
+Priors come from `priors.py` and inline `reason`+`prior` pairing in the DSL. Algorithm is auto-selected based on factor graph treewidth:
+
+| Treewidth | Algorithm | Type |
+|-----------|-----------|------|
+| <= 15 | Junction tree | Exact |
+| 16-30 | Generalized BP | Region decomposition |
+| > 30 | Loopy BP | Approximate |
+
+Output: `.gaia/beliefs.json`
+
+## `gaia render`
+
+Generate documentation and presentation outputs from a compiled package.
 
 ```bash
-gaia register [path] [--tag TAG] [--repo URL] [--registry-dir PATH] [--create-pr]
+gaia render [path] --target docs
+gaia render [path] --target github
+gaia render [path] --target obsidian
+gaia render [path]                       # --target all (default)
 ```
 
-Arguments:
+| Target | Requires beliefs? | Output |
+|--------|------------------|--------|
+| `docs` | Optional (enriched when available) | `docs/detailed-reasoning.md` with per-module Mermaid graphs |
+| `github` | Required | `.github-output/` with README skeleton, narrative outline, manifest |
+| `obsidian` | Required | `gaia-wiki/` Obsidian vault with claim pages and sections |
+| `all` | Optional | `docs` always + `github` when beliefs are available |
 
-| Argument | Default | Description |
-|----------|---------|-------------|
-| `path` | `.` | Path to the package repository |
+## `gaia add`
 
-Common options:
+Install a registered package from the official registry.
+
+```bash
+gaia add <package>
+gaia add <package> --version 1.0.0
+```
 
 | Option | Description |
 |--------|-------------|
-| `--tag` | Git tag to register. Defaults to `v<version>` |
-| `--repo` | Override the GitHub repository URL instead of inferring it from `origin` |
+| `--version`, `-v` | Pin to a specific version |
+| `--registry` | Override registry repo (default: `SiliconEinstein/gaia-registry`) |
+
+## `gaia register`
+
+Submit a package to the official registry. Requires a git tag pushed to GitHub.
+
+```bash
+gaia register [path] --create-pr
+```
+
+| Option | Description |
+|--------|-------------|
+| `--tag` | Git tag to register (default: `v<version>`) |
+| `--repo` | Override the GitHub repository URL |
 | `--registry-dir` | Path to a local checkout of the registry repo |
-| `--create-pr` | Create and push the registry branch and open a PR via GitHub CLI |
+| `--create-pr` | Create the registry branch and open a PR |
 
 Prerequisites:
 
-- `gaia compile` and `gaia check` already pass
-- the package source is pushed to GitHub
-- the target tag is already pushed
-- the registry repo is available locally if metadata needs to be written
+- `gaia compile` and `gaia check` pass
+- package source is pushed to GitHub
+- target tag is pushed
 
 Example:
 
@@ -156,18 +174,31 @@ Example:
 gaia compile .
 gaia check .
 git push origin main
-git tag v4.0.3
-git push origin v4.0.3
-gaia register . --tag v4.0.3 --create-pr
+git tag v1.0.0
+git push origin v1.0.0
+gaia register . --tag v1.0.0 --registry-dir ../gaia-registry --create-pr
 ```
 
-## Registration Model
+**Note:** `--create-pr` creates the registry branch locally but does not automatically push to your fork. After running, manually push and create the PR:
 
-The official registry is currently a Phase 1 source registry:
+```bash
+cd ../gaia-registry
+git push origin register/<name>-<version>
+gh pr create --repo SiliconEinstein/gaia-registry --base main \
+  --head <your-user>:register/<name>-<version> --title "register: <name> <version>"
+```
 
-- it records package metadata, version metadata, dependencies, `git_tag`, `git_sha`, and `ir_hash`
-- it re-clones the tagged GitHub source in CI
-- it recompiles and revalidates before merge
-- consumers currently use validated Git references rather than install-by-name
+## Typical Workflow
 
-See [../specs/2026-04-02-gaia-registry-design.md](../specs/2026-04-02-gaia-registry-design.md) for the full registry contract.
+```bash
+gaia init my-package-gaia          # 1. Scaffold
+# ... write DSL code ...           # 2. Author
+gaia compile .                     # 3. Compile
+gaia check .                       # 4. Validate
+# ... write priors.py ...          # 5. Assign priors
+gaia compile .                     # 6. Re-compile with priors
+gaia infer .                       # 7. Run inference
+gaia render . --target docs        # 8. Generate documentation
+gaia render . --target github      # 9. Generate presentation
+gaia register . --create-pr        # 10. Publish to registry
+```
