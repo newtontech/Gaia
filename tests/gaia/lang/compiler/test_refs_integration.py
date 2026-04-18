@@ -130,8 +130,8 @@ def test_compile_scans_sub_strategy_reasons(tmp_path: Path) -> None:
             'obs2 = claim("Second observation.")\n'
             'law = claim("A general law.")\n'
             # Create sub-strategies manually to test recursion
-            "sub1 = support(premises=[obs1], conclusion=law)\n"
-            "sub2 = support(premises=[obs2], conclusion=law, reason='Justification [@missing_key]', prior=0.9)\n"
+            "sub1 = support(premises=[law], conclusion=obs1)\n"
+            "sub2 = support(premises=[law], conclusion=obs2, reason='Justification [@missing_key]', prior=0.9)\n"
             "induction(sub1, sub2, law)\n"
             '__all__ = ["law", "obs1", "obs2"]\n'
         ),

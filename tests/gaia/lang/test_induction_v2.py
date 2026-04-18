@@ -134,19 +134,74 @@ def test_induction_requires_support_for_second_input():
         induction(previous, not_support, law)
 
 
-def test_induction_requires_sub_strategies_to_include_law():
-    """Reject supports that don't reference the law as premise or conclusion."""
+def test_induction_requires_law_as_premise_of_support():
+    """Reject supports that don't have the law as a premise (wrong direction)."""
     obs1 = claim("Obs 1.")
     obs2 = claim("Obs 2.")
     law = claim("Law.")
-    missing_law = support(premises=[obs1], conclusion=obs2)
+    # Mode B (wrong direction): obs → law
+    wrong_direction = support(premises=[obs1], conclusion=law)
     valid_support = support(premises=[law], conclusion=obs2)
 
-    with pytest.raises(ValueError, match="support_1 must reference the law"):
-        induction(missing_law, valid_support, law)
+    with pytest.raises(ValueError, match="support_1 must have the law as a premise"):
+        induction(wrong_direction, valid_support, law)
 
-    with pytest.raises(ValueError, match="support_2 must reference the law"):
-        induction(valid_support, missing_law, law)
+    with pytest.raises(ValueError, match="support_2 must have the law as a premise"):
+        induction(valid_support, wrong_direction, law)
+
+
+def test_induction_rejects_support_without_law():
+    """Reject supports that don't reference the law at all."""
+    obs1 = claim("Obs 1.")
+    obs2 = claim("Obs 2.")
+    law = claim("Law.")
+    no_law = support(premises=[obs1], conclusion=obs2)
+    valid_support = support(premises=[law], conclusion=obs2)
+
+    with pytest.raises(ValueError, match="support_1 must have the law as a premise"):
+        induction(no_law, valid_support, law)
+
+    with pytest.raises(ValueError, match="support_2 must have the law as a premise"):
+        induction(valid_support, no_law, law)
+
+
+def test_induction_premises_include_observations():
+    """Composite premises include observations (sub-strategy conclusions)."""
+    obs1 = claim("Obs 1.")
+    obs2 = claim("Obs 2.")
+    law = claim("Law.")
+
+    sup1 = support(premises=[law], conclusion=obs1)
+    sup2 = support(premises=[law], conclusion=obs2)
+
+    s = induction(sup1, sup2, law)
+
+    assert obs1 in s.premises
+    assert obs2 in s.premises
+    assert law not in s.premises
+    assert len(s.premises) == 2
+
+
+def test_induction_chained_premises_accumulate():
+    """Chained induction collects observations from all supports."""
+    obs1 = claim("Obs 1.")
+    obs2 = claim("Obs 2.")
+    obs3 = claim("Obs 3.")
+    law = claim("Law.")
+
+    sup1 = support(premises=[law], conclusion=obs1)
+    sup2 = support(premises=[law], conclusion=obs2)
+    sup3 = support(premises=[law], conclusion=obs3)
+
+    ind1 = induction(sup1, sup2, law)
+    ind2 = induction(ind1, sup3, law)
+
+    # ind2 should have all three observations as premises
+    assert obs1 in ind2.premises
+    assert obs2 in ind2.premises
+    assert obs3 in ind2.premises
+    assert law not in ind2.premises
+    assert len(ind2.premises) == 3
 
 
 def test_induction_premises_are_deduplicated():
