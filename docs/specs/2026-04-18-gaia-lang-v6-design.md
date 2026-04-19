@@ -15,8 +15,8 @@
 ## 1. 设计目标
 
 1. **Claim-first authoring**：作者先声明要讨论的 Claim，再用带 warrant 的 DSL 函数把 Claim 连接起来。Gaia Lang 不是 proof assistant 或 model checker，而是面向科学 Claim 的 probabilistic structured argumentation system。
-2. **薄 Knowledge 类型体系**：Knowledge 作为基类（纯文本，无概率），Setting/Claim/Question 作为不同用途的知识对象；Claim 支持用户自定义子类作为参数化领域类型。
-3. **无 Action IR / 无额外调用层**：support methods、source-first verbs、relation wrappers、`derive()`、`observe()`、`induction()` 等只是 DSL 层 constructor。编译后只保留 Gaia IR 的 Knowledge、Strategy、Operator、CompositeStrategy。
+2. **薄 Knowledge 类型体系**：Knowledge 作为未分化文本兜底类型（无概率），Setting/Claim/Question 作为不同用途的知识对象；Warrant 是 Claim 子类，用来表示可审查的论证步骤；Claim 支持用户自定义子类作为参数化领域类型。
+3. **无 Action IR / 无额外调用层**：`Claim.supported_by(...)`、`match()`、`contradict()`、`compute()` 等只是 DSL 层 constructor。编译后只保留 Gaia IR 的 Knowledge、Strategy、Operator 和 parameterization records。
 4. **只有 Compute 使用 decorator**：Compute 真正包装并执行 Python 函数体，因此保留 `@compute(...)`。Derive、Observe、Relate、Compose 不使用 decorator。
 5. **参数化 Knowledge 与谓词逻辑**：通过 Claim 子类定义参数 schema（类型标注 + docstring 模板），Python 控制流实现 ∀ 展开，编译到 ground factor graph。
 6. **InquiryState**：以导出 Claim 为 goal 的推理进度视图，通过 `gaia check --inquiry` 展示。
@@ -29,23 +29,25 @@
 ### 2.1 类型层次
 
 ```
-Knowledge              ← 纯文本背景知识，无概率，不进入推理图
+Knowledge              ← 未分化文本/叙事背景/兜底对象，无概率，不进入推理图
 ├── Setting            ← 定义、环境条件、常量（无概率，taken as given）
 ├── Claim              ← 命题（有 prior，参与 BP）
+│   ├── Warrant        ← 论证步骤本身的可审查 claim（带 pattern）
 │   └── 用户自定义子类 ← 参数化领域类型（如 Force, InfoTransfer）
 └── Question           ← 开放探究（标记未解决问题，不是 Claim）
 ```
 
-**四种类型，各有硬判定标准：**
+**核心类型各有硬判定标准：**
 
 | 类型 | 硬标准 |
 |------|--------|
-| Knowledge | 不进入推理图，纯文本 |
+| Knowledge | 不进入推理图，未分化文本 |
 | Setting | 无概率，taken as given |
 | Claim | 有概率，参与 BP |
+| Warrant | Claim 子类，表示“这条支持/关系/计算步骤成立” |
 | Question | 标记为开放探究 |
 
-Hypothesis、theory、law、prediction、observation、fact、judgment 等不设为独立类型——它们是 Claim 在推理图中扮演的角色，由 support record（`derive`/`observe`/`compute`/`match`/`contradict` 等）决定，不由类型标签决定。例如同一个 Claim 可以同时被 observation（经验数据支持）和 derivation（理论推导支持）双重支持，不需要改变类型。
+Hypothesis、theory、law、prediction、observation、fact、judgment 等不设为独立类型——它们是 Claim 在推理图中扮演的角色，由支持它的 `Warrant.pattern` 和 graph topology 决定，不由类型标签决定。例如同一个 Claim 可以同时被 observation pattern 和 derivation pattern 的 Warrant 支持，不需要改变类型。
 
 **参数化**：Setting/Claim/Question 都可以通过 class 继承定义参数化版本。class 定义谓词 schema，instance 是 ground formula：
 
@@ -63,7 +65,7 @@ Python 的 class/instance 就是谓词逻辑的 predicate/formula，无需额外
 
 ### 2.2 Knowledge 基类
 
-纯文本知识，不进入推理图，不携带概率。用途：叙事性背景、包级/模块级 context。
+未分化文本知识，不进入推理图，不携带概率。用途：叙事性背景、包级/模块级 context、尚未决定是否要提升为 Claim/Setting/Question 的文献材料。
 
 ```python
 class Knowledge:
@@ -121,7 +123,7 @@ class Claim(Knowledge):
     root_reason: str | None = None
 ```
 
-**核心规则：每个导出或非独立 Claim 都需要 warrant 或 explicit root declaration**。warrant 由 support method、`derive()`、`observe()`、`compute()`、relation、composition 等 DSL 函数提供。没有任何 Strategy / Operator 连接、且没有 `root_kind` 的裸 Claim 是 **structural hole**——即使在 priors.py 里赋了 prior 也不例外。prior 是对可信度的量化，warrant/root declaration 是可信度进入图的理由。二者缺一不可。
+**核心规则：每个导出或非独立 Claim 都需要 Warrant 或 explicit root declaration**。Warrant 由 `supported_by(...)`、`match()`、`contradict()`、`compute()` 等 DSL constructor 创建。没有 incoming Warrant、且没有 `root_kind` 的裸 Claim 是 **structural hole**——即使在 priors.py 里赋了 prior 也不例外。prior 是对可信度的量化，Warrant/root declaration 是可信度进入图的理由。二者缺一不可。
 
 合法 root 只用于真正的推理起点：
 
@@ -140,7 +142,32 @@ imported_result = Claim(
 
 Definitions、实验环境、常量和规范引用优先建模为 `Setting`。只有需要参与 BP 的命题性起点才使用 `root_kind`。
 
-### 2.5 Claim 子类——参数化领域类型
+### 2.5 Warrant
+
+`Warrant` 是 `Claim` 的子类，用来表示“某个论证步骤成立”。它不是新的 Gaia IR Knowledge type；编译到 IR 时仍是 `Knowledge(type="claim")`，只是带有 `metadata.kind = "warrant"` 和结构化属性。
+
+```python
+class Warrant(Claim):
+    label: str | None = None
+    pattern: str
+    inputs: list[Claim] = []
+    conclusion: Claim | None = None
+    context: list[Setting] = []
+```
+
+`pattern` 表示 warrant 的论证模式，例如：
+
+```text
+observation, citation, prediction, derivation, computation,
+match, contradict, induction, abduction, explanation,
+generalization, elimination
+```
+
+`pattern` 是 Warrant 的属性，不是 Claim 类型。它记录这条 warrant 在当前论证图里的角色；同一个普通 Claim 后续可以被不同 pattern 的 Warrant 反复支持，而 Claim identity 不需要改变。
+
+重要 warrant 应该由用户显式提供 `label`，以便后续引用、review 和 inquiry 展示。未显式标注时编译器可以生成稳定 label，但 published package 应优先使用可读 label。因为 Warrant 本身也是 Claim，后续 `supported_by(inputs=[...])` 可以直接把某个 relation Warrant 或 support Warrant 当作输入引用。
+
+### 2.6 Claim 子类——参数化领域类型
 
 用户通过继承 Claim 定义参数化的领域类型。class 定义 schema，docstring 是 `str.format()` 模板，类型标注定义参数：
 
@@ -184,7 +211,7 @@ dna_transfer = InfoTransfer(src=MoleculeType.DNA)
 
 **实现**：`Knowledge.__init_subclass__` 或 metaclass 收集类型标注，生成 Param 列表。`__init__` 时用 `str.format(**bound_params)` 渲染 content。未绑定参数在 content 中保留 `{param_name}` 占位符。
 
-### 2.6 Question
+### 2.7 Question
 
 开放探究，标记未解决的问题。可参数化。
 
@@ -194,7 +221,7 @@ class ProteinTransferQuestion(Question):
     dst: MoleculeType
 ```
 
-### 2.7 Param dataclass
+### 2.8 Param dataclass
 
 参数的内部表示：
 
@@ -212,239 +239,141 @@ class Param:
 
 ## 3. Warranted Reasoning API
 
-### 3.1 核心设计：Claim-first, IR-first
+### 3.1 核心设计：Claim + Warrant + Relation
 
-v6 不引入通用 reasoning decorator，也不引入额外调用层。用户侧的 support methods、source-first verbs 和 relation functions 都只是 DSL wrapper；编译后只剩 Gaia IR 对象：
+v6.0 的 authoring surface 只保留一组正交原语：
 
 | DSL surface | 语义 | IR 编译目标 |
 |---------|------|------------|
-| `claim.predicted_from(...)` / `claim.derived_from(...)` / `claim.explains(...)` | receiver Claim 被一条 support warrant 支持 | `Strategy(type="support" / "deduction" / ...)` |
-| `source_claim.predict(...)` / `source_claim.derive(...)` | 从已有 Claim 出发生成新 Claim，并添加 support | 新 `Knowledge(type="claim")` + `Strategy` |
-| `observe(...)` / `claim.observed_from(...)` | 观测 warrant 支持观测 Claim | `Strategy(type="support")` 或 `Strategy(type="infer")` |
-| `compute(...)` / `@compute(...)` | 执行 Python 函数并生成/支持 Claim | `Strategy(type="support")` + compute metadata |
-| `match(...)` / `contradict(...)` | prediction-observation 比较 wrapper | `Operator(type="equivalence" / "contradiction")` + helper Claim |
-| `contradiction(...)`, `equivalence(...)`, ... | Claim 间逻辑约束 wrapper | `Operator` + helper Claim |
-| `abduction(...)`, `induction(...)`, `compose(...)` | 组合已有 Strategy | `CompositeStrategy` |
+| `claim.supported_by(...)` | 创建一个 `Warrant`，说明 inputs 如何支持 receiver Claim | `Warrant` claim + `Strategy(type="support")` |
+| `match(a, b, ...)` | 创建一个 `Warrant`，说明两个 Claim 在当前论证中匹配 | `Operator(operator="equivalence")` + Warrant/helper Claim |
+| `contradict(a, b, ...)` | 创建一个 `Warrant`，说明两个 Claim 在当前论证中冲突 | `Operator(operator="contradiction")` + Warrant/helper Claim |
+| `compute(...)` / `@compute(...)` | 执行 Python 函数，生成输出 Claim 和 computation Warrant | 输出 Claim + Warrant claim + `Strategy(type="support")` + compute metadata |
 
-只有 `compute` 使用 decorator，因为它真的包装并执行 Python 函数体。support methods、source-first verbs、relation wrappers、composition 都是普通函数调用。
+不在 v6.0 主 surface 中暴露 `derive()`、`observe()`、`abduct()`、`induce()`、`explain()`、`compose()`，也不暴露 IR operator 名称 `equivalence()` / `contradiction()`。这些都可以在后续作为 sugar 或 advanced API 添加，但第一版保持一个核心：**Claim 由 Warrant 支持，Warrant 是可引用、可 review 的 Claim 子类**。
 
-#### 3.1.1 Claim-local support methods
+### 3.2 `Claim.supported_by`
 
-主 authoring surface 是 Claim-local：receiver Claim 就是 conclusion，method 名说明它如何被支持。
+`supported_by` 是唯一核心 support API。receiver Claim 是 conclusion；`inputs` 是支持它的 Claim/Warrant；`pattern` 说明这条 warrant 的论证模式；`warrant` 是 warrant claim 的正文；`label` 给这条 warrant 一个可引用名字。
 
 ```python
-quantum_hyp = Claim("Energy exchange is quantized.")
+claim.supported_by(
+    *,
+    inputs: list[Claim | Warrant],
+    pattern: str,
+    label: str | None = None,
+    warrant: str,
+    prior: float | None = None,
+    context: list[Setting] = [],
+    source: Any | None = None,
+) -> Warrant
+```
 
-planck_result = Claim("Planck spectrum matches blackbody observations.")
-planck_result.predicted_from(
-    inputs=[quantum_hyp],
-    context=[blackbody_equilibrium],
-    reason="Quantized exchange yields Planck's spectrum.",
+```python
+quantum = Claim("Energy exchange is quantized.")
+
+finite_radiation = Claim("High-frequency blackbody radiation remains finite.")
+w_prediction = finite_radiation.supported_by(
+    inputs=[quantum],
+    pattern="prediction",
+    label="quantization_predicts_finite_high_frequency_radiation",
+    warrant="Quantized exchange suppresses ultraviolet divergence.",
     prior=0.94,
 )
+```
 
-uv_data = Claim("Measured blackbody spectrum deviates from Rayleigh-Jeans law.")
-uv_data.observed_from(
-    context=[lab, spectrometer],
-    reason="Measured at 5 frequency points with calibrated UV-visible spectrometer.",
+返回值是 `Warrant`：
+
+```python
+assert isinstance(w_prediction, Warrant)
+assert w_prediction.pattern == "prediction"
+assert w_prediction.conclusion is finite_radiation
+assert w_prediction.inputs == [quantum]
+```
+
+Observation、citation、induction、abduction、explanation 等都用同一个 API 表达：
+
+```python
+observed_finite = Claim("High-frequency blackbody radiation is experimentally finite.")
+w_observation = observed_finite.supported_by(
+    inputs=[],
+    pattern="observation",
+    label="planck_1900_reports_finite_high_frequency_radiation",
+    source=planck_1900,
+    warrant="Planck 1900 reports finite high-frequency blackbody measurements.",
     prior=0.95,
 )
-```
 
-Each support method appends a warrant record whose conclusion is the receiver Claim. The compiler lowers these records to ordinary `Strategy` objects:
-
-```text
-planck_result.predicted_from(inputs=[quantum_hyp])
-== derive([quantum_hyp], conclusion=planck_result, role="predict")
-
-uv_data.observed_from(context=[lab])
-== observe(conclusion=uv_data, context=[lab])
-```
-
-Recommended support methods:
-
-```python
-claim.predicted_from(inputs=[...], context=[...])
-claim.observed_from(context=[...], source=...)
-claim.derived_from(inputs=[...])
-claim.computed_from(inputs=[...], compute=...)
-claim.cited_from(source=...)
-claim.proven_from(inputs=[...])
-claim.generalized_from(inputs=[...])
-claim.explains(evidence=[...], alternatives=[...])
-```
-
-这些 method 不定义 Claim 类型。一个 Claim 可以同时由 observation、derivation、citation、computation 等多条 support warrant 支持。
-
-#### 3.1.2 Source-first exploration sugar
-
-Exploration-first 系统更常从 frontier Claim 往外生成 candidate Claim。v6 支持 source-first sugar，但它只是 Claim-local support 的等价展开。
-
-```python
-p = quantum_hyp.predict(
-    "High-frequency blackbody radiation remains finite.",
-    given=[blackbody_equilibrium],
-    context=[thermal_equilibrium],
-    prior=0.72,
-)
-```
-
-等价于：
-
-```python
-p = Claim("High-frequency blackbody radiation remains finite.")
-p.predicted_from(
-    inputs=[quantum_hyp, blackbody_equilibrium],
-    context=[thermal_equilibrium],
-    prior=0.72,
-)
-```
-
-`given` 表示除 receiver 外的额外 Claim premises；`context` 仍然是 Setting/background，不作为 probabilistic premise。常见 source-first verbs：
-
-```python
-h.predict("...", given=[...])
-h.derive("...", given=[...])
-h.generalize("...", given=[...])
-h.specialize("...", conditions=[...])
-```
-
-它们都返回新 Claim，并把 receiver Claim 自动加入 support inputs。Gaia IR 只看到最终的 Claim + Strategy graph。
-
-### 3.2 derive
-
-`derive()` 是低阶支持边 constructor：作者显式声明 conclusion，再给出 premises、reason、prior。Claim-local methods 和 source-first verbs 都可以展开成 `derive()`/`observe()`。
-
-```python
-quantum_hyp = Claim("Energy exchange is quantized.")
-planck_result = Claim("Planck spectrum matches blackbody observations.")
-uv_data = Claim("Measured blackbody spectrum deviates from Rayleigh-Jeans law.")
-
-s = derive(
-    [planck_result, uv_data],
-    conclusion=quantum_hyp,
-    reason="Planck spectrum matches observed data and resolves UV catastrophe.",
-    prior=0.95,
-)
-```
-
-`derive()` 返回 Strategy handle，供 `induction()`、`abduction()`、`compose()` 等组合函数使用。一个 Claim 可以有多个 incoming Strategy。
-
-**编译**：默认编译为 `Strategy(type="support")`。需要严格逻辑推导时可指定 strategy type：
-
-```python
-derive(
-    [p, p_implies_q],
-    conclusion=q,
-    type="deduction",
-    reason="By modus ponens: if P and P→Q, then Q.",
-    prior=0.99,
-)
-```
-
-### 3.3 observe
-
-`observe()` 表示经验观测、测量、实验记录等 witness。观测对象必须是显式 Claim，实验条件、仪器、规范等放在 `context`。
-
-`observe(conclusion=existing_claim, ...)` 是低阶 constructor，返回 Strategy handle。`observe("statement", ...)` 是 convenience constructor，返回新 Claim，并自动添加 observation support。
-
-```python
-lab = Setting("Blackbody cavity at thermal equilibrium.")
-spectrometer = Setting("Calibrated UV-visible spectrometer.")
-uv_data = Claim("Measured blackbody spectrum deviates from Rayleigh-Jeans law.")
-
-obs = observe(
-    conclusion=uv_data,
-    context=[lab, spectrometer],
-    reason="Measured at 5 frequency points with calibrated UV-visible spectrometer.",
-    prior=0.95,
-)
-```
-
-也可以使用 convenience constructor 直接创建观测 Claim：
-
-```python
-uv_data = observe(
-    "Measured blackbody spectrum deviates from Rayleigh-Jeans law.",
-    context=[lab, spectrometer],
-    reason="Measured at 5 frequency points with calibrated UV-visible spectrometer.",
-    prior=0.95,
-)
-```
-
-等价于：
-
-```python
-uv_data = Claim("Measured blackbody spectrum deviates from Rayleigh-Jeans law.")
-uv_data.observed_from(
-    context=[lab, spectrometer],
-    reason="Measured at 5 frequency points with calibrated UV-visible spectrometer.",
-    prior=0.95,
-)
-```
-
-如果观测依赖不确定的上游 Claim，把它们放入 `premises`：
-
-```python
-calibrated = Claim("The spectrometer calibration is within tolerance.")
-
-observe(
-    [calibrated],
-    conclusion=uv_data,
-    context=[lab],
-    reason="Measured after calibration check.",
-    prior=0.95,
+quantum.supported_by(
+    inputs=[agreement, anomaly],
+    pattern="explanation",
+    label="quantization_explains_uv_anomaly",
+    warrant=(
+        "The quantum prediction matches the finite observation, while the "
+        "classical prediction contradicts it."
+    ),
+    prior=0.93,
 )
 ```
 
 **编译**：
 
-- 有 Claim premises：编译为 `Strategy(type="support", premises=[...], conclusion=...)`，`context` 编译为 `background`。
-- 无 Claim premises：编译为 `Strategy(type="infer", premises=[], conclusion=...)`，并为该 infer 策略提供单项 CPT `[prior]`。这使用现有 infer 语义，不新增 zero-premise support。
+```text
+Warrant(...) -> IR Knowledge(type="claim", metadata.kind="warrant", metadata.pattern=...)
+claim.supported_by(inputs=[...]) -> Strategy(type="support", premises=[warrant, *inputs], conclusion=claim)
+```
 
-### 3.4 relations
+把 Warrant 放进 premises 后，v6.0 不需要 zero-premise support：即使 observation/citation 没有普通 input Claim，也仍然有一个 observation/citation Warrant 作为 support premise。`source`、`context`、citation refs 和 source location 都进入 Warrant 的 metadata/provenance。
 
-Relation 不是 Strategy。它们是用户侧的 relation wrapper，封装 Gaia IR 的确定性 `Operator`。作者不直接构造 IR `Operator`；DSL function 负责生成 helper Claim、Operator 和 provenance metadata。
+### 3.3 Relation wrappers
 
-**Prediction-observation 比较**：`match()` 和 `contradict()` 是科学推理的核心操作——比较 prediction 和 observation 是否吻合：
+`match()` 和 `contradict()` 是用户侧 relation wrappers。它们返回 `Warrant`，因为 relation result 本身就是“这两个 Claim 的关系成立”的可审查 claim。
+
+```python
+match(
+    a: Claim,
+    b: Claim,
+    *,
+    label: str | None = None,
+    warrant: str,
+    prior: float | None = None,
+) -> Warrant
+
+contradict(
+    a: Claim,
+    b: Claim,
+    *,
+    label: str | None = None,
+    warrant: str,
+    prior: float | None = None,
+) -> Warrant
+```
 
 ```python
 agreement = match(
-    spectrum_prediction,
-    spectrum_observation,
-    reason="The predicted Planck spectrum agrees with measured data.",
+    finite_radiation,
+    observed_finite,
+    label="quantum_prediction_matches_observed_finite_radiation",
+    warrant="The predicted finite high-frequency behavior matches the reported observation.",
     prior=0.93,
 )
 
-conflict = contradict(
-    classical_prediction,
+anomaly = contradict(
+    classical_divergence,
     observed_finite,
-    reason="Classical theory predicts divergence, but observation reports finite radiation.",
+    label="classical_prediction_contradicts_observed_finite_radiation",
+    warrant="Classical theory predicts divergence, but measured radiation is finite.",
     prior=0.96,
 )
 ```
 
-`match()` 编译为 `Operator(type="equivalence")`，`contradict()` 编译为 `Operator(type="contradiction")`。返回值是 helper Claim，可以作为其他 support 的 premise（例如 `h.explains(evidence=[agreement])`）。
+`match()` 生成 `Warrant(pattern="match")`，并 lower 到 Gaia IR 的 `Operator(operator="equivalence")`；`contradict()` 生成 `Warrant(pattern="contradict")`，并 lower 到 `Operator(operator="contradiction")`。raw IR operator constructor 不进入 v6.0 authoring surface。
 
-**其他逻辑约束**：
+### 3.4 compute
 
-```python
-contradiction(a, b, reason="...", prior=0.99)
-equivalence(a, b, reason="...", prior=0.95)
-complement(a, b, reason="...", prior=0.99)
-disjunction([a, b, c], reason="...", prior=0.95)
-implication(a, b, reason="...", prior=0.95)
-```
+Compute 将 Python 函数的执行结果连接到推理图中。它是 v6.0 唯一保留的 decorator 方向，因为它真的包装并执行 Python 函数体；`@compute` decorator 是 `compute()` 函数的语法糖。
 
-**编译**：编译为 top-level `Operator`，并生成 helper Claim 承载 relation warrant prior。
-
-`match`/`contradict` 和 `equivalence`/`contradiction` 的区别是语义意图，不是 IR 结构——前者用于 prediction-observation 比较，后者用于一般逻辑约束。编译到相同的 IR Operator。
-
-### 3.5 compute
-
-Compute 将 Python 函数的执行结果连接到推理图中。和 derive/observe 一样，底层是一个普通函数调用；`@compute` decorator 是语法糖。
-
-#### 3.5.1 底层结构：`compute()` 函数
+#### 3.4.1 底层结构：`compute()` 函数
 
 ```python
 result = compute(
@@ -452,7 +381,8 @@ result = compute(
     inputs=[T, freq],               # 输入 Knowledge 列表
     conclusion=SpectralRadiance,    # 输出 Claim 类型（参数化子类）
     output_param="value",           # fn 返回值绑定到 conclusion 的哪个参数
-    reason="Planck's law: B(ν,T) = (2hν³/c²) · 1/(exp(hν/kT) - 1).",
+    label="planck_spectrum_computation",
+    warrant="Planck's law: B(ν,T) = (2hν³/c²) · 1/(exp(hν/kT) - 1).",
     prior=0.99,
 )
 ```
@@ -462,21 +392,23 @@ result = compute(
 1. 从每个 input Knowledge 的 bound parameters 中提取 raw value（默认要求 input 只有一个 bound value；复杂情况显式传 `extractors`）
 2. 用提取的 raw value 调用 `fn`
 3. 将返回值绑定到 `conclusion` 类型指定的 Claim 子类实例（默认绑定到 `output_param`）
-4. 注册 Strategy 连接 inputs → 输出 Claim
-5. 在 Strategy metadata 中记录 `kind="compute"`、函数名、代码 hash、输入输出参数、source location
-6. 返回输出 Claim
+4. 创建 `Warrant(pattern="computation", label=label, inputs=inputs, conclusion=result)`
+5. 注册 Strategy 连接 `[warrant, *inputs] → 输出 Claim`
+6. 在 Warrant / Strategy metadata 中记录函数名、代码 hash、输入输出参数、source location
+7. 返回输出 Claim
 
-`compute()` 返回输出 Claim。低阶 `derive()` / `observe(conclusion=...)` 返回 Strategy handle；Claim-local support methods 可以返回 Strategy handle 或 receiver Claim，但编译后都通过 IR stable ID 追踪。
+`compute()` 返回输出 Claim。生成的 computation Warrant 由 `label` 稳定引用；需要直接操作 warrant 时，implementation 可以提供 unpack/handle API，但 v6.0 语义上只要求 label 可引用。
 
-**编译**：编译为 `Strategy(type="support", premises=[inputs], conclusion=result)` + `metadata.compute`（函数名、代码 hash、source location）。warrant = `reason` 参数（或 `fn.__doc__`）。
+**编译**：编译为输出 Claim + `Warrant(pattern="computation")` + `Strategy(type="support", premises=[warrant, *inputs], conclusion=result)` + compute metadata。warrant 文本来自 `warrant` 参数（或 `fn.__doc__`）。
 
-#### 3.5.2 语法糖：`@compute` decorator
+#### 3.4.2 语法糖：`@compute` decorator
 
 ```python
 @compute(
     inputs={"T": CavityTemperature, "freq": TestFrequency},
     conclusion=SpectralRadiance,
     output_param="value",
+    label="planck_spectrum_computation",
     prior=0.99,
 )
 def planck_spectrum(T: float, freq: float) -> float:
@@ -504,7 +436,8 @@ result = compute(
     inputs=[CavityTemperature(value=5000.0), TestFrequency(value=1e15)],
     conclusion=SpectralRadiance,
     output_param="value",
-    reason=planck_spectrum_fn.__doc__,
+    label="planck_spectrum_computation",
+    warrant=planck_spectrum_fn.__doc__,
     prior=0.99,
 )
 ```
@@ -513,57 +446,51 @@ Decorator 通过 decorator 参数声明 Knowledge binding，通过 Python 函数
 - `inputs={"T": CavityTemperature}` 说明调用时参数 `T` 必须是 `CavityTemperature` Claim 实例
 - wrapper 从 `CavityTemperature(value=...)` 中提取 raw `value`，把 raw float 传给函数体
 - `conclusion=SpectralRadiance` 和 `output_param="value"` 说明返回 raw value 如何包装成输出 Claim
-- docstring → reason（warrant）
+- docstring → Warrant content
+- label → Warrant label / review key
 - prior → decorator 参数
 
 **对函数体零侵入**：函数内部仍然操作 raw Python 值，不需要了解 Knowledge 系统。需要声明的是 Gaia wrapper 如何把 Knowledge input/output 绑定到 raw Python 参数和值。
 
 **Compute 链式串联**：一个 Compute 的输出（Claim 子类）可以直接作为另一个 Compute 的输入，自动形成推理链。
 
-### 3.6 composition
+### 3.5 Deferred sugar
 
-组合函数只接收已经创建的 Strategy handle，不接收 decorator、模板或函数对象。
+`derive()`、`observe()`、`h.predict()`、`claim.predicted_from()`、`induce()`、`abduct()`、`explain()`、`compose()` 都不进入 v6.0 core。它们可以在后续版本作为 `supported_by(...)` 的 sugar 或 advanced composition API 添加，但不能改变底层语义：
 
 ```python
-s1 = derive([law], conclusion=obs1, reason="law predicts obs1", prior=0.9)
-s2 = derive([law], conclusion=obs2, reason="law predicts obs2", prior=0.9)
-
-ind = induction(
-    s1,
-    s2,
-    conclusion=law,
-    reason="Independent observations confirm the same law.",
+p = Claim("High-frequency blackbody radiation remains finite.")
+p.supported_by(
+    inputs=[quantum],
+    pattern="prediction",
+    label="quantization_predicts_finite_radiation",
+    warrant="Quantized exchange suppresses ultraviolet divergence.",
 )
 ```
 
-强语义组合（`abduction()`、`induction()`）优先使用命名函数；`compose()` 是低阶 escape hatch：
+任何 sugar 都必须展开为：
 
-```python
-compose(
-    [s1, s2, s3],
-    conclusion=target,
-    type="infer",
-    reason="These sub-arguments jointly establish the target.",
-)
+```text
+new/existing Claim + Warrant(pattern=...) + Strategy/Operator
 ```
 
-**编译**：编译为 `CompositeStrategy`，`sub_strategies` 引用子 Strategy 的稳定 ID。
-
-### 3.7 Provenance and references
+### 3.6 Provenance and references
 
 v6.0 的主路径是把已有科学文献或当前研究结果 formalize 成可推理的 Gaia epistemic graph。它不引入第二套 citation / provenance 模型，而是复用 Gaia 现有的 references and provenance pipeline。
 
-`Claim.content` 和所有 warrant 文本都应该进入现有 refs resolver。warrant 文本包括 support methods 的 `reason=...`、source-first verbs 的 `reason=...`、`derive(..., reason=...)`、`observe(..., reason=...)`、`compute(..., reason=...)` / `@compute(...)` docstring、relation 的 `reason=...` 和 composition 的 `reason=...`。解析成功的 citation refs 与 referenced claims 写入既有 provenance metadata，例如 `metadata.gaia.provenance.cited_refs` 和 `metadata.gaia.provenance.referenced_claims`。
+`Knowledge.content`、`Claim.content` 和所有 `Warrant.content` 都应该进入现有 refs resolver。解析成功的 citation refs 与 referenced claims 写入既有 provenance metadata，例如 `metadata.gaia.provenance.cited_refs` 和 `metadata.gaia.provenance.referenced_claims`。
 
 ```python
 uv_data = Claim(
     "Measured blackbody spectrum deviates from Rayleigh-Jeans law [@Planck1901]."
 )
 
-observe(
-    conclusion=uv_data,
+uv_data.supported_by(
+    inputs=[],
+    pattern="observation",
+    label="planck_1901_reports_uv_deviation",
     context=[lab, spectrometer],
-    reason="Figure 2 reports systematic deviation at high frequency [@Planck1901].",
+    warrant="Figure 2 reports systematic deviation at high frequency [@Planck1901].",
     prior=0.95,
 )
 ```
@@ -578,19 +505,19 @@ observe(
 
 | Prior | 谁设 | 含义 |
 |-------|------|------|
-| **Warrant prior**（DSL warrant 上的 `prior=`） | 作者 | 这条推理规则、观测方法、计算或关系声明的可靠度 |
-| **Claim prior**（priors.py 中的值） | Reviewer | 这个命题本身的可信度 |
+| **Domain Claim prior** | Reviewer | 科学命题本身的可信度 |
+| **Warrant prior** | 作者默认值 + Reviewer 审查 | 这条支持、关系、计算或观测 warrant 是否成立 |
 
-作者在 DSL 中设定 warrant prior，reviewer 审查 claim prior 和 warrant prior。两者独立：Claim prior 量化命题本身的先验可信度，warrant prior 量化“这条连接为什么成立”的可靠度。
+`Warrant` 是 `Claim` 子类，所以 warrant prior 本质上就是 Warrant claim 的 prior。区别只在 review UI：domain Claim 和 Warrant 分开导出、分开审查。Strategy 本身不再承载 v6 authoring-level prior；它只连接 `premises=[warrant, *inputs]` 到 conclusion。
 
-编译后，warrant prior 总是挂在 Gaia IR 中已经存在的对象上：
+编译后：
 
-| DSL warrant | 编译后 prior 位置 |
+| DSL object | 编译后 prior 位置 |
 |-------------|------------------|
-| support methods / source-first verbs / `derive(...)` / `compute(...)` / `@compute(...)` / 有 premise 的 `observe(...)` | `Strategy.metadata["prior"]`，需要形式化时再传播到生成的 helper Claim |
-| 无 premise 的 `observe(...)` | `Strategy(type="infer")` 的 `StrategyParamRecord(conditional_probabilities=[prior])` |
-| `contradiction(...)` / `equivalence(...)` 等 relation | `Operator` 仍是确定性约束；不确定性由生成的 helper Claim 的 prior 承载 |
-| `abduction(...)` / `induction(...)` / `compose(...)` | `CompositeStrategy.metadata["prior"]` 或 composition-validity helper Claim |
+| 普通 `Claim` | `PriorRecord(knowledge_id=claim_id)` |
+| `Warrant` from `supported_by(...)` | `PriorRecord(knowledge_id=warrant_id)` |
+| `Warrant` from `match(...)` / `contradict(...)` | helper/warrant Claim 的 `PriorRecord` |
+| `Warrant` from `compute(...)` / `@compute(...)` | computation Warrant Claim 的 `PriorRecord` |
 
 ### 4.2 Warrant 导出
 
@@ -609,14 +536,14 @@ gaia check --warrants --blind      # prior 留空（blank-slate）
 # warrant_priors.py（gaia check --warrants 自动生成模板）
 WARRANT_PRIORS = {
     # Pre-filled: target_id_or_alias: (author_prior, reviewer_justification)
-    "strategy:planck_resolves_catastrophe": (0.95, ""),
-    "strategy:uv_catastrophe_measurement":  (0.95, ""),
-    "strategy:planck_spectrum":             (0.99, ""),
-    "relation:energy_models_exclusive":     (0.99, ""),
+    "warrant:quantization_predicts_finite_high_frequency_radiation": (0.94, ""),
+    "warrant:planck_1900_reports_finite_high_frequency_radiation":   (0.95, ""),
+    "warrant:quantum_prediction_matches_observed_finite_radiation":  (0.93, ""),
+    "warrant:quantization_explains_uv_anomaly":                      (0.93, ""),
 }
 ```
 
-模板里可以使用可读 alias；编译器最终解析为稳定 IR ID（`strategy_id`、`operator_id` 或 helper Claim ID）。Review 不依赖 Python 函数对象身份，因为 `derive()` / `observe()` / relation 本身不是函数定义，也没有可 import 的 warrant 对象。
+模板里可以使用可读 warrant label；编译器最终解析为 Warrant claim 的稳定 IR ID。Review 不依赖 Python 函数对象身份，也不要求用户引用 Strategy/Operator id。
 
 ### 4.3 Claim Prior 审查
 
@@ -664,17 +591,20 @@ class InfoTransfer(Claim):
 for src, dst, name, evidence in confirmed_transfers:
     reported = Claim(f"{name} reports information transfer from {src} to {dst}.")
 
-    obs = observe(
-        conclusion=reported,
+    reported.supported_by(
+        inputs=[],
+        pattern="observation",
+        label=f"{name}_reports_{src}_to_{dst}",
         context=[molecular_bio_lab],
-        reason=f"{name}: {evidence}",
+        warrant=f"{name}: {evidence}",
         prior=0.99,
     )
 
-    derive(
-        [reported],
-        conclusion=InfoTransfer(src=src, dst=dst),
-        reason=f"{name} confirmed by independent evidence",
+    InfoTransfer(src=src, dst=dst).supported_by(
+        inputs=[reported],
+        pattern="derivation",
+        label=f"{name}_supports_info_transfer_{src}_to_{dst}",
+        warrant=f"{name} confirmed by independent evidence",
         prior=0.99,
     )
 ```
@@ -731,17 +661,20 @@ Package: blackbody-radiation-gaia
 ━━━ Goal 1: quantum_hyp (exported) ━━━
   Status: WARRANTED (needs review)
 
-  quantum_hyp ← derive:planck_resolves_catastrophe(planck_result, uv_data) [0.95]
-  │  "Planck spectrum resolves UV catastrophe."
+  quantum_hyp ← warrant:quantization_explains_uv_anomaly [pattern=explanation, prior=0.93]
+  │  "Quantum prediction matches observation while classical prediction contradicts it."
   │
-  ├─ planck_result ← compute:planck_spectrum(T, freq) [0.99]
+  ├─ agreement ← match:quantum_prediction_matches_observed_finite_radiation [0.93]
+  │  "The predicted finite spectrum matches measured data."
+  │
+  ├─ anomaly ← contradict:classical_prediction_contradicts_observed_finite_radiation [0.96]
+  │  "Classical divergence conflicts with finite measured radiation."
+  │
+  ├─ planck_result ← warrant:planck_spectrum_computation [pattern=computation, prior=0.99]
   │  "Planck's law: B(ν,T) = ..."
   │
-  └─ uv_data ← observe:uv_catastrophe_measurement() [0.95]
+  └─ uv_data ← warrant:planck_1900_reports_finite_high_frequency_radiation [pattern=observation, prior=0.95]
      "Measured at 5 frequency points..."
-
-  quantum_hyp ⊥ classical_hyp ← relation:energy_models_exclusive
-     "Mutually exclusive models."
 
 ━━━ Summary ━━━
   Warranted claims:  2/2 goals have warrant chains
@@ -753,10 +686,10 @@ Package: blackbody-radiation-gaia
 
 | 类型 | 含义 | 严重度 |
 |------|------|--------|
-| **Unwarranted** | Claim 没有任何 Strategy / Operator 连接，且不是 `root_kind` allowed root（即使有 prior） | 结构性 hole |
-| **Unreviewed** | 有 warrant 但 warrant prior 未被 reviewer 确认 | 审查 hole |
+| **Unwarranted** | 非 Warrant Claim 没有 incoming support Strategy，且不是 `root_kind` allowed root（即使有 prior） | 结构性 hole |
+| **Unreviewed** | 有 Warrant 但 Warrant prior 未被 reviewer 确认 | 审查 hole |
 
-核心原则：**prior ≠ justification**。没有 warrant、也没有 explicit root declaration 的 Claim 是 hole，不管有没有 prior。
+核心原则：**prior ≠ justification**。普通 Claim 需要 incoming Warrant 或 explicit root declaration；Warrant 本身是可审查的理由 claim，由 reviewer 通过 warrant review 接受或调整。
 
 ### 6.5 Quality Gate
 
@@ -784,28 +717,24 @@ Timeline、failed hypotheses、experiment planning、hypothesis revision、lab-n
 
 ## 7. 编译到 IR
 
-v6 DSL 的所有构造都直接编译到 Gaia IR。这里的核心约束是：不新增 Action IR，不新增额外层级；作者写的是 Python DSL，编译产物仍然只有 Knowledge、Strategy、FormalStrategy、Operator、CompositeStrategy 和 parameterization records。
+v6 DSL 的所有构造都直接编译到 Gaia IR。这里的核心约束是：不新增 Action IR，不新增额外层级；作者写的是 Python DSL，编译产物仍然只有现有 IR Knowledge、Strategy、Operator 和 parameterization records。
 
 | v6 DSL | 编译目标 |
 |--------|---------|
 | `Knowledge(...)` | 不进入 IR（metadata only） |
 | `Setting(...)` | IR Knowledge (type=setting) |
 | `Claim(...)` / Claim 子类 | IR Knowledge (type=claim)，参数化实例记录 `parameters`；`root_kind` 作为 allowed-root metadata |
+| `Warrant(...)` | IR Knowledge (type=claim)，`metadata.kind="warrant"`，`metadata.pattern=...` |
 | `Question(...)` | IR Knowledge (type=question) |
-| `claim.predicted_from(...)` / `claim.derived_from(...)` / `claim.explains(...)` | 展开为 `Strategy(..., conclusion=claim)` |
-| `h.predict(...)` / `h.derive(...)` | 新 Claim + `Strategy(..., premises=[h, *given])` |
-| `derive(...)` | `Strategy(type="support" / "deduction" / ...)`；需要形式化时展开为 `FormalStrategy + FormalExpr` |
-| 有 premise 的 `observe(...)` | `Strategy(type="support", premises=[...], conclusion=...)`，`context` → `background` |
-| 无 premise 的 `observe(...)` | `Strategy(type="infer", premises=[], conclusion=...)` + `StrategyParamRecord(conditional_probabilities=[prior])` |
-| `compute(...)` / `@compute(...)` | 输出 Claim + `Strategy(type="support")` + `metadata.compute` |
-| `match(...)` / `contradict(...)` | `Operator(type="equivalence" / "contradiction")` + helper Claim |
-| `contradiction(...)` / `equivalence(...)` 等 relation | top-level `Operator` + helper Claim |
-| `abduction(...)` / `induction(...)` / `compose(...)` | `CompositeStrategy(sub_strategies=[strategy_id, ...])` |
+| `claim.supported_by(...)` | 创建 Warrant + `Strategy(type="support", premises=[warrant, *inputs], conclusion=claim)` |
+| `compute(...)` / `@compute(...)` | 输出 Claim + computation Warrant + `Strategy(type="support")` + compute metadata |
+| `match(...)` | Warrant/helper Claim + `Operator(operator="equivalence", variables=[a,b], conclusion=warrant)` |
+| `contradict(...)` | Warrant/helper Claim + `Operator(operator="contradiction", variables=[a,b], conclusion=warrant)` |
 | Claim 子类实例化 | ground IR Knowledge + bound parameters |
 | `for` 循环展开 | N 个 ground IR Knowledge + N 个 ground Strategy / Operator |
-| `conclusion=` 多支持 | 多个 Strategy 指向同一个 IR Knowledge |
-| `reason=` | `Strategy.steps` / `metadata`，relation 则进入 helper Claim / Operator metadata |
-| warrant prior | `Strategy.metadata["prior"]`、`StrategyParamRecord` 或 helper Claim prior |
+| 多个 `supported_by(...)` | 多个 Warrant + 多个 Strategy 指向同一个 IR Knowledge |
+| `warrant=` | Warrant.content / provenance metadata |
+| warrant prior | Warrant Claim 的 `PriorRecord` |
 
 ### 7.1 必需 IR 扩展
 
@@ -825,11 +754,11 @@ class Parameter(BaseModel):
 - 不新增 Action 节点。
 - 不新增额外调用层对象。
 - 不新增 `observe` strategy type。
-- 不新增 zero-premise support。无 premise 的 `observe()` 编译为现有 `infer`，因为 `infer` 的 CPT 长度是 `2^k`，当 `k=0` 时自然是单项 `[prior]`。
+- 不新增 zero-premise support。v6.0 用 Warrant 作为 support premise，因此 observation/citation 也可以编译为普通 support edge。
 
 ### 7.3 稳定 ID 与 review key
 
-`gaia check --warrants` 可以输出可读 alias，但最终必须解析到 IR stable ID。实现上可以把 Python 变量名、函数名、source location、reason hash 等 traceability 信息放进 `metadata`，不需要扩展 IR schema。多个 warrant 即使 premise/conclusion 相同，也必须通过 source trace 或显式 alias 区分，避免 review 时合并成同一项。
+`gaia check --warrants` 可以输出可读 label，但最终必须解析到 Warrant claim 的 IR stable ID。实现上可以把 Python 变量名、函数名、source location、warrant hash 等 traceability 信息放进 `metadata`，不需要扩展 IR schema。多个 warrant 即使 inputs/conclusion 相同，也必须通过显式 `label` 或 source trace 区分，避免 review 时合并成同一项。
 
 ---
 
@@ -842,19 +771,19 @@ class Parameter(BaseModel):
 | `claim("...")` | `Claim("...")` 或自定义子类 | 大写，class 风格 |
 | `setting("...")` | `Setting("...")` | 大写 |
 | `question("...")` | `Question("...")` | 大写 |
-| `support([a], b, prior=0.9)` | `derive([a], conclusion=b, prior=0.9)` | 普通函数调用 |
-| `deduction([a], b)` | `derive([a], conclusion=b, type="deduction", prior=0.99)` | 普通函数调用 + type 参数 |
-| `contradiction(a, b)` | `contradiction(a, b, reason=..., prior=...)` 或 `contradict(a, b, ...)` | relation 函数 |
-| `equivalence(a, b)` | `equivalence(a, b, reason=..., prior=...)` 或 `match(a, b, ...)` | relation 函数 |
-| `noisy_and` | 废弃，用 `derive(..., type="support")` | 已在 v5 中废弃 |
+| `support([a], b, prior=0.9)` | `b.supported_by(inputs=[a], pattern="derivation", warrant=..., prior=0.9)` | 创建 Warrant + support Strategy |
+| `deduction([a], b)` | `b.supported_by(inputs=[a], pattern="deduction", warrant=..., prior=0.99)` | deduction 是 Warrant pattern |
+| `contradiction(a, b)` | `contradict(a, b, warrant=..., prior=...)` | 用户侧只暴露科学语义 wrapper |
+| `equivalence(a, b)` | `match(a, b, warrant=..., prior=...)` | 用户侧只暴露科学语义 wrapper |
+| `noisy_and` | 废弃，用 `supported_by(..., pattern=...)` | 已在 v5 中废弃 |
 | `review_claim(...)` | `priors.py` PRIORS dict | 已在 0.4.2 废弃 |
-| `review_strategy(...)` | `warrant_priors.py` | Strategy / Operator / helper Claim stable ID 或 alias 作为 key |
-| `composite(...)` | `compose(...)` / `abduction(...)` / `induction(...)` | 组合 Strategy handle |
+| `review_strategy(...)` | `warrant_priors.py` | Warrant label / Warrant stable ID 作为 key |
+| `composite(...)` | deferred | 后续可作为 advanced composition API |
 | `fills(source, target)` | 保持不变 | 跨包 premise 桥接 |
 
 ### 8.2 兼容性
 
-v5 的函数式 API（`claim()`, `support()`, `deduction()` 等）保留为 deprecated 兼容层，内部编译到与 v6 相同的 IR。新包应使用 v6 API。旧的 `support()` 可直接映射到 `derive(..., type="support")`；旧的 relation 函数语义保留，但 v6 明确它们不是 decorator。
+v5 的函数式 API（`claim()`, `support()`, `deduction()` 等）保留为 deprecated 兼容层，内部编译到与 v6 相同的 IR。新包应使用 v6 API。旧的 `support()` / `deduction()` 可直接映射到 `Claim.supported_by(..., pattern=...)`；旧的 raw operator 函数属于 IR/compat 层，不作为 v6.0 authoring surface。
 
 ---
 

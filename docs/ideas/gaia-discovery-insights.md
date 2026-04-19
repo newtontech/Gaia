@@ -72,7 +72,7 @@ gaia-lang       (external: compiler, IR, validator, lowering, InferenceEngine)
 | **Graph mutability** | Static after compilation | Dynamic, grows each iteration |
 | **BP timing** | One-shot after compilation | Incremental after each verification |
 | **Node state** | Only prior/posterior | Dual: discrete (proven/refuted) + continuous (belief) |
-| **Reasoning module selection** | Human chooses (derive/observe/compute) | Engine chooses (7 modules, UCB scheduling) |
+| **Reasoning module selection** | Human chooses Warrant pattern / relation / compute | Engine chooses (7 modules, UCB scheduling) |
 | **Verification** | Human reviewer | Automated (Python sandbox / Lean / LLM judge) |
 | **Identity** | Versioned `(knowledge_id, version)` | Flat node IDs, text-based deduplication |
 | **Organization** | Package/module hierarchy | Flat hypergraph |
@@ -111,9 +111,9 @@ DZ nodes have both discrete status (`proven`/`refuted`/`unverified`) and continu
 
 Every DZ hyperedge records which module (`PLAUSIBLE`/`EXPERIMENT`/`LEAN`) produced it. This enables confidence differentiation: formal proofs get higher confidence than heuristic reasoning.
 
-**Why this matters for Gaia:** Gaia's user-facing support wrappers (`predicted_from`, `observed_from`, `compute`, relation wrappers) encode this intent at authoring time. Inquiry/review tools should be able to reconstruct enough traceability from existing Strategy/Operator ids, source locations, and provenance.
+**Why this matters for Gaia:** Gaia's user-facing `supported_by(..., pattern=...)`, `compute`, and relation wrappers encode this intent at authoring time. Inquiry/review tools should be able to reconstruct enough traceability from Warrant labels, source locations, and provenance.
 
-**v6 implication:** Do not introduce Action IR. Preserve source traceability and provenance for generated Strategy/Operator objects so tools can support:
+**v6 implication:** Do not introduce Action IR. Preserve source traceability and provenance for generated Warrant/Strategy/Operator objects so tools can support:
 - InquiryState filtering by evidence type ("show only experimentally verified claims")
 - Confidence calibration by reasoning type
 - Audit trails for warrant review
@@ -154,9 +154,9 @@ Goal: quantum_hyp [posterior=0.85]
   
   Verification plan:
     A: planck_spectrum (compute, verified ✓)
-    B: uv_catastrophe (observe, reviewed ✓)
-    C: planck_resolves (derive, needs review ⚠)
-    D: classical_fails (derive, low confidence, optional)
+    B: uv_catastrophe (pattern=observation, reviewed ✓)
+    C: planck_resolves (pattern=explanation, needs review ⚠)
+    D: classical_fails (pattern=elimination, low confidence, optional)
   
   Suggested next action: Review warrant for planck_resolves
   Expected posterior gain: 0.85 → 0.92 if approved
@@ -180,7 +180,7 @@ DZ classifies claims into three types, each with a default verification method:
 
 For v6.0, this should remain outside Gaia Lang core:
 - discovery tools may classify generated candidates before choosing a verifier;
-- review tools may display the method used by a support edge;
+- review tools may display the Warrant pattern used by a support edge;
 - the persisted Gaia graph remains ordinary Claim + support/relation structure.
 
 ### 3. Critical Gap Analysis — Structural Bottleneck Detection
@@ -230,13 +230,13 @@ Goal: quantum_hyp [posterior=0.75, unchanged for 3 commits]
   ⚠ Stall detected: No belief gain in recent updates.
   
   Suggestions:
-  - Try a different reasoning approach (current: induction, consider: abduction)
+  - Try a different Warrant pattern (current: induction, consider: abduction)
   - Decompose the claim into sub-claims
   - Look for analogies in related domains
   - Add experimental evidence (only theoretical support so far)
 ```
 
-**Implementation:** Track belief history in package metadata. Detect stalls and suggest alternative Action types based on what's been tried.
+**Implementation:** Track belief history in package metadata. Detect stalls and suggest alternative Warrant patterns based on what's been tried.
 
 ---
 
@@ -290,9 +290,9 @@ This positions Gaia IR as the "LLVM IR of scientific reasoning."
 ### High Priority (Should Be in v6.0)
 
 1. **Keep Claim identity stable** — no `Hypothesis`/`Observation`/`QuantitativeClaim` subtype split for roles or verification routes
-2. **Preserve source traceability for generated Strategy/Operator objects** — enough for review/inquiry tools to reconstruct which wrapper created each warrant
+2. **Represent Warrant as a Claim subtype with `pattern` and stable labels** — enough for review/inquiry tools to reference and audit each argument step
 3. **Formalize runtime compilation API** — document `CollectedPackage` + `compile_package_artifact()` as a public API for programmatic package construction
-4. **Support source-first exploration sugar** — e.g. `h.predict(...)` creates a new Claim and records the corresponding support edge
+4. **Keep source-first exploration sugar deferred** — discovery tools can still emit plain Claim + Warrant + Strategy graphs in v6.0
 
 ### Medium Priority (v6.1 or Later)
 
