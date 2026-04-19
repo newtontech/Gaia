@@ -111,7 +111,7 @@ DZ nodes have both discrete status (`proven`/`refuted`/`unverified`) and continu
 
 Every DZ hyperedge records which module (`PLAUSIBLE`/`EXPERIMENT`/`LEAN`) produced it. This enables confidence differentiation: formal proofs get higher confidence than heuristic reasoning.
 
-**Why this matters for Gaia:** Gaia's user-facing `supported_by(..., pattern=...)`, `compute`, and relation wrappers encode this intent at authoring time. Inquiry/review tools should be able to reconstruct enough traceability from Warrant labels, source locations, and provenance.
+**Why this matters for Gaia:** Gaia's user-facing `supported_by(..., pattern=...)`, `compute`, and relation wrappers encode this intent at authoring time. Inquiry/review tools should be able to reconstruct enough traceability from Warrant labels, generated review Questions, source locations, and provenance.
 
 **v6 implication:** Do not introduce Action IR. Preserve source traceability and provenance for generated Warrant/Strategy/Operator objects so tools can support:
 - InquiryState filtering by evidence type ("show only experimentally verified claims")
@@ -290,7 +290,7 @@ This positions Gaia IR as the "LLVM IR of scientific reasoning."
 ### High Priority (Should Be in v6.0)
 
 1. **Keep Claim identity stable** — no `Hypothesis`/`Observation`/`QuantitativeClaim` subtype split for roles or verification routes
-2. **Represent Warrant as a Claim subtype with `pattern` and stable labels** — enough for review/inquiry tools to reference and audit each argument step
+2. **Represent Warrant as a Claim subtype with `pattern`, generated review Questions, `reason`, and stable labels** — enough for review/inquiry tools to reference and audit each argument step
 3. **Formalize runtime compilation API** — document `CollectedPackage` + `compile_package_artifact()` as a public API for programmatic package construction
 4. **Keep source-first exploration sugar deferred** — discovery tools can still emit plain Claim + Warrant + Strategy graphs in v6.0
 
