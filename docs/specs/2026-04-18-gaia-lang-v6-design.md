@@ -315,10 +315,37 @@ implication(a, b, reason="...", prior=0.95)
 
 ### 3.5 compute
 
-将 Python 函数包装为 executable witness。Compute 是唯一拥有实际函数体、也唯一使用 decorator 的 DSL 构造。
+Compute 将 Python 函数的执行结果连接到推理图中。和 derive/observe 一样，底层是一个普通函数调用；`@compute` decorator 是语法糖。
+
+#### 3.5.1 底层结构：`compute()` 函数
 
 ```python
-@compute(output=SpectralRadiance, reason="Planck's analytical law.", prior=0.99)
+result = compute(
+    fn=planck_spectrum_fn,          # 一个普通 Python callable
+    inputs=[T, freq],               # 输入 Knowledge 列表
+    conclusion=SpectralRadiance,    # 输出 Claim 类型（参数化子类）
+    reason="Planck's law: B(ν,T) = (2hν³/c²) · 1/(exp(hν/kT) - 1).",
+    prior=0.99,
+)
+```
+
+`compute()` 的职责：
+
+1. 从每个 input Knowledge 的 parameters 中按名称提取 raw value
+2. 用提取的 raw value 调用 `fn`
+3. 将返回值包装为 `conclusion` 类型指定的 Claim 子类实例
+4. 注册 Strategy 连接 inputs → 输出 Claim
+5. 在 Strategy metadata 中记录 `kind="compute"`、函数名、代码 hash、输入输出参数、source location
+6. 返回输出 Claim
+
+`compute()` 返回 Claim（和 derive/observe 一致），Strategy handle 通过 IR 追踪。
+
+**编译**：编译为 `Strategy(type="support", premises=[inputs], conclusion=result)` + `metadata.compute`（函数名、代码 hash、source location）。warrant = `reason` 参数（或 `fn.__doc__`）。
+
+#### 3.5.2 语法糖：`@compute` decorator
+
+```python
+@compute(prior=0.99)
 def planck_spectrum(T: CavityTemperature, freq: TestFrequency) -> SpectralRadiance:
     """Planck's law: B(ν,T) = (2hν³/c²) · 1/(exp(hν/kT) - 1).
     Exact analytical formula, no approximation."""
@@ -333,16 +360,28 @@ result = planck_spectrum(
 # result 是 SpectralRadiance(value=...)，content 由模板自动渲染
 ```
 
-**Decorator 职责**：
+Decorator 做的事等价于：
 
-1. 检查函数签名中的类型标注
-2. 调用时：从输入 Knowledge 的 parameters 中按名称提取 value
-3. 用提取的 raw value 调用原始函数
-4. 将返回值包装为返回类型标注指定的 Claim 子类
-5. 注册 Strategy 连接输入 Knowledge → 输出 Claim
-6. 在 Strategy metadata 中记录 `kind="compute"`、函数名、代码 hash、输入输出参数、source location
+```python
+def planck_spectrum_fn(T: float, freq: float) -> float:
+    ...
 
-**对用户零侵入**：已有的 Python 函数加一行 `@compute(output=..., prior=...)` 即可。函数内部仍然操作 raw Python 值，不需要了解 Knowledge 系统。
+result = compute(
+    fn=planck_spectrum_fn,
+    inputs=[CavityTemperature(value=5000.0), TestFrequency(value=1e15)],
+    conclusion=SpectralRadiance,
+    reason=planck_spectrum_fn.__doc__,
+    prior=0.99,
+)
+```
+
+Decorator 自动从函数签名推断：
+- 输入类型（`T: CavityTemperature`）→ inputs 的类型约束
+- 输出类型（`-> SpectralRadiance`）→ conclusion 的 Claim 子类
+- docstring → reason（warrant）
+- prior → decorator 参数
+
+**对用户零侵入**：已有的 Python 函数加一行 `@compute(prior=...)` 即可。函数内部仍然操作 raw Python 值，不需要了解 Knowledge 系统。
 
 **Compute 链式串联**：一个 Compute 的输出（Claim 子类）可以直接作为另一个 Compute 的输入，自动形成推理链。
 
