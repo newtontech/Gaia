@@ -555,13 +555,52 @@ new/existing Claim + Warrant(pattern=...) + Strategy/Operator
 
 ### 3.6 Provenance and references
 
-v6.0 的主路径是把已有科学文献或当前研究结果 formalize 成可推理的 Gaia epistemic graph。它不引入第二套 citation / provenance 模型，而是复用 Gaia 现有的 references and provenance pipeline。
+v6.0 的主路径是把已有科学文献或当前研究结果 formalize 成可推理的 Gaia epistemic graph。它不引入第二套 citation / provenance 模型，而是复用 Gaia 现有的 references and provenance pipeline，具体对齐 [References & `@` Syntax Unification Design](./2026-04-09-references-and-at-syntax.md)。
 
-`Knowledge.content`、`Claim.content`、`Warrant.reason` 和自动生成的 `Warrant.question.content` 都应该进入现有 refs resolver。解析成功的 citation refs 与 referenced claims 写入既有 provenance metadata，例如 `metadata.gaia.provenance.cited_refs` 和 `metadata.gaia.provenance.referenced_claims`。
+`Knowledge.content`、`Claim.content`、`Warrant.reason` 和自动生成的 `Warrant.question.content` 都应该进入现有 refs resolver。解析成功的 citation refs 与 referenced claims 写入既有 provenance metadata：
+
+```python
+knowledge.metadata["gaia"]["provenance"] = {
+    "cited_refs": ["Planck1901", "planck_1901_fig2_scan"],
+    "referenced_claims": ["blackbody_data_claim"],
+}
+```
+
+v6 surface 上有三类来源语义，分别复用现有通道：
+
+| 来源 | 表达方式 | 编译结果 |
+|------|----------|----------|
+| 本包或 imported package 里的 claim / knowledge | `[@label]` 或 `@label` | `metadata["gaia"]["provenance"]["referenced_claims"]` |
+| 论文、书、网页、数据集、软件、图表、实验日志、`artifacts/` 或其他包内材料 | package root 的 `references.json`，CSL-JSON dict-by-key；content / reason 里用 `[@key]` 或 `@key` 引用 | `metadata["gaia"]["provenance"]["cited_refs"]` |
+| package-version source lineage | 现有 `Knowledge.provenance` / `claim(..., provenance=[...])` | IR `Knowledge.provenance: list[PackageRef]` |
+
+因此，本地 artifact 不应该通过新的 v6 object 表达。若一个文件是 claim 的证据来源，就把它登记成 `references.json` 里的 CSL entry，再在 `Claim.content` 或 `Warrant.reason` 中引用。CSL 1.0.2 已支持 `figure`、`graphic`、`dataset`、`software`、`document`、`report`、`webpage` 等类型；`URL` 可以指向 DOI / 外部 URL，也可以指向 package-relative 文件路径。`metadata.figure` 仍然可以给 GitHub Pages / Wiki renderer 用来展示图片，但它是 presentation metadata，不是 provenance source of truth。
+
+```json
+{
+  "Planck1901": {
+    "type": "article-journal",
+    "title": "On the Law of Distribution of Energy in the Normal Spectrum",
+    "author": [{"family": "Planck", "given": "Max"}],
+    "issued": {"date-parts": [[1901]]}
+  },
+  "planck_1901_fig2_scan": {
+    "type": "figure",
+    "title": "Scanned blackbody spectrum figure used for UV deviation extraction",
+    "URL": "artifacts/planck_1901/fig2.png"
+  },
+  "planck_lab_log": {
+    "type": "dataset",
+    "title": "Digitized blackbody radiation measurements",
+    "URL": "data/planck_lab_log.csv"
+  }
+}
+```
 
 ```python
 uv_data = Claim(
-    "Measured blackbody spectrum deviates from Rayleigh-Jeans law [@Planck1901]."
+    "Measured blackbody spectrum deviates from Rayleigh-Jeans law "
+    "[@Planck1901] [@planck_1901_fig2_scan]."
 )
 
 uv_data.supported_by(
@@ -569,12 +608,17 @@ uv_data.supported_by(
     pattern="observation",
     label="planck_1901_reports_uv_deviation",
     context=[lab, spectrometer],
-    reason="Figure 2 reports systematic deviation at high frequency [@Planck1901].",
+    reason=(
+        "Figure 2 reports systematic deviation at high frequency "
+        "[@planck_1901_fig2_scan]; the digitized table is [@planck_lab_log]."
+    ),
     prior=0.95,
 )
 ```
 
 跨包和 imported claim 的 provenance 仍遵循现有 owner boundary：consumer package 可以引用 foreign claim，但不能把本地 citation 写回 foreign node。Bridge reason 可以被 validate；是否保留为 bridge-local provenance 是后续生态层问题，不改变 Gaia IR。
+
+如果后续需要更严格的 artifact resolver，例如校验 package-relative path 是否存在、记录 checksum、或接入 storage `resources.json` / `attachments.json`，也应该作为现有 refs pipeline 的扩展，把结果写回同一个 `metadata["gaia"]["provenance"]` 命名空间，而不是在 v6 action / claim surface 上另起一套 evidence attachment 系统。
 
 ---
 
