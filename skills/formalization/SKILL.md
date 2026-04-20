@@ -206,21 +206,23 @@ abd = abduction(s_h, s_alt, comp,
 
 **Note:** `abduction()` returns a Strategy (not a Knowledge). You must assign the return value to a named public variable (e.g., `abd_xxx`) so it gets a label and appears in `gaia check --brief` output.
 
-**`induction` is a binary composite of support strategies.** Use `induction(s1, s2, law=law)` with two support strategies. It is chainable: `induction(prev_induction, new_support, law=law)`.
+**`induction` is a binary composite of support strategies.** Use `induction(s1, s2, law=law)` with two support strategies. Each support must be in the **generative direction**: `support([law], prediction)` — the law predicts an observable consequence. It is chainable: `induction(prev_induction, new_support, law=law)`.
 
 ```python
 law = claim("MgB2 universally superconducts below 39K")
-obs1 = claim("Sample A: Tc = 39K")
-obs2 = claim("Sample B: Tc = 39K")
-obs3 = claim("Sample C: Tc = 39K")
+pred1 = claim("Sample A: Tc = 39K")   # prediction: law implies this
+pred2 = claim("Sample B: Tc = 39K")
+pred3 = claim("Sample C: Tc = 39K")
 
-s1 = support([law], obs1, reason="law predicts obs1", prior=0.9)
-s2 = support([law], obs2, reason="law predicts obs2", prior=0.9)
-s3 = support([law], obs3, reason="law predicts obs3", prior=0.9)
+s1 = support([law], pred1, reason="law predicts sample A result", prior=0.9)
+s2 = support([law], pred2, reason="law predicts sample B result", prior=0.9)
+s3 = support([law], pred3, reason="law predicts sample C result", prior=0.9)
 
 ind_12 = induction(s1, s2, law=law, reason="Samples A and B independent")
 ind_123 = induction(ind_12, s3, law=law, reason="Sample C independent")
 ```
+
+**Direction matters:** `support([law], prediction)` creates a factor where confirmation of the prediction (high prior) flows backward to boost the law. The reversed direction `support([prediction], law)` does NOT work — it will be rejected by the compiler.
 
 **Semantics of pi(Alt) -- critical:** In abduction, the prior pi(Alt) of the `alternative` represents: **"the probability that Alt alone can explain Obs without H"** -- not whether Alt's calculation is correct.
 
@@ -528,6 +530,7 @@ After refining all strategies, verify:
 - **Every abduction has a meaningful alternative?** The alternative should be a real competing explanation, not a placeholder. If there's no natural alternative, consider whether abduction is the right pattern.
 - **Abduction alternatives will be reviewed — are they set up correctly?** Each abduction's alternative will need a prior (set via `prior=` on the `support()` call or in `priors.py`). Remember: π(Alt) = "Can Alt alone explain Obs?" (explanatory power), NOT "Is Alt correct?". Flag any abduction where this distinction might be tricky for the reviewer.
 - **Each induction's support sub-strategies independent?** For `induction(s1, s2, law=law)`, each observation should provide independent evidence. If the observations are dependent, consider whether a single support with stronger evidence is more appropriate.
+- **Induction support direction correct?** Every support inside `induction()` **must** use the generative direction: `support([law], prediction)` — law predicts an observable consequence. Never `support([prediction], law)`. When the prediction is confirmed (high prior from experimental data), the backward message through `support([law], prediction)` boosts law's belief. The reversed direction does not create this backward flow correctly.
 
 ### Post-Refinement Check
 
@@ -671,8 +674,9 @@ support([claim_B], law, reason="argument from B's perspective", prior=0.85)
 1. List every claim with 2+ incoming strategies
 2. For each pair of strategies: "does each bring genuinely independent new information?"
 3. For each `induction`: "do the observations share unmodeled dependencies?"
-4. For each `equivalence`: "do both sides need their own strategies to the same target?"
-5. For all strategies: "does the reason text contain evidence not captured as premises?"
+4. For each `induction`: "are all sub-strategy supports in the generative direction (`support([law], prediction)`)?" If any use `support([prediction], law)`, fix the direction — the compiler will reject the wrong direction.
+5. For each `equivalence`: "do both sides need their own strategies to the same target?"
+6. For all strategies: "does the reason text contain evidence not captured as premises?"
 
 ### 5c. Re-compile and Verify
 
@@ -805,6 +809,7 @@ After compiling and running inference, check:
 | Independent premises | belief approx prior (small change) | belief significantly pulled down → downstream constraint conflict |
 | Derived conclusions | belief > 0.5 (pulled up) | belief < 0.5 → see below |
 | Contradiction | One side high, one side low ("picks a side") | Both sides low → prior assignment issue |
+| Abduction hypotheses | Clear separation (H > 0.5, Alt < 0.3) | Near equipoise (H ≈ Alt ≈ 0.33) → support direction reversed or observation missing prior |
 
 If results are clearly wrong (e.g., a well-supported conclusion has belief < 0.3, or a contradiction doesn't pick a side), go back and check:
 
@@ -874,6 +879,8 @@ The critical analysis is the analytical payoff of formalization — it transform
 | Not verifying numerical values | Data errors | Cross-check every value against the source |
 | Same claim in multiple paths to same conclusion | Evidence double-counted, inflated belief | Ensure each leaf enters a conclusion through exactly one path (Pass 5) |
 | Induction with non-independent observations | Overcounted evidence | Extract shared dependencies as explicit claims (Pass 5) |
+| Induction support direction reversed (`support([obs], law)` instead of `support([law], prediction)`) | Backward message from confirmed prediction cannot boost law; hypotheses stuck near prior | Flip to generative direction: `support([law], prediction)` — law predicts prediction, confirmation flows back |
+| Observation claim missing prior (classified as "derived" because it has incoming supports) | Observation's empirical grounding lost; belief depends entirely on theory supports instead of being anchored by data | Add observation to `priors.py` with high prior (0.9+), or model as setting if it is a directly measured fact |
 | Wrong contradiction (claims can both be true) | BP forced to suppress one side incorrectly | Verify operator semantics in Pass 5 |
 | Setting prior on derived claim | Double-counts evidence | Do not set priors for derived claims; inference engine defaults to 0.5 |
 
