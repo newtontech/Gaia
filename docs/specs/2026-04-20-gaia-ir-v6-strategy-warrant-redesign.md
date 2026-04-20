@@ -179,6 +179,49 @@ Implies[G, C]
 LikelihoodScore[target=H, model=two_binomial, query=theta_B>theta_A, log_lr=1.73]
 ```
 
+### Knowledge references in parameters
+
+When a parameterized Claim has a Knowledge-typed parameter (e.g., `experiment: Setting`), the parameter value stores the referenced Knowledge node's QID (qualified ID).
+
+Example at Lang level:
+
+```python
+class ABCounts(Claim):
+    """[@experiment] recorded {ctrl_k}/{ctrl_n} control conversions."""
+    experiment: Setting  # Knowledge-typed parameter
+    ctrl_n: int
+    ctrl_k: int
+    treat_n: int
+    treat_k: int
+
+exp = Setting("AB test exp_123: 50/50 randomization, March 1-14.")
+counts = ABCounts(experiment=exp, ctrl_n=10000, ctrl_k=500, treat_n=10000, treat_k=550)
+```
+
+At IR level:
+
+```python
+Knowledge(
+    knowledge_id="github:my_package::counts",
+    type="claim",
+    content="[@github:my_package::exp] recorded 500/10000 control conversions.",
+    parameters=[
+        Parameter(name="experiment", type="Setting", value="github:my_package::exp"),  # QID reference
+        Parameter(name="ctrl_n", type="int", value=10000),
+        Parameter(name="ctrl_k", type="int", value=500),
+        Parameter(name="treat_n", type="int", value=10000),
+        Parameter(name="treat_k", type="int", value=550),
+    ],
+)
+```
+
+The `[@...]` syntax in `content` is resolved at compile time to the referenced node's label or QID. This allows:
+
+1. **Stable hashing**: Parameter values (including QID references) participate in content hash
+2. **Cross-package matching**: Two packages can reference the same Setting and match on it
+3. **Rendering**: `[@label]` can be rendered as Markdown links in documentation
+4. **Type safety**: Lang layer enforces that Knowledge-typed parameters receive Knowledge objects
+
 ## 4.3 Grounding metadata
 
 A root Claim may include grounding metadata explaining why its prior exists.
@@ -580,7 +623,23 @@ It is not deduction.
 
 AB tests, Mendel ratios, measurement models, Bayes factors, and model comparisons belong here.
 
-## 9.2 Schema extension
+## 9.2 Standard library and auto-generated assumptions
+
+At the Lang level, Gaia v6 provides a standard library of parameterized Claim classes for common statistical assumptions:
+
+```python
+RandomAssignment(experiment: Setting)
+ConsistentLogging(experiment: Setting)
+NoEarlyStopping(experiment: Setting)
+FormulaCorrect(formula_name: str)
+ImplementationCorrect(formula_name: str)
+```
+
+Standard helpers like `ab_test(counts, target)` auto-generate these assumption Claims with default priors, so users don't manually declare them unless overriding.
+
+At IR level, these appear as ordinary `Knowledge(type="claim")` nodes with bound parameters. The IR doesn't distinguish "standard library Claims" from user Claims — they're all just parameterized Claims with priors.
+
+## 9.3 Schema extension
 
 A likelihood Strategy should have a method payload:
 
@@ -1062,16 +1121,20 @@ This means the equivalence has force only to the extent that `ratio_mapping_vali
 
 ## 16.3 AB test likelihood
 
-Claims:
+Claims (instances of parameterized Claim classes):
 
 ```text
-B_better
-ab_counts_true
-randomization_valid
-logging_valid
-stopping_rule_accounted_for
-ab_log_lr_score_correct
+B_better                          — target hypothesis Claim
+ab_counts_true                    — ABCounts(experiment=exp, ctrl_n=10000, ctrl_k=500, treat_n=10000, treat_k=550)
+randomization_valid               — RandomAssignment(experiment=exp)
+logging_valid                     — ConsistentLogging(experiment=exp)
+stopping_rule_accounted_for       — NoEarlyStopping(experiment=exp)
+ab_log_lr_score_correct           — LikelihoodScore(target=B_better, model="two_binomial", query="theta_B > theta_A", log_lr=1.73)
+formula_correct                   — FormulaCorrect(formula_name="two_binomial_log_lr")
+implementation_correct            — ImplementationCorrect(formula_name="two_binomial_log_lr")
 ```
+
+Note: `experiment=exp` means these Claims reference a `Setting` node via Knowledge parameter. At IR level, this is stored as a QID reference in the `Parameter.value` field.
 
 Compute Strategy:
 
@@ -1081,7 +1144,12 @@ Strategy(
     premises=[ab_counts_true, formula_correct, implementation_correct],
     conclusion=ab_log_lr_score_correct,
     reason="Compute the two-binomial log likelihood ratio from AB counts.",
-    method=ComputeMethod(...),
+    method=ComputeMethod(
+        function_ref="two_binomial_log_lr",
+        input_bindings={"counts": ab_counts_true},
+        output=ab_log_lr_score_correct,
+        output_binding={"log_lr": "return_value"},
+    ),
 )
 ```
 
@@ -1107,6 +1175,8 @@ Strategy(
     ),
 )
 ```
+
+In practice, the Lang layer provides `ab_test(counts, target)` helpers that auto-generate these standard assumption Claims, so users don't manually declare them unless overriding defaults.
 
 ---
 

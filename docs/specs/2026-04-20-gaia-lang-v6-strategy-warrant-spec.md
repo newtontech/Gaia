@@ -141,25 +141,34 @@ Rules:
 
 Gaia Lang v6 should support parameterized Claim classes.
 
+Parameters come in two kinds:
+
+- **Value parameters** (`int`, `float`, `str`, `Enum`): use `{param_name}` template substitution in the docstring.
+- **Knowledge parameters** (`Setting`, `Claim`, or subclasses): use `[@param_name]` reference syntax in the docstring. The compiler resolves these to the referenced node's QID at compile time.
+
+Example:
+
 ```python
 class ABCounts(Claim):
-    """Experiment {experiment_id} recorded {control_k}/{control_n} conversions for A and {treatment_k}/{treatment_n} for B."""
-    experiment_id: str
-    control_n: int
-    control_k: int
-    treatment_n: int
-    treatment_k: int
+    """[@experiment] recorded {ctrl_k}/{ctrl_n} control and {treat_k}/{treat_n} treatment conversions."""
+    experiment: Setting    # Knowledge parameter — rendered via [@experiment]
+    ctrl_n: int            # value parameter — rendered via {ctrl_n}
+    ctrl_k: int
+    treat_n: int
+    treat_k: int
 ```
 
 A ground instance:
 
 ```python
+exp = Setting("AB test exp_123: 50/50 hash-based randomization, March 1-14.")
+
 ab_counts = ABCounts(
-    experiment_id="exp_123",
-    control_n=10_000,
-    control_k=500,
-    treatment_n=10_000,
-    treatment_k=550,
+    experiment=exp,
+    ctrl_n=10_000,
+    ctrl_k=500,
+    treat_n=10_000,
+    treat_k=550,
     prior=0.99,
     grounding=Grounding(
         kind="source_fact",
@@ -167,13 +176,21 @@ ab_counts = ABCounts(
         source_refs=[ctx],
     ),
 )
+# ab_counts.content = "[@exp_123] recorded 500/10000 control and 550/10000 treatment conversions."
 ```
+
+Template rendering order:
+
+1. Compiler extracts `[@...]` references from docstring, resolves Knowledge-typed parameters to their labels/QIDs.
+2. Compiler applies `str.format()` for value-typed parameters.
+3. Final `content` contains resolved `[@label]` references and substituted values.
 
 Lowering:
 
 ```text
 Knowledge(type="claim")
 Parameter.value stores bound values.
+Knowledge-typed parameters store the referenced node's QID.
 ```
 
 The bound parameter values must be preserved in IR and included in stable hashes.
@@ -387,7 +404,161 @@ odds(H) *= LR
 
 Therefore statistical evidence should not use ordinary `supported_by` unless the conclusion is merely a threshold/criterion Claim such as “p-value exceeds alpha”.
 
-## 6.2 Recommended surface API
+## 6.2 Standard parameterized Claim library
+
+To avoid requiring users to manually declare standard assumptions for every statistical test, Gaia Lang v6 provides a standard library of parameterized Claim classes.
+
+### Standard assumption Claims
+
+```python
+class RandomAssignment(Claim):
+    “””Users in [@experiment] were randomly assigned between groups.”””
+    experiment: Setting
+
+class ConsistentLogging(Claim):
+    “””Conversions in [@experiment] were logged consistently across groups.”””
+    experiment: Setting
+
+class NoEarlyStopping(Claim):
+    “””[@experiment] analysis accounts for the stopping rule.”””
+    experiment: Setting
+
+class FormulaCorrect(Claim):
+    “””The {formula_name} formula is mathematically correct for this likelihood calculation.”””
+    formula_name: str
+
+class ImplementationCorrect(Claim):
+    “””The reviewed code for {formula_name} implements the formula without relevant bugs.”””
+    formula_name: str
+```
+
+### Standard data Claims
+
+```python
+class ABCounts(Claim):
+    “””[@experiment] recorded {ctrl_k}/{ctrl_n} control and {treat_k}/{treat_n} treatment conversions.”””
+    experiment: Setting
+    ctrl_n: int
+    ctrl_k: int
+    treat_n: int
+    treat_k: int
+
+class LikelihoodScore(Claim):
+    “””Likelihood score for [@target] under {model} model: log_lr = {log_lr:.3f}.”””
+    target: Claim
+    model: str
+    query: str
+    log_lr: float
+```
+
+## 6.3 Standard likelihood helpers
+
+The standard library provides one-line helpers that automatically instantiate standard assumptions:
+
+```python
+def ab_test(counts: ABCounts, target: Claim) -> Strategy:
+    “””Standard AB test likelihood with built-in assumptions.
+    
+    Automatically creates:
+    - RandomAssignment (prior=0.98)
+    - ConsistentLogging (prior=0.97)
+    - NoEarlyStopping (prior=0.80)
+    - FormulaCorrect (prior=0.98)
+    - ImplementationCorrect (prior=0.97)
+    - LikelihoodScore computation via two_binomial_log_lr
+    
+    Returns a likelihood_from Strategy with all assumptions gated.
+    “””
+    exp = counts.experiment
+    
+    # Standard assumptions — auto-generated, user doesn't declare
+    rand = RandomAssignment(experiment=exp, prior=0.98)
+    log  = ConsistentLogging(experiment=exp, prior=0.97)
+    stop = NoEarlyStopping(experiment=exp, prior=0.80)
+    
+    # Computation assumptions
+    formula = FormulaCorrect(formula_name=”two_binomial_log_lr”, prior=0.98)
+    impl = ImplementationCorrect(formula_name=”two_binomial_log_lr”, prior=0.97)
+    
+    # Compute score
+    score = compute(
+        fn=two_binomial_log_lr,
+        inputs=[counts],
+        output=LikelihoodScore(
+            target=target,
+            model=”two_binomial”,
+            query=”theta_B > theta_A”,
+            log_lr=0.0,  # placeholder, computed by fn
+        ),
+        assumptions=[formula, impl],
+        reason=”Compute two-binomial log likelihood ratio.”,
+    )
+    
+    # Likelihood Strategy
+    return likelihood_from(
+        target=target,
+        data=[counts],
+        assumptions=[rand, log, stop],
+        score=score,
+        model=”two_binomial”,
+        query=”theta_B > theta_A”,
+        reason=”AB test likelihood under standard experiment assumptions.”,
+    )
+```
+
+### User-facing usage
+
+With the standard library, users write:
+
+```python
+exp = Setting(“AB test exp_123: 50/50 hash-based randomization, March 1-14.”)
+
+counts = ABCounts(
+    experiment=exp,
+    ctrl_n=10_000, ctrl_k=500,
+    treat_n=10_000, treat_k=550,
+    prior=0.99,
+    grounding=Grounding(kind=”source_fact”, reason=”Extracted from dashboard.”),
+)
+
+b_better = Claim(
+    “Variant B has a higher true conversion rate than A.”,
+    prior=0.5,
+)
+
+ab_test(counts, b_better)
+```
+
+That's it. No manual assumption declaration unless the user wants to override defaults.
+
+### Overriding standard assumptions
+
+If a user needs non-standard priors or additional assumptions:
+
+```python
+# Override stopping rule prior
+stop_custom = NoEarlyStopping(experiment=exp, prior=0.60)
+
+# Manual likelihood_from with custom assumptions
+likelihood_from(
+    target=b_better,
+    data=[counts],
+    assumptions=[
+        RandomAssignment(experiment=exp, prior=0.98),
+        ConsistentLogging(experiment=exp, prior=0.97),
+        stop_custom,  # custom prior
+        novelty_effect_accounted,  # additional assumption
+    ],
+    score=score,
+    model=”two_binomial”,
+    query=”theta_B > theta_A”,
+    reason=”AB test with custom stopping rule confidence and novelty effect check.”,
+)
+```
+
+## 6.4 Low-level likelihood_from API
+
+For non-standard tests or when standard helpers don't apply:
 
 ```python
 likelihood_from(
@@ -395,79 +566,16 @@ likelihood_from(
     data=[data_claims],
     assumptions=[assumption_claims],
     score=likelihood_score_claim,
-    model="...",
-    query="...",
-    reason="...",
-)
-```
-
-Example:
-
-```python
-b_better = Claim(
-    "Variant B has a higher true conversion rate than variant A.",
-    prior=0.5,
-)
-
-ab_counts = ABCounts(
-    experiment_id="exp_123",
-    control_n=10_000,
-    control_k=500,
-    treatment_n=10_000,
-    treatment_k=550,
-    prior=0.99,
-    grounding=Grounding(kind="source_fact", reason="Extracted from dashboard."),
-)
-
-randomization_valid = Claim(
-    "Users were randomly assigned between A and B.",
-    prior=0.98,
-)
-
-logging_valid = Claim(
-    "Conversions were logged consistently for A and B.",
-    prior=0.97,
-)
-```
-
-A score Claim:
-
-```python
-ab_log_lr_score = LikelihoodScore(
-    target=b_better,
-    model="two_binomial",
-    query="theta_B > theta_A",
-    log_lr=1.73,
-    prior=0.99,
-    grounding=Grounding(
-        kind="source_fact",
-        reason="Computed by reviewed two-binomial likelihood function.",
-    ),
-)
-```
-
-Likelihood Strategy:
-
-```python
-likelihood_from(
-    target=b_better,
-    data=[ab_counts],
-    assumptions=[randomization_valid, logging_valid, stopping_rule_accounted_for],
-    score=ab_log_lr_score,
-    model="two_binomial",
-    query="theta_B > theta_A",
-    reason=(
-        "Given valid randomization, consistent logging, stopping-rule handling, "
-        "and a correctly computed likelihood score, the AB-test likelihood ratio "
-        "updates belief in whether B improves conversion."
-    ),
+    model=”...”,
+    query=”...”,
+    reason=”...”,
 )
 ```
 
 Lowering:
 
 ```text
-Strategy(type="likelihood")
+Strategy(type=”likelihood”)
 ```
 
 with premises:
@@ -487,39 +595,7 @@ model
 query
 ```
 
-## 6.3 Score computation can be separate
-
-Often the likelihood score should be produced by `compute(...)` first.
-
-```python
-score = compute(
-    fn=two_binomial_log_lr,
-    inputs=[ab_counts],
-    output=LikelihoodScore(
-        target=b_better,
-        model="two_binomial",
-        query="theta_B > theta_A",
-    ),
-    assumptions=[formula_correct, implementation_correct],
-    reason="Compute the two-binomial log likelihood ratio from the AB counts.",
-)
-```
-
-Then:
-
-```python
-likelihood_from(
-    target=b_better,
-    data=[ab_counts],
-    assumptions=[randomization_valid, logging_valid, stopping_rule_accounted_for],
-    score=score,
-    model="two_binomial",
-    query="theta_B > theta_A",
-    reason="Apply the computed likelihood ratio under the experiment-validity assumptions.",
-)
-```
-
-## 6.4 No likelihood Strategy prior
+## 6.5 No likelihood Strategy prior
 
 Do not write:
 
@@ -531,7 +607,7 @@ If model applicability is uncertain, add an assumption Claim:
 
 ```python
 model_applicable = Claim(
-    "The two-binomial model is appropriate for this experiment.",
+    “The two-binomial model is appropriate for this experiment.”,
     prior=0.85,
 )
 ```
@@ -551,13 +627,16 @@ Example:
 ```python
 score = compute(
     fn=two_binomial_log_lr,
-    inputs=[ab_counts],
+    inputs=[counts],
     output=LikelihoodScore(
         target=b_better,
         model="two_binomial",
         query="theta_B > theta_A",
     ),
-    assumptions=[formula_correct, implementation_correct],
+    assumptions=[
+        FormulaCorrect(formula_name="two_binomial_log_lr", prior=0.98),
+        ImplementationCorrect(formula_name="two_binomial_log_lr", prior=0.97),
+    ],
     reason="Compute the AB-test log likelihood ratio from observed counts.",
 )
 ```
@@ -575,13 +654,13 @@ Do not put probability on the compute Strategy.
 If something is uncertain, use Claims:
 
 ```python
-formula_correct = Claim(
-    "The implemented two-binomial formula matches the intended likelihood calculation.",
+formula_correct = FormulaCorrect(
+    formula_name="two_binomial_log_lr",
     prior=0.98,
 )
 
-implementation_correct = Claim(
-    "The reviewed code implements the formula without relevant bugs.",
+implementation_correct = ImplementationCorrect(
+    formula_name="two_binomial_log_lr",
     prior=0.97,
 )
 ```
@@ -666,12 +745,14 @@ Control A had 10,000 users and 500 conversions.
 Treatment B had 10,000 users and 550 conversions.
 """)
 
+exp = Setting("AB test exp_123: 50/50 hash-based randomization, March 1-14.")
+
 ab_counts = ABCounts(
-    experiment_id="exp_123",
-    control_n=10_000,
-    control_k=500,
-    treatment_n=10_000,
-    treatment_k=550,
+    experiment=exp,
+    ctrl_n=10_000,
+    ctrl_k=500,
+    treat_n=10_000,
+    treat_k=550,
     prior=0.99,
     grounding=Grounding(
         kind="source_fact",
@@ -795,28 +876,42 @@ assertions=[S]
 ## 12.2 Mendel ratio as likelihood
 
 ```python
+from gaia.lang.likelihood import binomial_test, BinomialCounts
+
+exp = Setting("Mendel's pea plant crossing experiment, F2 generation.")
+
 p_is_075 = Claim(
     "The true dominant phenotype probability is 0.75 under the Mendelian model.",
     prior=0.5,
 )
 
-mendel_counts = PhenotypeCounts(
-    dominant=295,
-    recessive=100,
+mendel_counts = BinomialCounts(
+    experiment=exp,
+    successes=295,
+    trials=395,
     prior=0.98,
     grounding=Grounding(kind="source_fact", reason="Extracted from the experimental report."),
 )
 
+binomial_test(mendel_counts, target=p_is_075, p_hypothesis=0.75)
+```
+
+For manual control, the full low-level form is still available:
+
+```python
 binomial_model_valid = Claim(
     "The binomial sampling model is appropriate for this phenotype count experiment.",
     prior=0.85,
 )
 
+formula = FormulaCorrect(formula_name="binomial_log_lr", prior=0.98)
+impl = ImplementationCorrect(formula_name="binomial_log_lr", prior=0.97)
+
 score = compute(
-    fn=binomial_log_lr_for_p_075,
+    fn=binomial_log_lr_for_p,
     inputs=[mendel_counts],
     output=LikelihoodScore(target=p_is_075, model="binomial", query="p=0.75"),
-    assumptions=[formula_correct, implementation_correct],
+    assumptions=[formula, impl],
     reason="Compute the likelihood score of the observed counts under p=0.75.",
 )
 
@@ -833,42 +928,58 @@ likelihood_from(
 
 ## 12.3 AB test
 
+Using the standard library:
+
 ```python
+from gaia.lang.likelihood import ab_test, ABCounts
+
+exp = Setting("AB test exp_123: 50/50 hash-based randomization, March 1-14.")
+
 b_better = Claim(
     "Variant B has a higher true conversion rate than variant A.",
     prior=0.5,
 )
 
-ab_counts = ABCounts(
-    experiment_id="exp_123",
-    control_n=10_000,
-    control_k=500,
-    treatment_n=10_000,
-    treatment_k=550,
+counts = ABCounts(
+    experiment=exp,
+    ctrl_n=10_000,
+    ctrl_k=500,
+    treat_n=10_000,
+    treat_k=550,
     prior=0.99,
     grounding=Grounding(kind="source_fact", reason="Extracted from experiment dashboard."),
 )
 
-randomization_valid = Claim("Users were randomly assigned between A and B.", prior=0.98)
-logging_valid = Claim("Conversions were logged consistently for A and B.", prior=0.97)
-stopping_rule_ok = Claim("The analysis accounts for the stopping rule.", prior=0.80)
+ab_test(counts, b_better)
+```
+
+For manual control with custom assumptions:
+
+```python
+rand = RandomAssignment(experiment=exp, prior=0.98)
+log = ConsistentLogging(experiment=exp, prior=0.97)
+stop = NoEarlyStopping(experiment=exp, prior=0.60)  # custom: low confidence in stopping rule
+novelty = Claim("The novelty effect has been accounted for.", prior=0.75)
+
+formula = FormulaCorrect(formula_name="two_binomial_log_lr", prior=0.98)
+impl = ImplementationCorrect(formula_name="two_binomial_log_lr", prior=0.97)
 
 score = compute(
     fn=two_binomial_log_lr,
-    inputs=[ab_counts],
+    inputs=[counts],
     output=LikelihoodScore(target=b_better, model="two_binomial", query="theta_B > theta_A"),
-    assumptions=[formula_correct, implementation_correct],
+    assumptions=[formula, impl],
     reason="Compute the two-binomial log likelihood ratio.",
 )
 
 likelihood_from(
     target=b_better,
-    data=[ab_counts],
-    assumptions=[randomization_valid, logging_valid, stopping_rule_ok],
+    data=[counts],
+    assumptions=[rand, log, stop, novelty],
     score=score,
     model="two_binomial",
     query="theta_B > theta_A",
-    reason="Apply the computed AB-test likelihood ratio under valid experiment assumptions.",
+    reason="AB test with custom stopping rule confidence and novelty effect check.",
 )
 ```
 
