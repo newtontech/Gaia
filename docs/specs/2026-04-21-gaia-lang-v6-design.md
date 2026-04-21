@@ -599,16 +599,16 @@ knowledge.metadata["gaia"]["provenance"] = {
 | `Claim(...)` / subclasses | `Knowledge(type="claim")` + bound parameters |
 | `Question(...)` | `Knowledge(type="question")` |
 | `derive(...)` | `FormalStrategy(type="deduction")` + conjunction + implication helpers |
-| `observe(...)` with given | `FormalStrategy(type="observation")` + conjunction + implication helpers |
+| `observe(...)` with given | `FormalStrategy(type="deduction", metadata.pattern="observation")` |
 | `observe(...)` no given | `Grounding(kind="source_fact")` on the Claim |
-| `compute(...)` / `@compute` | `Strategy(type="computation")` + ComputationMethod |
+| `compute(...)` / `@compute` | `FormalStrategy(type="deduction", metadata.compute={...})` |
 | `equal(A, B)` | `Operator(type="equivalence")` + Equivalence helper |
 | `contradict(A, B)` | `Operator(type="contradiction")` + Contradiction helper |
-| `infer(...)` | `Strategy(type="infer")` + LikelihoodMethod + StatisticalSupport helper |
+| `infer(...)` | `Strategy(type="infer", premises=[H]+gates, conclusion=E)` + CPT + StatisticalSupport helper |
 | `given=(A, B, C)` tuple | `Operator(type="conjunction")` + conjunction helper |
-| `rationale=` | `Strategy.rationale` |
+| `rationale=` | `steps=[Step(reasoning=rationale)]` |
 | `background=` | `Strategy.background` |
-| Warrant review | `ReviewManifest` with `Warrant` entries |
+| Review | `ReviewManifest` with `Review` entries |
 
 ---
 
