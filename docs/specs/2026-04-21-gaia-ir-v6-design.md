@@ -84,29 +84,31 @@ Parameter(name="experiment", type="Setting", value="github:my_package::exp_123")
 
 ### 1.3 Grounding metadata
 
-New optional field on Knowledge:
+Grounding is stored in `metadata.grounding`, not as a top-level field:
 
 ```python
-class Grounding:
-    kind: Literal["assumption", "source_fact", "definition", "imported", "judgment", "open"]
-    rationale: str | None = None
-    source_refs: list[KnowledgeID] = []
+metadata = {
+    "grounding": {
+        "kind": "assumption" | "source_fact" | "definition" | "imported" | "judgment" | "open",
+        "rationale": "...",
+        "source_refs": ["..."],
+    }
+}
 ```
 
-A root Claim with a non-default prior should have grounding metadata or incoming Strategy support.
-
-Grounding is metadata; it does not affect BP directly.
+A root Claim with a non-default prior should have grounding metadata or incoming Strategy support. Grounding does not affect BP directly.
 
 ### 1.4 Parameterized Claim rendering
 
-Two new optional fields on Knowledge:
+The original docstring template is stored in `metadata.content_template`:
 
 ```python
-content_template: str | None = None    # original docstring template
-rendered_content: str | None = None    # content after parameter substitution
+metadata = {
+    "content_template": "[@experiment] recorded {ctrl_k}/{ctrl_n} control conversions.",
+}
 ```
 
-`content_template` preserves the original template with `[@param]` and `{param}` placeholders. `rendered_content` stores the final text after substitution. Neither affects identity — content hash uses `content_template` + bound parameter values.
+`Knowledge.content` stores the rendered text after parameter substitution. Content hash uses the template + bound parameter values for stable identity.
 
 ---
 
@@ -248,18 +250,21 @@ Templates are rendered to concrete questions using the referenced Claims' labels
 ### 5.1 Modified
 
 - `Knowledge.type` adds `"context"` value
-- `Parameter.value: JsonValue | None` — bound parameter values
-- `Knowledge.grounding: Grounding | None` — root Claim provenance metadata
-- `Knowledge.content_template: str | None` — original docstring template
-- `Knowledge.rendered_content: str | None` — content after substitution
+- `Parameter.value: JsonValue | None` — bound parameter values (including QID references)
 
-### 5.2 New types
+### 5.2 New metadata conventions
 
-- `Grounding` — root Claim provenance metadata
+- `metadata.grounding` — root Claim provenance (kind, rationale, source_refs)
+- `metadata.content_template` — original docstring template before rendering
+- `metadata.pattern` — observation/derivation/computation distinction
+- `metadata.compute` — computation function_ref, code_hash, etc.
+
+### 5.3 New types
+
 - `ReviewManifest` — package-level review state
 - `Review` — individual Strategy review record
 
-### 5.3 Unchanged
+### 5.4 Unchanged
 
 - `Strategy` schema — no new fields
 - `StrategyType` enum — no new types
