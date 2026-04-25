@@ -9,11 +9,8 @@ import typer
 from gaia.cli._packages import GaiaCliError, load_gaia_package, validate_fills_relations
 from gaia.cli._packages import apply_package_priors
 from gaia.cli._packages import compile_loaded_package_artifact
-from gaia.cli.commands._classify import classify_ir, node_role
 from gaia.cli.commands.check_core import (
-    KnowledgeBreakdown,
     analyze_knowledge_breakdown,
-    get_prior as _get_prior,
 )
 from gaia.ir import LocalCanonicalGraph
 from gaia.ir.validator import validate_local_graph
@@ -32,7 +29,9 @@ def _knowledge_diagnostics(ir: dict) -> list[str]:
     lines.append("")
     lines.append(f"  Settings:  {len(kb.settings)}")
     lines.append(f"  Questions: {len(kb.questions)}")
-    lines.append(f"  Claims:    {len(kb.independent) + len(kb.derived) + len(kb.structural) + len(kb.background_only) + len(kb.orphaned)}")
+    lines.append(
+        f"  Claims:    {len(kb.independent) + len(kb.derived) + len(kb.structural) + len(kb.background_only) + len(kb.orphaned)}"
+    )
     lines.append(f"    Independent (need prior):  {len(kb.independent)}")
     if n_holes:
         lines.append(f"      Holes (no prior set):   {n_holes}")

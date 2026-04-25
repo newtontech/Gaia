@@ -1,13 +1,13 @@
 """Tests for Batch B Inquiry diagnostics:
-   stale_artifact / focus_low_posterior / prior_without_justification /
-   unreviewed_warrant / rejected_warrant + publish_blockers strict gate.
+stale_artifact / focus_low_posterior / prior_without_justification /
+unreviewed_warrant / rejected_warrant + publish_blockers strict gate.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
 
-import pytest
 
 from gaia.cli.commands.check_core import HoleEntry, KnowledgeBreakdown
 from gaia.inquiry.diagnostics import (
@@ -59,9 +59,7 @@ def test_stale_artifact_silent_when_no_current_hash(tmp_path: Path) -> None:
 
 
 def test_focus_low_posterior_emits_below_threshold() -> None:
-    belief_report = {
-        "focus": {"knowledge_id": "k::x", "label": "x", "after": 0.1, "before": 0.5}
-    }
+    belief_report = {"focus": {"knowledge_id": "k::x", "label": "x", "after": 0.1, "before": 0.5}}
     diags = detect_focus_low_posterior(belief_report, threshold=0.3)
     assert len(diags) == 1
     assert diags[0].kind == "focus_low_posterior"
@@ -153,8 +151,7 @@ def test_ranking_includes_all_new_kinds_for_every_mode() -> None:
     ]
     for mode in supported_modes():
         diags = [
-            Diagnostic(severity="warning", kind=k, target=k, label=k, message=k)
-            for k in new_kinds
+            Diagnostic(severity="warning", kind=k, target=k, label=k, message=k) for k in new_kinds
         ]
         ranked = rank_diagnostics(diags, mode)
         # All present (no drop), and kind-rank lookup must be < 99.
@@ -196,8 +193,9 @@ def test_publish_blockers_empty_for_clean_report() -> None:
 def test_publish_blockers_flags_prior_hole_diagnostic() -> None:
     report = _empty_report()
     report.diagnostics = [
-        Diagnostic(severity="warning", kind="prior_hole", target="c::a",
-                   label="a", message="missing prior")
+        Diagnostic(
+            severity="warning", kind="prior_hole", target="c::a", label="a", message="missing prior"
+        )
     ]
     blockers = publish_blockers(report)
     assert len(blockers) == 1
@@ -216,10 +214,12 @@ def test_publish_blockers_flags_graph_warnings_and_errors() -> None:
 def test_publish_blockers_ignores_non_blocking_kinds() -> None:
     report = _empty_report()
     report.diagnostics = [
-        Diagnostic(severity="info", kind="rejected_warrant", target="s::s1",
-                   label="s1", message="rejected"),
-        Diagnostic(severity="info", kind="background_only", target="c::b",
-                   label="b", message="bg only"),
+        Diagnostic(
+            severity="info", kind="rejected_warrant", target="s::s1", label="s1", message="rejected"
+        ),
+        Diagnostic(
+            severity="info", kind="background_only", target="c::b", label="b", message="bg only"
+        ),
     ]
     assert publish_blockers(report) == []
 

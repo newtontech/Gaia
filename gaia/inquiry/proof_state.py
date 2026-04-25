@@ -7,9 +7,6 @@ from typing import Any
 
 from gaia.inquiry.state import (
     InquiryState,
-    SyntheticHypothesis,
-    SyntheticObligation,
-    SyntheticRejection,
 )
 
 

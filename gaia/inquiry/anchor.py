@@ -40,7 +40,11 @@ class SourceAnchor:
 def _label_from_call(node: ast.Call) -> str | None:
     """优先用 ``label="..."`` 关键字, 缺省时由调用者用变量名兜底。"""
     for kw in node.keywords:
-        if kw.arg == "label" and isinstance(kw.value, ast.Constant) and isinstance(kw.value.value, str):
+        if (
+            kw.arg == "label"
+            and isinstance(kw.value, ast.Constant)
+            and isinstance(kw.value.value, str)
+        ):
             return kw.value.value
     if node.args and isinstance(node.args[0], ast.Constant) and isinstance(node.args[0].value, str):
         # 多数 DSL 把首个位置参数当作 content/label——claim() 是 content,
@@ -101,7 +105,10 @@ def find_anchors(pkg_path: str | Path) -> dict[str, SourceAnchor]:
         return out
     for py_file in sorted(root.rglob("*.py")):
         # 跳过 .gaia/ / .venv / __pycache__ / 隐藏目录
-        if any(part.startswith(".") or part == "__pycache__" for part in py_file.relative_to(root).parts):
+        if any(
+            part.startswith(".") or part == "__pycache__"
+            for part in py_file.relative_to(root).parts
+        ):
             continue
         rel = py_file.relative_to(root).as_posix()
         for label, anchor in _scan_module(py_file, rel).items():

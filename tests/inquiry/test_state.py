@@ -78,9 +78,7 @@ def test_invalid_mode_rejected(tmp_path: Path):
 
 def test_invalid_obligation_kind_rejected():
     with pytest.raises(ValueError):
-        SyntheticObligation(
-            qid="x", target_qid="t", content="c", diagnostic_kind="bogus"
-        )
+        SyntheticObligation(qid="x", target_qid="t", content="c", diagnostic_kind="bogus")
 
 
 def test_focus_push_and_pop_roundtrip(tmp_path: Path):

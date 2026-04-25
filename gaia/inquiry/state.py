@@ -138,21 +138,14 @@ def load_state(pkg_path: str | Path) -> InquiryState:
     version = int(raw.get("version", 1))
     if version > STATE_SCHEMA_VERSION:
         raise ValueError(
-            f"state.json version {version} is newer than supported "
-            f"{STATE_SCHEMA_VERSION}"
+            f"state.json version {version} is newer than supported {STATE_SCHEMA_VERSION}"
         )
     mode = raw.get("mode", "auto")
     if mode not in VALID_MODES:
         raise ValueError(f"invalid mode {mode!r}; allowed: {sorted(VALID_MODES)}")
-    obligations = [
-        SyntheticObligation(**o) for o in raw.get("synthetic_obligations", [])
-    ]
-    hypotheses = [
-        SyntheticHypothesis(**h) for h in raw.get("synthetic_hypotheses", [])
-    ]
-    rejections = [
-        SyntheticRejection(**r) for r in raw.get("synthetic_rejections", [])
-    ]
+    obligations = [SyntheticObligation(**o) for o in raw.get("synthetic_obligations", [])]
+    hypotheses = [SyntheticHypothesis(**h) for h in raw.get("synthetic_hypotheses", [])]
+    rejections = [SyntheticRejection(**r) for r in raw.get("synthetic_rejections", [])]
     return InquiryState(
         version=STATE_SCHEMA_VERSION,
         focus=raw.get("focus"),

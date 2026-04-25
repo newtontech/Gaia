@@ -5,8 +5,6 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from gaia.inquiry.diagnostics import Diagnostic
-from gaia.inquiry.diff import SemanticDiff
 from gaia.inquiry.focus import FocusBinding
 from gaia.inquiry.proof_state import ProofContext
 
@@ -47,20 +45,20 @@ def render_text(report: "ReviewReport") -> str:  # noqa: F821 - forward ref from
         lines.append(f"  baseline: {d.baseline_review_id}")
         # §14.2 — print every non-empty category with consistent +/- prefixes.
         for tag, items in (
-            ("claims",     d.added_claims),
-            ("questions",  d.added_questions),
-            ("settings",   d.added_settings),
+            ("claims", d.added_claims),
+            ("questions", d.added_questions),
+            ("settings", d.added_settings),
             ("strategies", d.added_strategies),
-            ("operators",  d.added_operators),
+            ("operators", d.added_operators),
         ):
             if items:
                 lines.append(f"  + {len(items)} {tag}")
         for tag, items in (
-            ("claims",     d.removed_claims),
-            ("questions",  d.removed_questions),
-            ("settings",   d.removed_settings),
+            ("claims", d.removed_claims),
+            ("questions", d.removed_questions),
+            ("settings", d.removed_settings),
             ("strategies", d.removed_strategies),
-            ("operators",  d.removed_operators),
+            ("operators", d.removed_operators),
         ):
             if items:
                 lines.append(f"  - {len(items)} {tag}")
@@ -257,15 +255,15 @@ def render_markdown(report) -> str:
         md.append(f"baseline: `{d.baseline_review_id}`")
         md.append("")
         for heading, items in (
-            ("Added claims",     d.added_claims),
-            ("Removed claims",   d.removed_claims),
-            ("Added questions",  d.added_questions),
+            ("Added claims", d.added_claims),
+            ("Removed claims", d.removed_claims),
+            ("Added questions", d.added_questions),
             ("Removed questions", d.removed_questions),
-            ("Added settings",   d.added_settings),
+            ("Added settings", d.added_settings),
             ("Removed settings", d.removed_settings),
             ("Added strategies", d.added_strategies),
             ("Removed strategies", d.removed_strategies),
-            ("Added operators",  d.added_operators),
+            ("Added operators", d.added_operators),
             ("Removed operators", d.removed_operators),
         ):
             if items:
@@ -274,16 +272,18 @@ def render_markdown(report) -> str:
                     md.append(f"- `{x}`")
                 md.append("")
         for heading, deltas in (
-            ("Changed claims",     d.changed_claims),
+            ("Changed claims", d.changed_claims),
             ("Changed strategies", d.changed_strategies),
-            ("Changed operators",  d.changed_operators),
-            ("Changed priors",     d.changed_priors),
-            ("Changed exports",    d.changed_exports),
+            ("Changed operators", d.changed_operators),
+            ("Changed priors", d.changed_priors),
+            ("Changed exports", d.changed_exports),
         ):
             if deltas:
                 md.append(f"**{heading}** ({len(deltas)})")
                 for delta in deltas:
-                    md.append(f"- `{delta.label}` _{delta.field}_: `{delta.before}` → `{delta.after}`")
+                    md.append(
+                        f"- `{delta.label}` _{delta.field}_: `{delta.before}` → `{delta.after}`"
+                    )
                 md.append("")
     md.append("")
 
@@ -382,9 +382,7 @@ def render_markdown(report) -> str:
     if not report.next_edits_structured and not report.next_edits:
         md.append("_no suggested edits_")
     else:
-        items = report.next_edits_structured or [
-            None for _ in report.next_edits
-        ]
+        items = report.next_edits_structured or [None for _ in report.next_edits]
         for i, edit in enumerate(report.next_edits_structured, 1):
             anchor = ""
             if edit.source_anchor is not None:
@@ -397,6 +395,6 @@ def render_markdown(report) -> str:
 
     return "\n".join(md)
 
+
 def render_json(report) -> str:
     return json.dumps(to_json_dict(report), ensure_ascii=False, indent=2)
-

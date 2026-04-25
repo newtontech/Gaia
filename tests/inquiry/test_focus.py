@@ -44,9 +44,7 @@ def test_cli_focus_freeform_then_clear(simple_pkg: Path):
     )
     assert r.exit_code == 0
 
-    r2 = runner.invoke(
-        app, ["inquiry", "focus", "--clear", "--path", str(simple_pkg)]
-    )
+    r2 = runner.invoke(app, ["inquiry", "focus", "--clear", "--path", str(simple_pkg)])
     assert r2.exit_code == 0
     assert "cleared" in r2.output
     assert load_state(simple_pkg).focus is None

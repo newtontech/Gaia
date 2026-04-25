@@ -15,7 +15,13 @@ from typing import Optional
 
 import typer
 
-from gaia.inquiry.review import publish_blockers, render_markdown, render_text, resolve_graph, run_review
+from gaia.inquiry.review import (
+    publish_blockers,
+    render_markdown,
+    render_text,
+    resolve_graph,
+    run_review,
+)
 from gaia.inquiry.focus import resolve_focus_target
 from gaia.inquiry.state import (
     VALID_OBLIGATION_KINDS,
@@ -67,9 +73,7 @@ def focus_command(
 ) -> None:
     flags_set = sum([bool(clear), bool(push), bool(pop), bool(show_stack)])
     if flags_set > 1:
-        typer.echo(
-            "Error: --clear/--push/--pop/--stack are mutually exclusive.", err=True
-        )
+        typer.echo("Error: --clear/--push/--pop/--stack are mutually exclusive.", err=True)
         raise typer.Exit(2)
 
     state = load_state(path)
@@ -109,9 +113,7 @@ def focus_command(
             "focus_pop",
             {"old": (old or {}).get("focus"), "restored": state.focus},
         )
-        typer.echo(
-            f"popped: {(old or {}).get('focus')} → {state.focus or '(none)'}"
-        )
+        typer.echo(f"popped: {(old or {}).get('focus')} → {state.focus or '(none)'}")
         return
 
     if push:
@@ -169,9 +171,7 @@ def obligation_add(
     state = load_state(path)
     qid = mint_qid("oblig")
     state.synthetic_obligations.append(
-        SyntheticObligation(
-            qid=qid, target_qid=target_qid, content=content, diagnostic_kind=kind
-        )
+        SyntheticObligation(qid=qid, target_qid=target_qid, content=content, diagnostic_kind=kind)
     )
     save_state(path, state)
     append_tactic_event(
@@ -205,9 +205,7 @@ def obligation_list(
         typer.echo("(no open obligations)")
         return
     for r in rows:
-        typer.echo(
-            f"- [{r['diagnostic_kind']}] {r['qid']} → {r['target_qid']}: {r['content']}"
-        )
+        typer.echo(f"- [{r['diagnostic_kind']}] {r['qid']} → {r['target_qid']}: {r['content']}")
 
 
 @obligation_app.command("close")
@@ -217,9 +215,7 @@ def obligation_close(
 ) -> None:
     state = load_state(path)
     before = len(state.synthetic_obligations)
-    state.synthetic_obligations = [
-        o for o in state.synthetic_obligations if o.qid != qid
-    ]
+    state.synthetic_obligations = [o for o in state.synthetic_obligations if o.qid != qid]
     if len(state.synthetic_obligations) == before:
         typer.echo(f"Error: no obligation with qid {qid!r}.", err=True)
         raise typer.Exit(1)
@@ -282,9 +278,7 @@ def hypothesis_remove(
 ) -> None:
     state = load_state(path)
     before = len(state.synthetic_hypotheses)
-    state.synthetic_hypotheses = [
-        h for h in state.synthetic_hypotheses if h.qid != qid
-    ]
+    state.synthetic_hypotheses = [h for h in state.synthetic_hypotheses if h.qid != qid]
     if len(state.synthetic_hypotheses) == before:
         typer.echo(f"Error: no hypothesis with qid {qid!r}.", err=True)
         raise typer.Exit(1)
@@ -310,9 +304,7 @@ def reject_command(
         SyntheticRejection(qid=qid, target_strategy=strategy, content=content)
     )
     save_state(path, state)
-    append_tactic_event(
-        path, "reject", {"qid": qid, "strategy": strategy}
-    )
+    append_tactic_event(path, "reject", {"qid": qid, "strategy": strategy})
     typer.echo(f"strategy rejected {qid} ({strategy})")
 
 

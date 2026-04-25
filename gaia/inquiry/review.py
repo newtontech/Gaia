@@ -35,7 +35,6 @@ from gaia.inquiry.diagnostics import (
     detect_prior_without_justification,
     detect_stale_artifact,
     detect_warrant_status,
-    format_diagnostics_as_next_edits,
     format_diagnostics_as_structured_edits,
     from_knowledge_breakdown,
     from_validation,
@@ -53,15 +52,11 @@ from gaia.inquiry.snapshot import (
     resolve_baseline,
     save_snapshot,
 )
-from gaia.inquiry.state import InquiryState, load_state, save_state
+from gaia.inquiry.state import load_state, save_state
 
 
 def _utcnow_iso() -> str:
-    return (
-        datetime.now(tz=timezone.utc)
-        .isoformat(timespec="seconds")
-        .replace("+00:00", "Z")
-    )
+    return datetime.now(tz=timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z")
 
 
 # --------------------------------------------------------------------------- #
@@ -220,12 +215,8 @@ def run_review(
         diagnostics.extend(detect_prior_without_justification(kb, anchors))
     diagnostics.extend(detect_stale_artifact(pkg_path, ir_hash))
     diagnostics.extend(detect_focus_low_posterior(belief_report))
-    rejected_targets = {
-        r.target_strategy for r in getattr(state, "synthetic_rejections", []) or []
-    }
-    diagnostics.extend(
-        detect_warrant_status(graph, rejected_targets, anchors)
-    )
+    rejected_targets = {r.target_strategy for r in getattr(state, "synthetic_rejections", []) or []}
+    diagnostics.extend(detect_warrant_status(graph, rejected_targets, anchors))
     diagnostics = rank_diagnostics(diagnostics, mode)
     next_edits_structured = rank_next_edits(
         format_diagnostics_as_structured_edits(diagnostics), mode
@@ -498,4 +489,3 @@ def publish_blockers(report: ReviewReport) -> list[str]:
         if d.kind in blocking_kinds:
             blockers.append(f"{d.kind}: {d.label} — {d.message}")
     return blockers
-

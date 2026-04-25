@@ -22,12 +22,7 @@ from gaia.inquiry.proof_state import (
     RejectionView,
     build_proof_context,
 )
-from gaia.inquiry.render import (
-    render_json,
-    render_markdown,
-    render_text as _render_text_via_render,
-    to_json_dict,
-)
+from gaia.inquiry.render import render_json, render_markdown, to_json_dict
 from gaia.inquiry.review import ReviewReport, render_text, resolve_graph, run_review
 from gaia.inquiry.state import (
     STATE_SCHEMA_VERSION,
@@ -75,14 +70,15 @@ __all__ = [
     "from_knowledge_breakdown",
     "from_validation",
     "inquiry_dir",
-    "json_dict_of",
+    "render_json",
+    "render_markdown",
     "load_state",
     "mint_qid",
     "pop_focus_frame",
     "push_focus_frame",
     "read_tactic_log",
     "render_text",
-    "render_text_of",
+    "to_json_dict",
     "resolve_focus_target",
     "resolve_graph",
     "run_review",

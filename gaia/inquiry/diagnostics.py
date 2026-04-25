@@ -187,8 +187,7 @@ def _prior_hole_diag(entry: HoleEntry) -> Diagnostic:
         label=entry.label,
         message=f"Independent claim `{entry.label}` has no prior set (defaults to 0.5).",
         suggested_edit=(
-            f'Set a prior in priors.py: set_prior("{entry.label}", <value>, '
-            'justification="...").'
+            f'Set a prior in priors.py: set_prior("{entry.label}", <value>, justification="...").'
         ),
         data={"content": preview},
     )
@@ -312,8 +311,7 @@ def detect_prior_without_justification(
                 "`prior_justification` recorded."
             ),
             suggested_edit=(
-                f'Update priors.py: set_prior("{entry.label}", {entry.prior}, '
-                'justification="...").'
+                f'Update priors.py: set_prior("{entry.label}", {entry.prior}, justification="...").'
             ),
             data={"prior": entry.prior},
         )

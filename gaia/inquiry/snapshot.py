@@ -30,10 +30,7 @@ def mint_review_id(ir_hash: str | None, mode: str) -> str:
     Colons in the ISO timestamp are replaced with dashes so the id is usable
     as a path component on every platform.
     """
-    ts = (
-        datetime.now(tz=timezone.utc)
-        .strftime("%Y-%m-%dT%H-%M-%SZ")
-    )
+    ts = datetime.now(tz=timezone.utc).strftime("%Y-%m-%dT%H-%M-%SZ")
     raw = ir_hash or "nohash"
     if ":" in raw:
         raw = raw.split(":", 1)[1]

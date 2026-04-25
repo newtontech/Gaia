@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-import pytest
 from typer.testing import CliRunner
 
 from gaia.cli.main import app
@@ -34,7 +33,7 @@ def _pkg_with_holes(pkg_dir: Path, name: str = "review_pkg") -> None:
         'covered = claim("covered hypothesis", metadata={"prior": 0.7})\n'
         'hole = claim("hypothesis with no prior")\n'
         'derived_claim = claim("derived conclusion")\n'
-        'sup = support(premises=[hole, covered], conclusion=derived_claim)\n'
+        "sup = support(premises=[hole, covered], conclusion=derived_claim)\n"
         'iid = setting("data is i.i.d.")\n'
         'rq = question("does it generalize?")\n'
         '__all__ = ["covered", "hole", "derived_claim", "sup", "iid", "rq"]\n',
@@ -203,9 +202,7 @@ def test_strict_no_warnings_no_exit(tmp_path):
     pkg = tmp_path / "p"
     _pkg_with_holes(pkg)
     # First review: validation may warn; we just check exit-code path is reachable.
-    r = runner.invoke(
-        app, ["inquiry", "review", str(pkg), "--no-infer", "--mode", "publish"]
-    )
+    r = runner.invoke(app, ["inquiry", "review", str(pkg), "--no-infer", "--mode", "publish"])
     assert r.exit_code in (0, 1)  # depends on validator output for empty-strategy pkg
 
 

@@ -13,7 +13,6 @@ from gaia.inquiry.diff import compute_semantic_diff
 from gaia.inquiry.review import run_review
 from gaia.inquiry.snapshot import (
     list_snapshots,
-    load_snapshot,
     mint_review_id,
     resolve_baseline,
     reviews_dir,
@@ -22,9 +21,7 @@ from gaia.inquiry.state import inquiry_dir
 
 runner = CliRunner()
 
-REVIEW_ID_RE = re.compile(
-    r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z_[a-zA-Z0-9]+_[A-Za-z0-9._-]+$"
-)
+REVIEW_ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z_[a-zA-Z0-9]+_[A-Za-z0-9._-]+$")
 
 
 def _write_pkg(
@@ -46,7 +43,7 @@ def _write_pkg(
         "from gaia.lang import claim, support\n"
         f'main = claim("main hypothesis", metadata={{"prior": {prior}}})\n'
         'evidence = claim("supporting evidence", metadata={"prior": 0.6})\n'
-        'sup = support(premises=[evidence], conclusion=main)\n'
+        "sup = support(premises=[evidence], conclusion=main)\n"
     )
     if extra_claim:
         body += f'extra = claim("{extra_claim}")\n'
@@ -192,10 +189,14 @@ def test_diff_removed_claim_detected(tmp_path):
 def test_diff_unit_compute_against_synthetic_snapshot():
     cur = {
         "knowledges": [
-            {"id": "p::a", "type": "claim", "label": "a", "content": "X",
-             "metadata": {"prior": 0.5}},
-            {"id": "p::b", "type": "claim", "label": "b", "content": "new",
-             "metadata": {}},
+            {
+                "id": "p::a",
+                "type": "claim",
+                "label": "a",
+                "content": "X",
+                "metadata": {"prior": 0.5},
+            },
+            {"id": "p::b", "type": "claim", "label": "b", "content": "new", "metadata": {}},
         ],
         "strategies": [],
         "operators": [],
@@ -204,10 +205,14 @@ def test_diff_unit_compute_against_synthetic_snapshot():
         "review_id": "r-base",
         "ir": {
             "knowledges": [
-                {"id": "p::a", "type": "claim", "label": "a", "content": "X",
-                 "metadata": {"prior": 0.3}},
-                {"id": "p::c", "type": "claim", "label": "c", "content": "gone",
-                 "metadata": {}},
+                {
+                    "id": "p::a",
+                    "type": "claim",
+                    "label": "a",
+                    "content": "X",
+                    "metadata": {"prior": 0.3},
+                },
+                {"id": "p::c", "type": "claim", "label": "c", "content": "gone", "metadata": {}},
             ],
             "strategies": [],
         },
@@ -231,9 +236,7 @@ def test_cli_review_emits_diff_section_after_second_run(tmp_path):
     r1 = runner.invoke(app, ["inquiry", "review", str(pkg), "--no-infer"])
     assert r1.exit_code == 0
     _write_pkg(pkg, extra_claim="cli extra")
-    r2 = runner.invoke(
-        app, ["inquiry", "review", str(pkg), "--no-infer", "--json"]
-    )
+    r2 = runner.invoke(app, ["inquiry", "review", str(pkg), "--no-infer", "--json"])
     assert r2.exit_code == 0
     data = json.loads(r2.output)
     assert "extra" in data["semantic_diff"]["added_claims"]

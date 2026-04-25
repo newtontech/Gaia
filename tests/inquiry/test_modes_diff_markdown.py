@@ -71,7 +71,11 @@ def test_diff_added_removed_questions():
 
 def test_diff_added_removed_settings():
     base_ir = {"knowledges": [_setting("s::a", "sa")], "strategies": [], "operators": []}
-    cur_ir = {"knowledges": [_setting("s::b", "sb"), _setting("s::a", "sa")], "strategies": [], "operators": []}
+    cur_ir = {
+        "knowledges": [_setting("s::b", "sb"), _setting("s::a", "sa")],
+        "strategies": [],
+        "operators": [],
+    }
     d = compute_semantic_diff(cur_ir, _baseline_snapshot(base_ir))
     assert d.added_settings == ["sb"]
     assert d.removed_settings == []
@@ -120,12 +124,21 @@ def test_diff_to_dict_has_all_16_keys():
     d = SemanticDiff()
     keys = set(d.to_dict().keys()) - {"baseline_review_id"}
     assert keys == {
-        "added_claims", "removed_claims", "changed_claims",
-        "added_questions", "removed_questions",
-        "added_settings", "removed_settings",
-        "added_strategies", "removed_strategies", "changed_strategies",
-        "added_operators", "removed_operators", "changed_operators",
-        "changed_priors", "changed_exports",
+        "added_claims",
+        "removed_claims",
+        "changed_claims",
+        "added_questions",
+        "removed_questions",
+        "added_settings",
+        "removed_settings",
+        "added_strategies",
+        "removed_strategies",
+        "changed_strategies",
+        "added_operators",
+        "removed_operators",
+        "changed_operators",
+        "changed_priors",
+        "changed_exports",
     }
 
 
@@ -169,7 +182,9 @@ def test_rank_formalize_promotes_prior_holes_and_structural_holes():
     ]
     ranked = rank_diagnostics(ds, "formalize")
     kinds = [d.kind for d in ranked]
-    assert kinds.index("structural_hole") < kinds.index("prior_hole") < kinds.index("focus_weakness")
+    assert (
+        kinds.index("structural_hole") < kinds.index("prior_hole") < kinds.index("focus_weakness")
+    )
 
 
 def test_rank_publish_keeps_compile_errors_first():
@@ -248,7 +263,7 @@ def test_render_markdown_diff_section_lists_added_categories(tmp_path: Path):
     src = pkg / "diffmd"
     src.mkdir()
     (src / "__init__.py").write_text(
-        'from gaia.lang import claim, question\n'
+        "from gaia.lang import claim, question\n"
         'a = claim("a")\n'
         'q = question("q")\n'
         '__all__ = ["a", "q"]\n',
@@ -257,7 +272,7 @@ def test_render_markdown_diff_section_lists_added_categories(tmp_path: Path):
     r1 = run_review(pkg, no_infer=True)
 
     (src / "__init__.py").write_text(
-        'from gaia.lang import claim, question\n'
+        "from gaia.lang import claim, question\n"
         'a = claim("a")\n'
         'b = claim("b")\n'
         'q = question("q")\n'

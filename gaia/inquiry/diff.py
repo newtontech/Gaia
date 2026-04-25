@@ -134,11 +134,7 @@ def empty_diff() -> SemanticDiff:
 
 
 def _knowledges_by_type_id(ir: dict, kind: str) -> dict[str, dict]:
-    return {
-        k["id"]: k
-        for k in ir.get("knowledges", []) or []
-        if k.get("type") == kind
-    }
+    return {k["id"]: k for k in ir.get("knowledges", []) or [] if k.get("type") == kind}
 
 
 def _strategies_by_id(ir: dict) -> dict[str, dict]:
@@ -230,9 +226,7 @@ def _diff_claims(diff: SemanticDiff, cur: dict, base: dict) -> None:
 
         ea, eb = _exported(a), _exported(b)
         if ea != eb:
-            diff.changed_exports.append(
-                ClaimDelta(label, "exported", _fmt(ea), _fmt(eb))
-            )
+            diff.changed_exports.append(ClaimDelta(label, "exported", _fmt(ea), _fmt(eb)))
 
 
 def _diff_questions(diff: SemanticDiff, cur: dict, base: dict) -> None:
@@ -265,7 +259,9 @@ def _diff_strategies(diff: SemanticDiff, cur: dict, base: dict) -> None:
         label = sid.split("::")[-1]
         if a.get("conclusion") != b.get("conclusion"):
             diff.changed_strategies.append(
-                ClaimDelta(label, "conclusion", _fmt(a.get("conclusion")), _fmt(b.get("conclusion")))
+                ClaimDelta(
+                    label, "conclusion", _fmt(a.get("conclusion")), _fmt(b.get("conclusion"))
+                )
             )
         if list(a.get("premises") or []) != list(b.get("premises") or []):
             diff.changed_strategies.append(
@@ -290,7 +286,9 @@ def _diff_operators(diff: SemanticDiff, cur: dict, base: dict) -> None:
         label = oid.split("::")[-1]
         if a.get("conclusion") != b.get("conclusion"):
             diff.changed_operators.append(
-                ClaimDelta(label, "conclusion", _fmt(a.get("conclusion")), _fmt(b.get("conclusion")))
+                ClaimDelta(
+                    label, "conclusion", _fmt(a.get("conclusion")), _fmt(b.get("conclusion"))
+                )
             )
         va, vb = list(a.get("variables") or []), list(b.get("variables") or [])
         if va != vb:

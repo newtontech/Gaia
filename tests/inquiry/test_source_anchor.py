@@ -150,9 +150,7 @@ def test_text_next_edit_contains_file_line(tmp_path):
     pkg = tmp_path / "p"
     _write_pkg(pkg)
     report = run_review(pkg, no_infer=True)
-    assert any(
-        "__init__.py:" in edit for edit in report.next_edits
-    ), report.next_edits
+    assert any("__init__.py:" in edit for edit in report.next_edits), report.next_edits
 
 
 def test_structured_next_edits_have_anchor(tmp_path):
@@ -213,9 +211,7 @@ def test_structured_next_edits_dedup_matches_text():
 def test_cli_json_contains_next_edits_structured(tmp_path):
     pkg = tmp_path / "p"
     _write_pkg(pkg)
-    r = runner.invoke(
-        app, ["inquiry", "review", str(pkg), "--no-infer", "--json"]
-    )
+    r = runner.invoke(app, ["inquiry", "review", str(pkg), "--no-infer", "--json"])
     assert r.exit_code == 0, r.output
     data = json.loads(r.output)
     assert "next_edits_structured" in data
