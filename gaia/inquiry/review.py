@@ -31,7 +31,12 @@ from gaia.inquiry.anchor import find_anchors
 from gaia.inquiry.diagnostics import (
     Diagnostic,
     NextEdit,
+    detect_blocked_warrant_path,
+    detect_claim_with_evidence_but_no_focus_connection,
     detect_focus_low_posterior,
+    detect_focus_unsupported,
+    detect_large_belief_drop,
+    detect_overstrong_strategy_without_provenance,
     detect_prior_without_justification,
     detect_stale_artifact,
     detect_warrant_status,
@@ -217,6 +222,15 @@ def run_review(
     diagnostics.extend(detect_focus_low_posterior(belief_report))
     rejected_targets = {r.target_strategy for r in getattr(state, "synthetic_rejections", []) or []}
     diagnostics.extend(detect_warrant_status(graph, rejected_targets, anchors))
+    if graph is not None:
+        if ir_dict is not None:
+            diagnostics.extend(detect_blocked_warrant_path(graph, kb, anchors))
+        diagnostics.extend(detect_focus_unsupported(graph, focus, anchors))
+        diagnostics.extend(detect_overstrong_strategy_without_provenance(graph, anchors=anchors))
+        diagnostics.extend(
+            detect_claim_with_evidence_but_no_focus_connection(graph, focus, anchors)
+        )
+    diagnostics.extend(detect_large_belief_drop(belief_report))
     diagnostics = rank_diagnostics(diagnostics, mode)
     next_edits_structured = rank_next_edits(
         format_diagnostics_as_structured_edits(diagnostics), mode
@@ -398,11 +412,18 @@ def _build_prior_holes(kb: KnowledgeBreakdown) -> list[dict[str, Any]]:
 
 def _build_inquiry_tree(kb: KnowledgeBreakdown, graph) -> dict[str, Any]:
     n_strategies = len(getattr(graph, "strategies", []) or []) if graph else 0
+    hole_ids = {h.cid for h in kb.holes}
+    blocked_paths = 0
+    if graph is not None and hole_ids:
+        for s in getattr(graph, "strategies", []) or []:
+            premises = list(getattr(s, "premises", None) or [])
+            if any(p in hole_ids for p in premises):
+                blocked_paths += 1
     return {
         "goals": len(kb.questions),
         "accepted_warrants": 0,
         "unreviewed_warrants": n_strategies,
-        "blocked_paths": 0,
+        "blocked_paths": blocked_paths,
         "structural_holes": list(kb.orphaned),
     }
 
@@ -484,6 +505,9 @@ def publish_blockers(report: ReviewReport) -> list[str]:
         "unreviewed_warrant",
         "prior_without_justification",
         "stale_artifact",
+        "blocked_warrant_path",
+        "focus_unsupported",
+        "overstrong_strategy_without_provenance",
     }
     for d in report.diagnostics:
         if d.kind in blocking_kinds:
